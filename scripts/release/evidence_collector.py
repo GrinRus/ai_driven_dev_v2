@@ -13,9 +13,7 @@ from urllib.parse import urlparse
 _VERSION_PATTERN = re.compile(
     r"^[0-9]+\.[0-9]+\.[0-9]+(?:(?:a|b|rc)[0-9]+)?(?:\.post[0-9]+)?(?:\.dev[0-9]+)?$"
 )
-_ERROR_OUTPUT_PATTERN = re.compile(
-    r"(?im)^(?:error|exception|traceback|failed|fatal)\b"
-)
+_ERROR_OUTPUT_PATTERN = re.compile(r"(?im)^(?:error|exception|traceback|failed|fatal)\b")
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,15 +34,10 @@ class ReleaseEvidence:
 
     def to_markdown(self) -> str:
         rows = "\n".join(
-            f"- `{check.name}`: `{check.status}` - {check.detail}"
-            for check in self.checks
+            f"- `{check.name}`: `{check.status}` - {check.detail}" for check in self.checks
         )
         verdict = "accepted" if self.success else "blocked"
-        return (
-            f"### `v{self.version}` release evidence\n\n"
-            f"- Result: {verdict}.\n"
-            f"{rows}\n"
-        )
+        return f"### `v{self.version}` release evidence\n\n- Result: {verdict}.\n{rows}\n"
 
 
 def collect_release_evidence(
@@ -191,10 +184,7 @@ def _workflow_url_check(url: str) -> EvidenceCheck:
         detail=(
             url
             if valid
-            else (
-                "expected canonical GitHub Actions run URL for "
-                "GrinRus/ai_driven_dev_v2"
-            )
+            else ("expected canonical GitHub Actions run URL for GrinRus/ai_driven_dev_v2")
         ),
     )
 

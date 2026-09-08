@@ -274,10 +274,7 @@ def render_stage_brief(
             "",
             "# Workspace path discipline",
             "",
-            (
-                "- AIDD workspace-relative paths such as `workitems/...` are "
-                "relative to `.aidd/`."
-            ),
+            ("- AIDD workspace-relative paths such as `workitems/...` are relative to `.aidd/`."),
             (
                 "- From the repository root, write canonical stage artifacts under "
                 "`.aidd/workitems/...`; do not create top-level `workitems/...`."
@@ -440,7 +437,11 @@ def persist_execution_state(
     changed_at_utc: datetime | None = None,
 ) -> StageExecutionState:
     if not isinstance(attempt_mode, str) or attempt_mode not in {
-        "initial", "repair", "resume", "intervention", "repair-extension"
+        "initial",
+        "repair",
+        "resume",
+        "intervention",
+        "repair-extension",
     }:
         raise ValueError("Executing an attempt requires an explicit valid attempt mode.")
     load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)

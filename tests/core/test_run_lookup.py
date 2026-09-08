@@ -149,12 +149,15 @@ def test_latest_attempt_number_resolves_highest_attempt(tmp_path: Path) -> None:
         stage=stage,
     )
 
-    assert latest_attempt_number(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-    ) == 2
+    assert (
+        latest_attempt_number(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        == 2
+    )
     assert latest_attempt_path(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -441,10 +444,7 @@ def test_latest_run_id_uses_current_metadata_timestamp(tmp_path: Path) -> None:
         changed_at_utc=now + timedelta(minutes=10),
     )
 
-    assert (
-        latest_run_id(workspace_root=workspace_root, work_item="WI-001")
-        == "run-002"
-    )
+    assert latest_run_id(workspace_root=workspace_root, work_item="WI-001") == "run-002"
 
 
 def test_latest_run_id_rejects_ambiguous_timestamps(tmp_path: Path) -> None:

@@ -110,4 +110,3 @@ def _normalize_dimension_status(value: str) -> str:
     if not status:
         raise ValueError("Conformance matrix dimension status must be a non-empty string.")
     return status
-

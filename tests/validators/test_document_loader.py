@@ -217,14 +217,7 @@ def test_load_markdown_document_normalizes_workspace_relative_path(tmp_path: Pat
     canonical_path.write_text("# Plan\n", encoding="utf-8")
 
     aliased_path = (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "stages"
-        / "plan"
-        / "output"
-        / "."
-        / "plan.md"
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "." / "plan.md"
     )
     loaded = load_markdown_document(path=aliased_path, workspace_root=workspace_root)
 

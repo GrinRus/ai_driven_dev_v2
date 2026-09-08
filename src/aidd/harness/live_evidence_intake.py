@@ -90,9 +90,7 @@ def _validate_source_chain(*, source: Path, authorized_root: Path) -> os.stat_re
                 f"Evidence component {component!r} must not be a symlink."
             )
     if not stat.S_ISREG(metadata.st_mode) and not stat.S_ISDIR(metadata.st_mode):
-        raise LiveEvidenceIntakeError(
-            "Evidence source must be a regular file or directory."
-        )
+        raise LiveEvidenceIntakeError("Evidence source must be a regular file or directory.")
     if stat.S_ISREG(metadata.st_mode) and metadata.st_nlink != 1:
         raise LiveEvidenceIntakeError("Evidence files must not be hard linked.")
     return metadata
@@ -201,9 +199,7 @@ def _copy_regular_file(source: _SourceFile, destination: Path) -> LiveEvidenceFi
         try:
             output = destination.open("xb")
         except OSError as exc:
-            raise LiveEvidenceIntakeError(
-                f"Unable to create staged evidence file: {exc}"
-            ) from exc
+            raise LiveEvidenceIntakeError(f"Unable to create staged evidence file: {exc}") from exc
         with output:
             while chunk := os.read(descriptor, _COPY_CHUNK_SIZE):
                 output.write(chunk)
@@ -324,16 +320,9 @@ def validate_live_evidence_publication(
         )
     actual_files = tuple(_digest_source_file(item) for item in source_files)
     if actual_files != expected_files:
-        raise LiveEvidenceIntakeError(
-            "Trusted evidence file inventory changed after publication."
-        )
-    if (
-        _tree_digest(directories=directories, files=actual_files)
-        != expected_tree_sha256
-    ):
-        raise LiveEvidenceIntakeError(
-            "Trusted evidence tree digest changed after publication."
-        )
+        raise LiveEvidenceIntakeError("Trusted evidence file inventory changed after publication.")
+    if _tree_digest(directories=directories, files=actual_files) != expected_tree_sha256:
+        raise LiveEvidenceIntakeError("Trusted evidence tree digest changed after publication.")
 
 
 def intake_live_evidence(
@@ -352,9 +341,7 @@ def intake_live_evidence(
     destination_parent = lexical_destination.parent
     _require_real_directory(destination_parent, label="evidence bundle root")
     if lexical_destination.exists() or lexical_destination.is_symlink():
-        raise LiveEvidenceIntakeError(
-            "Trusted evidence destination must not already exist."
-        )
+        raise LiveEvidenceIntakeError("Trusted evidence destination must not already exist.")
 
     if stat.S_ISDIR(source_metadata.st_mode):
         source_kind: EvidenceSourceKind = "directory"
@@ -381,8 +368,7 @@ def intake_live_evidence(
         for relative in directories:
             (staging / relative).mkdir(parents=True, exist_ok=False, mode=0o700)
         copied_files = tuple(
-            _copy_regular_file(item, staging / item.relative_path)
-            for item in source_files
+            _copy_regular_file(item, staging / item.relative_path) for item in source_files
         )
         for item in copied_files:
             _digest_staged_file(staging / item.relative_path, item)

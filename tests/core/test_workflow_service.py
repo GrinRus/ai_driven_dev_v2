@@ -410,12 +410,19 @@ def test_run_workflow_rejects_incompatible_continuation_without_manifest_mutatio
 
 @pytest.mark.parametrize("missing_field", ("schema_version", "adapter_id", "config_snapshot"))
 def test_workflow_continuation_rejects_incomplete_manifest_before_execution(
-    tmp_path: Path, missing_field: str,
+    tmp_path: Path,
+    missing_field: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     manifest_path = create_run_manifest(
-        workspace_root, "WI-CURRENT", "run-current", "generic-cli", "qa", {},
-        workflow_stage_start="idea", workflow_stage_end="qa",
+        workspace_root,
+        "WI-CURRENT",
+        "run-current",
+        "generic-cli",
+        "qa",
+        {},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
     )
     manifest = json.loads(manifest_path.read_text())
     del manifest[missing_field]
@@ -429,10 +436,15 @@ def test_workflow_continuation_rejects_incomplete_manifest_before_execution(
     with pytest.raises(ValueError, match=missing_field):
         run_workflow(
             request=WorkflowRunRequest(
-                work_item="WI-CURRENT", runtime_id="generic-cli",
-                workspace_root=workspace_root, config_path=Path("aidd.test.toml"),
-                config_snapshot={}, stage_start="research", stage_end="research",
-                run_id="run-current", continuation=True,
+                work_item="WI-CURRENT",
+                runtime_id="generic-cli",
+                workspace_root=workspace_root,
+                config_path=Path("aidd.test.toml"),
+                config_snapshot={},
+                stage_start="research",
+                stage_end="research",
+                run_id="run-current",
+                continuation=True,
             ),
             stage_executor=lambda request: executed.append(request.stage),
         )

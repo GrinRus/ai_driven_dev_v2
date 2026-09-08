@@ -300,7 +300,7 @@ def test_qwen_event_reader_commits_malformed_complete_line_before_partial_tail(
     tmp_path: Path,
 ) -> None:
     events_path = tmp_path / "qwen-events.jsonl"
-    events_path.write_bytes(b"{not-json}\n{\"type\":")
+    events_path.write_bytes(b'{not-json}\n{"type":')
 
     offset, lines = _read_complete_event_lines(
         events_path=events_path,
@@ -312,7 +312,7 @@ def test_qwen_event_reader_commits_malformed_complete_line_before_partial_tail(
     assert _parse_json_line(lines[0]) is None
 
     with events_path.open("ab") as handle:
-        handle.write(b"\"message\"}\n")
+        handle.write(b'"message"}\n')
     offset, lines = _read_complete_event_lines(
         events_path=events_path,
         read_offset=offset,
@@ -343,18 +343,12 @@ def test_qwen_live_transport_deny_or_cancel_fails_stage(
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == f"permission-denied: {action.value}"
-    exit_metadata = json.loads(
-        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
-    )
+    exit_metadata = json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))
     expected_classification = (
-        "cancelled"
-        if action is RuntimeOperatorDecisionAction.CANCEL
-        else "denied"
+        "cancelled" if action is RuntimeOperatorDecisionAction.CANCEL else "denied"
     )
     expected_outcome = (
-        "cancellation"
-        if action is RuntimeOperatorDecisionAction.CANCEL
-        else "denial"
+        "cancellation" if action is RuntimeOperatorDecisionAction.CANCEL else "denial"
     )
     assert exit_metadata["exit_classification"] == expected_classification
     assert exit_metadata["adapter_outcome"] == expected_outcome
@@ -380,9 +374,7 @@ def test_qwen_live_transport_blocks_when_provider_has_no_decision(tmp_path: Path
     assert (attempt_path / "operator-requests.jsonl").exists()
     assert (attempt_path / "qwen-events.jsonl").exists()
     assert (attempt_path / "qwen-input.jsonl").read_text(encoding="utf-8") == ""
-    exit_metadata = json.loads(
-        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
-    )
+    exit_metadata = json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))
     assert exit_metadata["exit_classification"] == "blocked"
     assert exit_metadata["adapter_outcome"] == "blocked"
     assert exit_metadata["exit_code"] is None
@@ -444,9 +436,12 @@ def test_qwen_live_transport_persists_cancelled_outcome(
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "qwen-live: cancelled"
-    assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
-        "exit_classification"
-    ] == "cancelled"
+    assert (
+        json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
+            "exit_classification"
+        ]
+        == "cancelled"
+    )
     assert result.adapter_outcome is not None
     assert result.adapter_outcome.value == "cancellation"
     assert (attempt_path / "runtime.log").exists()
@@ -462,9 +457,7 @@ def test_qwen_live_supervises_output_before_large_prompt_delivery(tmp_path: Path
         request=_request(tmp_path, prompt_size=2_000_000),
         attempt_path=tmp_path / "attempt",
         base_env={},
-        operator_decision_provider=_DecisionProvider(
-            RuntimeOperatorDecisionAction.ALLOW_ONCE
-        ),
+        operator_decision_provider=_DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE),
     )
 
     assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED

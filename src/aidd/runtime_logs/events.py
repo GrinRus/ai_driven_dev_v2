@@ -18,16 +18,13 @@ MAX_LIFECYCLE_PROJECTION_BYTES = 1024 * 1024
 
 class RuntimeRunResultLike(Protocol):
     @property
-    def stdout_text(self) -> str:
-        ...
+    def stdout_text(self) -> str: ...
 
     @property
-    def stderr_text(self) -> str:
-        ...
+    def stderr_text(self) -> str: ...
 
     @property
-    def structured_events_source_path(self) -> Path | None:
-        ...
+    def structured_events_source_path(self) -> Path | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,15 +261,13 @@ def project_lifecycle_events(
                 },
                 "outcome": f"omitted={len(omitted)}",
                 "evidence": (
-                    f"{evidence_filename}#line={len(retained_events) + 1}-"
-                    f"{len(structured_events)}"
+                    f"{evidence_filename}#line={len(retained_events) + 1}-{len(structured_events)}"
                 ),
                 "payload_sha256": omitted_digest.hexdigest(),
             }
         )
     encoded_size = sum(
-        len(json.dumps(row, sort_keys=True).encode("utf-8")) + 1
-        for row in projections
+        len(json.dumps(row, sort_keys=True).encode("utf-8")) + 1 for row in projections
     )
     if encoded_size > MAX_LIFECYCLE_PROJECTION_BYTES:
         raise ValueError("Canonical lifecycle projection exceeds its fixed file bound.")
@@ -345,6 +340,8 @@ def persist_lifecycle_projection_from_jsonl(
             projections,
         ),
     )
+
+
 __all__ = [
     "MAX_LIFECYCLE_EVENT_BYTES",
     "MAX_LIFECYCLE_EVENTS",

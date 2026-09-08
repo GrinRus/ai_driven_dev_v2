@@ -92,7 +92,8 @@ def process_segments_from_payload(raw: object) -> tuple[ProcessSegment, ...]:
         raw_reason = item.get("termination_reason")
         reason = (
             raw_reason
-            if raw_reason in {
+            if raw_reason
+            in {
                 "awaiting-quality-review",
                 "blocked",
                 "fail",
@@ -111,9 +112,7 @@ def process_segments_from_payload(raw: object) -> tuple[ProcessSegment, ...]:
                 started_at_utc=started_at,
                 finished_at_utc=finished_at,
                 duration_seconds=(
-                    max(float(duration), 0.0)
-                    if isinstance(duration, int | float)
-                    else 0.0
+                    max(float(duration), 0.0) if isinstance(duration, int | float) else 0.0
                 ),
                 owner_pid=owner_pid,
                 termination_reason=cast(ProcessTerminationReason | None, reason),

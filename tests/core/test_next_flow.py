@@ -22,14 +22,7 @@ def test_create_follow_up_work_item_draft_writes_durable_context_with_references
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    source_artifact = (
-        workspace_root
-        / "workitems"
-        / "WI-SOURCE"
-        / "stages"
-        / "qa"
-        / "qa-report.md"
-    )
+    source_artifact = workspace_root / "workitems" / "WI-SOURCE" / "stages" / "qa" / "qa-report.md"
     source_artifact.parent.mkdir(parents=True, exist_ok=True)
     source_artifact.write_text(
         "# QA Report\n\n## Finding\n\nRaw source body that must not be copied.\n",
@@ -65,9 +58,7 @@ def test_create_follow_up_work_item_draft_writes_durable_context_with_references
     request_text = result.request_path.read_text(encoding="utf-8")
     user_request_text = result.context_seed.user_request_path.read_text(encoding="utf-8")
     assert result.work_item == "WI-FOLLOW-UP"
-    assert result.source_artifact_paths == (
-        "workitems/WI-SOURCE/stages/qa/qa-report.md",
-    )
+    assert result.source_artifact_paths == ("workitems/WI-SOURCE/stages/qa/qa-report.md",)
     assert "Carry the edited first-stage input into the child work item." in user_request_text
     assert "Edited acceptance criteria survives launch." in request_text
     assert "Edited required evidence survives launch." in request_text
@@ -80,9 +71,9 @@ def test_create_follow_up_work_item_draft_writes_durable_context_with_references
     assert result.context_seed.intake_path.exists()
 
     metadata = json.loads(
-        (
-            workspace_root / "workitems" / "WI-FOLLOW-UP" / "work-item.json"
-        ).read_text(encoding="utf-8")
+        (workspace_root / "workitems" / "WI-FOLLOW-UP" / "work-item.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert metadata["lineage"] == {
         "source_run_id": "run-source",
@@ -232,9 +223,7 @@ def test_create_clone_flow_draft_writes_editable_configuration_from_source_run(
     assert not (workspace_root / "reports" / "runs" / "WI-CLONE").exists()
 
     metadata = json.loads(
-        (workspace_root / "workitems" / "WI-CLONE" / "work-item.json").read_text(
-            encoding="utf-8"
-        )
+        (workspace_root / "workitems" / "WI-CLONE" / "work-item.json").read_text(encoding="utf-8")
     )
     assert metadata["lineage"] == {
         "baseline_id": "baseline-run",

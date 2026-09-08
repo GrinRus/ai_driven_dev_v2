@@ -62,8 +62,7 @@ def evaluate_runtime_conformance_row(
         runtime_id=row.runtime_id,
         expected_dimensions=dict(row.dimensions),
         observed_dimensions={
-            dimension: observed_dimensions[dimension]
-            for dimension in row.dimensions
+            dimension: observed_dimensions[dimension] for dimension in row.dimensions
         },
     )
 

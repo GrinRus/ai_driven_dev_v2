@@ -57,8 +57,7 @@ def _declared_project_set_roots(*, workspace_root: Path, work_item: str) -> tupl
         relative = PurePosixPath(raw_root)
         if relative.is_absolute() or ".." in relative.parts or "\\" in raw_root:
             raise ValueError(
-                "Project-set context contains an unsafe repository-relative root: "
-                f"{raw_root}."
+                f"Project-set context contains an unsafe repository-relative root: {raw_root}."
             )
         roots.append(relative.as_posix())
     unique_roots = tuple(dict.fromkeys(roots))
@@ -75,8 +74,7 @@ def _path_is_in_project_set(path: str, roots: tuple[str, ...]) -> bool:
         raise ValueError(f"Task diff contains an unsafe repository-relative path: {path}.")
     normalized = relative.as_posix()
     return any(
-        not root or normalized == root or normalized.startswith(f"{root}/")
-        for root in roots
+        not root or normalized == root or normalized.startswith(f"{root}/") for root in roots
     )
 
 
@@ -118,20 +116,14 @@ def outside_project_set_changes(
         if not isinstance(payload, dict):
             raise ValueError(f"Task diff evidence must be an object for `{entry.id}`.")
         if payload.get("schema_version") != 1 or payload.get("task_id") != entry.id:
-            raise ValueError(
-                f"Task diff evidence identity is invalid for `{entry.id}`."
-            )
+            raise ValueError(f"Task diff evidence identity is invalid for `{entry.id}`.")
         observed = payload.get("observed_touched_paths")
         if not isinstance(observed, list) or not all(isinstance(path, str) for path in observed):
-            raise ValueError(
-                f"Task diff evidence has invalid observed paths for `{entry.id}`."
-            )
+            raise ValueError(f"Task diff evidence has invalid observed paths for `{entry.id}`.")
         for path in observed:
             if not _path_is_in_project_set(path, roots):
                 outside.setdefault(path, set()).add(entry.id)
-    return tuple(
-        (path, tuple(sorted(task_ids))) for path, task_ids in sorted(outside.items())
-    )
+    return tuple((path, tuple(sorted(task_ids))) for path, task_ids in sorted(outside.items()))
 
 
 def render_outside_project_set_evidence(
@@ -160,9 +152,7 @@ def render_outside_project_set_evidence(
 def aggregate_execution_mode(plan: TaskPlan) -> TaskExecutionMode:
     """Return the effective repository mode for system-owned aggregate evidence."""
 
-    if any(
-        task.execution_mode is TaskExecutionMode.REPOSITORY_CHANGE for task in plan.tasks
-    ):
+    if any(task.execution_mode is TaskExecutionMode.REPOSITORY_CHANGE for task in plan.tasks):
         return TaskExecutionMode.REPOSITORY_CHANGE
     return TaskExecutionMode.VERIFICATION_ONLY
 

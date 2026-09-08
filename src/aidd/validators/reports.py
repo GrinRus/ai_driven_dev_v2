@@ -99,25 +99,17 @@ def render_validator_report(
         "## Summary",
         "",
         f"- {validator_report_field('total_issues').label}: {len(findings_list)}",
-        (
-            f"- {validator_report_field('blocking_issues').label}: "
-            f"{'yes' if blocking else 'no'}"
-        ),
+        (f"- {validator_report_field('blocking_issues').label}: {'yes' if blocking else 'no'}"),
         (
             f"- {validator_report_field('affected_documents').label}: "
             + ", ".join(f"`{path}`" for path in affected_documents)
             if affected_documents
             else f"- {validator_report_field('affected_documents').label}: none"
         ),
-        (
-            f"- {validator_report_field('dominant_failure_categories').label}: "
-            f"{dominant_labels}"
-        ),
+        (f"- {validator_report_field('dominant_failure_categories').label}: {dominant_labels}"),
     ]
     if occurrence_count != len(findings_list):
-        lines.append(
-            f"- {validator_report_field('finding_occurrences').label}: {occurrence_count}"
-        )
+        lines.append(f"- {validator_report_field('finding_occurrences').label}: {occurrence_count}")
     lines.append("")
 
     for section in finding_sections:
@@ -162,10 +154,7 @@ def render_validator_report(
             "## Result",
             "",
             f"- {validator_report_field('verdict').label}: `{verdict}`",
-            (
-                f"- {validator_report_field('repair_required').label}: "
-                f"{repair_required}"
-            ),
+            (f"- {validator_report_field('repair_required').label}: {repair_required}"),
             "",
         ]
     )

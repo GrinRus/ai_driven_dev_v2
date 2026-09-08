@@ -40,10 +40,7 @@ def test_runtime_product_surface_has_no_live_scenario_literals() -> None:
 
 def test_product_contracts_and_prompts_have_no_live_scenario_literals() -> None:
     product_files = tuple(
-        path
-        for root in _PRODUCT_TEXT_ROOTS
-        for path in sorted(root.rglob("*"))
-        if path.is_file()
+        path for root in _PRODUCT_TEXT_ROOTS for path in sorted(root.rglob("*")) if path.is_file()
     )
     violations = {
         path.as_posix(): literal

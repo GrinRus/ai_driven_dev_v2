@@ -53,9 +53,10 @@ def _validate_local_wheel_repository_root(repository_root: Path | None) -> Path:
             "source checkout, or pass a scenario path inside the source checkout."
         )
     resolved_repository_root = repository_root.resolve(strict=False)
-    if not (resolved_repository_root / "pyproject.toml").exists() or not (
-        resolved_repository_root / "contracts"
-    ).exists():
+    if (
+        not (resolved_repository_root / "pyproject.toml").exists()
+        or not (resolved_repository_root / "contracts").exists()
+    ):
         raise HarnessInstallError(
             "Local-wheel live eval requires a source checkout containing "
             "`pyproject.toml` and `contracts/`. Received "
@@ -114,9 +115,7 @@ def _run_command(
 
 
 def _validate_built_wheel_resources(wheel_path: Path) -> None:
-    expected_stage_contracts = {
-        f"aidd/_resources/contracts/stages/{stage}.md" for stage in STAGES
-    }
+    expected_stage_contracts = {f"aidd/_resources/contracts/stages/{stage}.md" for stage in STAGES}
     expected_document_contracts = {
         "aidd/_resources/contracts/documents/repair-extension.md",
         "aidd/_resources/contracts/documents/stage-result.md",
@@ -175,8 +174,7 @@ def _require_clean_tracked_head(repository_root: Path) -> str:
     if status.returncode != 0:
         stderr = status.stderr.strip() or status.stdout.strip() or "unknown git error"
         raise HarnessInstallError(
-            "Failed to inspect source checkout cleanliness before live eval: "
-            f"{stderr}"
+            f"Failed to inspect source checkout cleanliness before live eval: {stderr}"
         )
     if status.stdout.strip():
         raise HarnessInstallError(
@@ -316,14 +314,14 @@ def prepare_local_wheel_install(
         installed_command=(installed_binary.as_posix(),),
         command_transcripts=(build_transcript, install_transcript),
         duration_seconds=sum(
-            transcript.duration_seconds
-            for transcript in (build_transcript, install_transcript)
+            transcript.duration_seconds for transcript in (build_transcript, install_transcript)
         ),
         source_snapshot_path=source_snapshot_path,
         build_dist_path=dist_root,
         uv_cache_dir=uv_cache_dir,
         source_revision=source_revision,
     )
+
 
 __all__ = [
     "HarnessInstallError",

@@ -21,8 +21,7 @@ from aidd.harness.live_acceptance_session import (
 @pytest.fixture(autouse=True)
 def _isolation_capability(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -83,9 +82,7 @@ def test_session_preserves_source_and_publishes_cleanup_evidence(
     assert session.result.process_exit_code == 0
     assert session.result.cleanup["sentinel_removed"] is True
     assert user_file.read_text(encoding="utf-8") == "keep me\n"
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "pass"
     assert payload["schema_version"] == 2
     assert payload["provider_auth"] == {
@@ -124,8 +121,7 @@ def test_capability_failure_does_not_allocate_provider_layout(
         raise LiveAcceptanceIsolationError("backend unavailable")
 
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         _unsupported,
     )
 
@@ -154,9 +150,7 @@ def test_new_source_file_invalidates_session(tmp_path: Path) -> None:
                 encoding="utf-8",
             )
 
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
     assert "source untracked file set changed" in payload["violations"]
 
@@ -172,9 +166,7 @@ def test_changed_tracked_bytes_invalidate_session(tmp_path: Path) -> None:
         ):
             (source / "tracked.txt").write_text("mutated\n", encoding="utf-8")
 
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
     assert "source tracked bytes changed" in payload["violations"]
 
@@ -291,9 +283,7 @@ def test_target_root_symlink_invalidates_postflight(tmp_path: Path) -> None:
         ):
             (provider / "work").symlink_to(outside, target_is_directory=True)
 
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
     assert payload["cleanup"]["sentinel_removed"] is True
     assert payload["target_postflight"]["expected_roots"]["work"] == {
@@ -315,9 +305,7 @@ def test_cleanup_failure_invalidates_session_and_is_recorded(tmp_path: Path) -> 
         ):
             (provider / ".live-acceptance-session-active").unlink()
 
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
     assert payload["cleanup"]["sentinel_removed"] is False
     assert payload["cleanup"]["errors"]
@@ -353,12 +341,7 @@ def test_provider_auth_parent_symlink_invalidates_session_evidence(
                 probe_status="pass",
             )
 
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "fail"
     assert payload["provider_auth"]["cleanup_status"] == "failed"
-    assert (
-        "provider auth destination parent is not a real directory"
-        in payload["violations"]
-    )
+    assert "provider auth destination parent is not a real directory" in payload["violations"]

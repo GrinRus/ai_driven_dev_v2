@@ -40,11 +40,7 @@ def _roots(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
 def _targets_by_label(diagnostics: dict[str, object]) -> dict[str, dict[str, object]]:
     targets = diagnostics["targets"]
     assert isinstance(targets, list)
-    return {
-        str(target["label"]): target
-        for target in targets
-        if isinstance(target, dict)
-    }
+    return {str(target["label"]): target for target in targets if isinstance(target, dict)}
 
 
 def _git_source(tmp_path: Path) -> Path:
@@ -95,10 +91,7 @@ def _fake_auth_cli(
     expected_args = (
         '[ "$1" = "login" ] && [ "$2" = "status" ]'
         if runtime == "codex"
-        else (
-            '[ "$1" = "auth" ] && [ "$2" = "status" ] '
-            '&& [ "$3" = "--json" ]'
-        )
+        else ('[ "$1" = "auth" ] && [ "$2" = "status" ] && [ "$3" = "--json" ]')
     )
     executable.write_text(
         "#!/bin/sh\n"
@@ -107,7 +100,7 @@ def _fake_auth_cli(
         f"if [ -r {shlex.quote(sibling_marker.as_posix())} ]; then exit 32; fi\n"
         f"if printf 'mutated' >> {shlex.quote((source / 'tracked.txt').as_posix())} "
         "2>/dev/null; then exit 33; fi\n"
-        f"if [ ! -f \"$HOME/{relative_auth}\" ]; then "
+        f'if [ ! -f "$HOME/{relative_auth}" ]; then '
         "echo 'opaque-fixture-secret' >&2; exit 34; fi\n"
         f"grep -F 'opaque-fixture-secret' \"$HOME/{relative_auth}\" >/dev/null "
         "2>&1 || exit 35\n"
@@ -148,12 +141,11 @@ def test_private_environment_is_allowlisted_and_uses_provider_roots(
     assert boundary.environment["AIDD_OWN_CREDENTIAL"] == "own-secret"
     assert "AIDD_SIBLING_CREDENTIAL" not in boundary.environment
     assert "UNRELATED" not in boundary.environment
-    assert boundary.environment["HOME"] == (
-        provider / ".live-provider-private" / "home"
-    ).as_posix()
-    assert boundary.environment["XDG_CONFIG_HOME"] == (
-        provider / ".live-provider-private" / "config"
-    ).as_posix()
+    assert boundary.environment["HOME"] == (provider / ".live-provider-private" / "home").as_posix()
+    assert (
+        boundary.environment["XDG_CONFIG_HOME"]
+        == (provider / ".live-provider-private" / "config").as_posix()
+    )
     assert boundary.environment["AIDD_LIVE_ISOLATION_ACTIVE"] == "1"
     assert all(
         (provider / ".live-provider-private" / name).is_dir()
@@ -555,18 +547,9 @@ def test_macos_boundary_allows_selected_developer_toolchain_and_tls_for_git(
     profile = " ".join(boundary.launch_prefix)
     assert f'(subpath "{Path(selected).resolve().as_posix()}")' in profile
     assert '(subpath "/private/etc/ssl")' in profile
-    assert (
-        f'(allow file-write* (subpath "{provider.resolve().as_posix()}"))'
-        in profile
-    )
-    assert (
-        f'(allow file-write* (subpath "{operator_home.resolve().as_posix()}"))'
-        not in profile
-    )
-    assert (
-        f'(allow file-write* (subpath "{sibling.resolve().as_posix()}"))'
-        not in profile
-    )
+    assert f'(allow file-write* (subpath "{provider.resolve().as_posix()}"))' in profile
+    assert f'(allow file-write* (subpath "{operator_home.resolve().as_posix()}"))' not in profile
+    assert f'(allow file-write* (subpath "{sibling.resolve().as_posix()}"))' not in profile
     assert '(allow file-write* (subpath "/private/etc/ssl"))' not in profile
 
 
@@ -588,8 +571,7 @@ def test_launcher_uses_mandatory_session_guard(
     external.mkdir()
     provider = external / "provider"
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -647,9 +629,7 @@ def test_launcher_uses_mandatory_session_guard(
         )
         == 0
     )
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["status"] == "pass"
     assert payload["process_exit_code"] == 0
     assert payload["cleanup"]["sentinel_removed"] is True
@@ -673,8 +653,7 @@ def test_launcher_rejects_existing_provider_without_explicit_resume(
     provider = external / "provider"
     provider.mkdir(parents=True)
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -784,7 +763,7 @@ def test_launcher_resume_reuses_private_auth_and_reprobes(
     codex = fake_bin / "codex"
     codex.write_text(
         "#!/bin/sh\n"
-        "[ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ] || exit 30\n"
+        '[ "$1" = "login" ] && [ "$2" = "status" ] || exit 30\n'
         "grep -F 'opaque-fixture-secret' \"$HOME/.codex/auth.json\" "
         ">/dev/null 2>&1 || exit 31\n"
         "exit 0\n",
@@ -792,8 +771,7 @@ def test_launcher_resume_reuses_private_auth_and_reprobes(
     )
     codex.chmod(0o755)
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -850,13 +828,7 @@ def test_launcher_resume_reuses_private_auth_and_reprobes(
         )
         == 0
     )
-    private_auth = (
-        provider
-        / ".live-provider-private"
-        / "home"
-        / ".codex"
-        / "auth.json"
-    )
+    private_auth = provider / ".live-provider-private" / "home" / ".codex" / "auth.json"
     first_inode = private_auth.stat().st_ino
     first_bytes = private_auth.read_bytes()
 
@@ -876,9 +848,7 @@ def test_launcher_resume_reuses_private_auth_and_reprobes(
 
     assert private_auth.stat().st_ino == first_inode
     assert private_auth.read_bytes() == first_bytes
-    payload = json.loads(
-        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
-    )
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
     assert payload["provider_auth"] == {
         "cleanup_status": "private-auth-retained",
         "probe_status": "pass",
@@ -931,8 +901,7 @@ def test_seeded_private_auth_probe_crosses_real_boundary_before_evaluator(
         f"{fake_bin.as_posix()}:/usr/bin:/bin",
     )
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -963,20 +932,12 @@ def test_seeded_private_auth_probe_crosses_real_boundary_before_evaluator(
 
     assert exit_code == 0
     assert evaluator_sentinel.read_text(encoding="utf-8") == "launched"
-    relative_auth = (
-        Path(".codex/auth.json")
-        if runtime == "codex"
-        else Path(".claude.json")
-    )
-    private_auth = (
-        provider / ".live-provider-private" / "home" / relative_auth
-    )
+    relative_auth = Path(".codex/auth.json") if runtime == "codex" else Path(".claude.json")
+    private_auth = provider / ".live-provider-private" / "home" / relative_auth
     assert private_auth.is_file()
     assert not (sibling / relative_auth).exists()
     assert (source / "tracked.txt").read_text(encoding="utf-8") == "tracked\n"
-    payload_text = (provider / SESSION_INTEGRITY_FILENAME).read_text(
-        encoding="utf-8"
-    )
+    payload_text = (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
     payload = json.loads(payload_text)
     assert payload["provider_auth"] == {
         "cleanup_status": "private-auth-retained",
@@ -1034,8 +995,7 @@ def test_unseeded_private_auth_blocks_evaluator_inside_real_boundary(
         f"{fake_bin.as_posix()}:/usr/bin:/bin",
     )
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_session."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_session.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -1068,9 +1028,7 @@ def test_unseeded_private_auth_blocks_evaluator_inside_real_boundary(
     captured = capsys.readouterr()
     assert "provider-auth blocker" in captured.err
     assert "opaque-fixture-secret" not in captured.err
-    payload_text = (provider / SESSION_INTEGRITY_FILENAME).read_text(
-        encoding="utf-8"
-    )
+    payload_text = (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
     payload = json.loads(payload_text)
     assert payload["provider_auth"]["probe_status"] == "fail"
     assert payload["provider_auth"]["cleanup_status"] == "no-private-auth"

@@ -25,9 +25,9 @@ from aidd.validators.semantic_rules.evidence import (
         "`uv run --frozen python - <<'PY'\nprint('verified')\nPY` -> pass",
         "`perl -e 'alarm 4; exec @ARGV' -- uv run --frozen pytest -q tests/test_testclient.py "
         "-k 'test_streaming_response_is_available_after_first_chunk'` -> fail (exit code 142)",
-        "`out=$(git status --short --untracked-files=all | awk '$1 == \"??\" "
-        "&& $2 !~ /^\\.aidd\\// && $2 != \"aidd.example.toml\" { print }'); "
-        "test -z \"$out\"` -> pass",
+        '`out=$(git status --short --untracked-files=all | awk \'$1 == "??" '
+        '&& $2 !~ /^\\.aidd\\// && $2 != "aidd.example.toml" { print }\'); '
+        'test -z "$out"` -> pass',
         "`if git diff --name-only | rg -q -v '^(src|tests)/'; then exit 1; "
         "else exit 0; fi -> pass`",
         "`if git status --short; then exit 1; else exit 0; fi -> exit code 0`",

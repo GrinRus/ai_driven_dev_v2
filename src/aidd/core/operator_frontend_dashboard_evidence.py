@@ -484,9 +484,7 @@ def _metadata_stage_rail_items(
         title, subtitle = _STAGE_UI_COPY[stage]
         metadata_summary = metadata_by_stage.get(stage)
         status = (
-            metadata_summary.status
-            if metadata_summary is not None
-            else StageState.PENDING.value
+            metadata_summary.status if metadata_summary is not None else StageState.PENDING.value
         )
         can_run = metadata is None and index == 0
         reason = "not started"
@@ -662,11 +660,7 @@ def _blockers(
                 ),
             )
         )
-    if (
-        active_stage_view is not None
-        and result is not None
-        and result.validator_fail_count
-    ):
+    if active_stage_view is not None and result is not None and result.validator_fail_count:
         finding = active_stage_view.diagnostics.validation.primary_validation_finding
         detail = (
             _validation_finding_detail(finding)
@@ -696,10 +690,7 @@ def _blockers(
                     stage=rail_item.stage,
                 )
             )
-        if (
-            rail_item.validator_fail_count
-            and rail_item.status != StageState.SUCCEEDED.value
-        ):
+        if rail_item.validator_fail_count and rail_item.status != StageState.SUCCEEDED.value:
             finding = _primary_validation_finding_for_stage(
                 workspace_root=workspace_root,
                 work_item=work_item,
@@ -742,8 +733,8 @@ def _blockers(
 
 
 def _read_review_approval_status(*, workspace_root: Path, work_item: str) -> str | None:
-    review_report = workspace_root / "workitems" / work_item / "stages" / "review" / (
-        "review-report.md"
+    review_report = (
+        workspace_root / "workitems" / work_item / "stages" / "review" / ("review-report.md")
     )
     if not review_report.exists():
         return None
@@ -1058,8 +1049,7 @@ def _first_failure(
             continue
         latest_repair = stage_metadata.repair_history[-1] if stage_metadata.repair_history else None
         if latest_repair is not None and any(
-            marker in latest_repair.outcome.lower()
-            for marker in ("exhaust", "failed", "invalid")
+            marker in latest_repair.outcome.lower() for marker in ("exhaust", "failed", "invalid")
         ):
             return OperatorFirstFailure(
                 kind="repair-exhausted",
@@ -1403,13 +1393,16 @@ def _runtime_events_activity(
     )
     if attempt_number is None:
         return []
-    events_path = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / RUN_EVENTS_JSONL_FILENAME
+    events_path = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / RUN_EVENTS_JSONL_FILENAME
+    )
     if not events_path.exists():
         return []
 
@@ -1467,9 +1460,7 @@ def _recent_activity(
             )
         )
     return tuple(
-        sorted(events, key=lambda event: event.time_utc or "", reverse=True)[
-            :_MAX_ACTIVITY_EVENTS
-        ]
+        sorted(events, key=lambda event: event.time_utc or "", reverse=True)[:_MAX_ACTIVITY_EVENTS]
     )
 
 
@@ -1582,9 +1573,7 @@ def _recent_artifacts(
             )
         )
     return tuple(
-        sorted(refs, key=lambda ref: ref.updated_at_utc or "", reverse=True)[
-            :_MAX_RECENT_ARTIFACTS
-        ]
+        sorted(refs, key=lambda ref: ref.updated_at_utc or "", reverse=True)[:_MAX_RECENT_ARTIFACTS]
     )
 
 
@@ -1592,9 +1581,7 @@ def _read_qa_verdict(*, workspace_root: Path, work_item: str) -> str | None:
     qa_report = workspace_root / "workitems" / work_item / "stages" / "qa" / "qa-report.md"
     if not qa_report.exists():
         return None
-    matched = _QA_VERDICT_PATTERN.search(
-        qa_report.read_text(encoding="utf-8", errors="replace")
-    )
+    matched = _QA_VERDICT_PATTERN.search(qa_report.read_text(encoding="utf-8", errors="replace"))
     return matched.group(1).lower() if matched is not None else None
 
 
@@ -1724,7 +1711,7 @@ def _compact_repair_reason(text: str) -> str:
         return ""
     if len(normalized) <= _MAX_REPAIR_REASON_CHARS:
         return normalized
-    return f"{normalized[:_MAX_REPAIR_REASON_CHARS - 1].rstrip()}..."
+    return f"{normalized[: _MAX_REPAIR_REASON_CHARS - 1].rstrip()}..."
 
 
 def _read_repair_reason(
@@ -1990,9 +1977,7 @@ def _terminal_handoff(
     missing_terminal_evidence = _missing_terminal_evidence_labels(final_artifacts)
     qa_verdict = _read_qa_verdict(workspace_root=workspace_root, work_item=work_item)
     final_qa_status = (
-        "evidence-incomplete"
-        if missing_terminal_evidence
-        else qa_verdict or qa_result.final_state
+        "evidence-incomplete" if missing_terminal_evidence else qa_verdict or qa_result.final_state
     )
     handoff_status = _terminal_handoff_status(
         qa_stage_state=qa_result.final_state,
@@ -2209,10 +2194,7 @@ def _collect_operator_dashboard_evidence(
         stages_with_operator_requests=stages_with_operator_requests,
     )
     validation_stage = active_stage
-    if (
-        next_action.action in {"inspect-validation", "review-intervention"}
-        and next_action.stage
-    ):
+    if next_action.action in {"inspect-validation", "review-intervention"} and next_action.stage:
         validation_stage = next_action.stage
     elif (
         first_failure is not None
@@ -2243,9 +2225,7 @@ def _collect_operator_dashboard_evidence(
         blockers=blockers,
         first_failure=first_failure,
         validation_findings=validation_findings,
-        primary_validation_finding=(
-            validation_findings[0] if validation_findings else None
-        ),
+        primary_validation_finding=(validation_findings[0] if validation_findings else None),
         recovery_actions=_recovery_actions(
             next_action=next_action,
             first_failure=first_failure,

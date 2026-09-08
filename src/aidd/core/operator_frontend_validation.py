@@ -64,18 +64,18 @@ def parse_validator_report_findings(
 ) -> tuple[OperatorValidationFindingView, ...]:
     report = parse_validator_report(markdown_text)
     findings = [
-            OperatorValidationFindingView(
-                category=finding.category,
-                code=finding.code,
-                severity=finding.severity,
-                path=finding.source_path,
-                line_number=finding.source_line_number,
-                message=finding.message,
-                occurrence_count=finding.occurrence_count,
-                operator_hint=_operator_hint(code=finding.code, message=finding.message),
-            )
-            for finding in report.findings
-        ]
+        OperatorValidationFindingView(
+            category=finding.category,
+            code=finding.code,
+            severity=finding.severity,
+            path=finding.source_path,
+            line_number=finding.source_line_number,
+            message=finding.message,
+            occurrence_count=finding.occurrence_count,
+            operator_hint=_operator_hint(code=finding.code, message=finding.message),
+        )
+        for finding in report.findings
+    ]
     return _merge_duplicate_findings(findings)
 
 

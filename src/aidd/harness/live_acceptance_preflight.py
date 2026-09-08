@@ -62,9 +62,10 @@ def _run_git(source_checkout: Path, *args: str) -> str:
 
 def capture_tracked_source_state(source_checkout: Path) -> TrackedSourceState:
     resolved_source = source_checkout.resolve(strict=False)
-    if not (resolved_source / "pyproject.toml").is_file() or not (
-        resolved_source / "contracts"
-    ).is_dir():
+    if (
+        not (resolved_source / "pyproject.toml").is_file()
+        or not (resolved_source / "contracts").is_dir()
+    ):
         raise LiveAcceptancePreflightError(
             "Source checkout must be an AIDD repository containing pyproject.toml and contracts/."
         )
@@ -115,15 +116,12 @@ def _validate_layout_roots(
             "Provider root must be one unsymlinked component below the external root."
         )
     roots = tuple(
-        (provider_root / name).resolve(strict=False)
-        for name in ("work", "reports", "browser")
+        (provider_root / name).resolve(strict=False) for name in ("work", "reports", "browser")
     )
     if any(not root.is_relative_to(provider_root) for root in roots):
         raise LiveAcceptancePreflightError("Provider roots must stay inside one provider subtree.")
     roots_overlap = any(
-        _is_nested(left, right)
-        for index, left in enumerate(roots)
-        for right in roots[index + 1 :]
+        _is_nested(left, right) for index, left in enumerate(roots) for right in roots[index + 1 :]
     )
     if roots_overlap:
         raise LiveAcceptancePreflightError(

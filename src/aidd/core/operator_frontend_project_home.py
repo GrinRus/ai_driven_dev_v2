@@ -188,7 +188,8 @@ def _work_item_summary(
                 for stage in stages
                 if stage.status in {"preparing", "executing", "validating"}
             ),
-            dashboard.next_action.stage or next(
+            dashboard.next_action.stage
+            or next(
                 (stage.stage for stage in stages if stage.status != "succeeded"),
                 _active_stage_from_run(dashboard.run),
             ),

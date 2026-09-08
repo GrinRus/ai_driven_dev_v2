@@ -141,7 +141,7 @@ def _fake_codex(
         "if descendant_signal_path and '--help' not in sys.argv:\n"
         "    ready_path = descendant_signal_path + '.ready'\n"
         "    pid_path = descendant_signal_path + '.pid'\n"
-        "    child = \"import pathlib,signal,sys,time; "
+        '    child = "import pathlib,signal,sys,time; '
         "signal.signal(signal.SIGTERM, lambda s,f: "
         "(pathlib.Path(sys.argv[1]).write_text(str(s)), sys.exit(0))); "
         "pathlib.Path(sys.argv[2]).write_text(str(__import__('os').getpid())); "
@@ -250,9 +250,11 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
     assert provider.requests[0].payload["command"] == "npm install"
     transcript = [
         json.loads(line)
-        for line in (attempt_path / "codex-app-server.jsonl").read_text(
+        for line in (attempt_path / "codex-app-server.jsonl")
+        .read_text(
             encoding="utf-8",
-        ).splitlines()
+        )
+        .splitlines()
     ]
     approval_response = [
         item["payload"]
@@ -263,14 +265,12 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
     thread_start = [
         item["payload"]
         for item in transcript
-        if item["direction"] == "client"
-        and item["payload"].get("method") == "thread/start"
+        if item["direction"] == "client" and item["payload"].get("method") == "thread/start"
     ][0]
     turn_start = [
         item["payload"]
         for item in transcript
-        if item["direction"] == "client"
-        and item["payload"].get("method") == "turn/start"
+        if item["direction"] == "client" and item["payload"].get("method") == "turn/start"
     ][0]
     assert thread_start["params"]["sandbox"] == "read-only"
     assert thread_start["params"]["approvalPolicy"] == {
@@ -311,21 +311,21 @@ def test_codex_live_transport_maps_typed_selectors_to_native_start_payloads(
     assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED
     transcript = [
         json.loads(line)
-        for line in (attempt_path / "codex-app-server.jsonl").read_text(
+        for line in (attempt_path / "codex-app-server.jsonl")
+        .read_text(
             encoding="utf-8",
-        ).splitlines()
+        )
+        .splitlines()
     ]
     thread_start = next(
         item["payload"]
         for item in transcript
-        if item["direction"] == "client"
-        and item["payload"].get("method") == "thread/start"
+        if item["direction"] == "client" and item["payload"].get("method") == "thread/start"
     )
     turn_start = next(
         item["payload"]
         for item in transcript
-        if item["direction"] == "client"
-        and item["payload"].get("method") == "turn/start"
+        if item["direction"] == "client" and item["payload"].get("method") == "turn/start"
     )
     assert thread_start["params"]["model"] == "gpt-5.6-luna"
     assert "effort" not in thread_start["params"]
@@ -362,15 +362,16 @@ def test_codex_live_transport_preserves_supported_model_option(
     assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED
     transcript = [
         json.loads(line)
-        for line in (attempt_path / "codex-app-server.jsonl").read_text(
+        for line in (attempt_path / "codex-app-server.jsonl")
+        .read_text(
             encoding="utf-8",
-        ).splitlines()
+        )
+        .splitlines()
     ]
     thread_start = next(
         item["payload"]
         for item in transcript
-        if item["direction"] == "client"
-        and item["payload"].get("method") == "thread/start"
+        if item["direction"] == "client" and item["payload"].get("method") == "thread/start"
     )
     assert thread_start["params"]["model"] == expected_model
 
@@ -386,10 +387,7 @@ def test_codex_live_parser_accepts_managed_default_commands() -> None:
         ).executable
         == "codex"
     )
-    assert (
-        parse_codex_live_command(definition.brokered_default_command or "").executable
-        == "codex"
-    )
+    assert parse_codex_live_command(definition.brokered_default_command or "").executable == "codex"
 
 
 @pytest.mark.parametrize(
@@ -432,9 +430,7 @@ def test_codex_live_transport_rejects_unsupported_arguments_before_launch(
             request=_request(tmp_path),
             attempt_path=attempt_path,
             base_env={},
-            operator_decision_provider=_DecisionProvider(
-                RuntimeOperatorDecisionAction.ALLOW_ONCE
-            ),
+            operator_decision_provider=_DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE),
         )
 
     assert launches == []
@@ -458,9 +454,7 @@ def test_codex_live_transport_denial_fails_stage(tmp_path: Path) -> None:
     assert result.details == "permission-denied: deny"
     assert result.runtime_log_path == attempt_path / "runtime.log"
     assert result.runtime_exit_metadata_path == attempt_path / "runtime-exit.json"
-    exit_metadata = json.loads(
-        result.runtime_exit_metadata_path.read_text(encoding="utf-8")
-    )
+    exit_metadata = json.loads(result.runtime_exit_metadata_path.read_text(encoding="utf-8"))
     assert exit_metadata["adapter_outcome"] == "denial"
     assert exit_metadata["exit_classification"] == "denied"
     assert exit_metadata["exit_code"] is None
@@ -484,15 +478,11 @@ def test_codex_live_transport_blocks_when_provider_has_no_decision(tmp_path: Pat
     assert provider.requests[0].id == "approval-1"
     assert (attempt_path / "operator-requests.jsonl").exists()
     assert (attempt_path / "codex-app-server.jsonl").exists()
-    exit_metadata = json.loads(
-        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
-    )
+    exit_metadata = json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))
     assert exit_metadata["adapter_outcome"] == "blocked"
     assert exit_metadata["exit_classification"] == "blocked"
     assert exit_metadata["exit_code"] is None
-    assert "requestApproval" in (attempt_path / "runtime.log").read_text(
-        encoding="utf-8"
-    )
+    assert "requestApproval" in (attempt_path / "runtime.log").read_text(encoding="utf-8")
 
 
 def test_codex_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
@@ -550,9 +540,12 @@ def test_codex_live_transport_persists_cancelled_outcome(
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "codex-live: cancelled"
-    assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
-        "exit_classification"
-    ] == "cancelled"
+    assert (
+        json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
+            "exit_classification"
+        ]
+        == "cancelled"
+    )
     assert result.adapter_outcome is not None
     assert result.adapter_outcome.value == "cancellation"
     assert (attempt_path / "runtime.log").exists()
@@ -562,22 +555,16 @@ def test_codex_live_protocol_failure_commits_failed_evidence(tmp_path: Path) -> 
     attempt_path = tmp_path / "attempt"
 
     result = get_runtime_adapter_surface("codex").execute_stage_request(
-        configured_command=(
-            f"{_fake_codex(tmp_path, scenario='protocol_failure')} exec --json -"
-        ),
+        configured_command=(f"{_fake_codex(tmp_path, scenario='protocol_failure')} exec --json -"),
         request=_request(tmp_path),
         attempt_path=attempt_path,
         base_env={},
-        operator_decision_provider=_DecisionProvider(
-            RuntimeOperatorDecisionAction.ALLOW_ONCE
-        ),
+        operator_decision_provider=_DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE),
     )
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert "protocol failure" in result.details
-    exit_metadata = json.loads(
-        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
-    )
+    exit_metadata = json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))
     assert exit_metadata["adapter_outcome"] == "runtime_failure"
     assert exit_metadata["exit_classification"] == "protocol_failure"
     assert exit_metadata["exit_code"] is None
@@ -608,9 +595,11 @@ def test_codex_live_transport_handles_file_and_permissions_requests(
     assert provider.requests[0].id == "perm-approval"
     transcript = [
         json.loads(line)
-        for line in (attempt_path / "codex-app-server.jsonl").read_text(
+        for line in (attempt_path / "codex-app-server.jsonl")
+        .read_text(
             encoding="utf-8",
-        ).splitlines()
+        )
+        .splitlines()
     ]
     permission_response = [
         item["payload"]

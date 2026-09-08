@@ -65,11 +65,7 @@ def _default_live_native_command(*, runtime_id: str) -> str:
         return definition.default_command
     insertion_index = exec_index + 1
     existing = set(tokens)
-    options = [
-        option
-        for option in _LIVE_CODEX_NATIVE_STARTUP_OPTIONS
-        if option not in existing
-    ]
+    options = [option for option in _LIVE_CODEX_NATIVE_STARTUP_OPTIONS if option not in existing]
     return shlex.join(
         [*tokens[:insertion_index], *options, *tokens[insertion_index:]],
     )
@@ -97,9 +93,7 @@ def resolve_live_runtime_command_entries(
         if not command_value:
             command_value = _default_live_native_command(runtime_id=runtime_id)
             command_source = (
-                "default-native"
-                if execution_mode is RuntimeExecutionMode.NATIVE
-                else "default"
+                "default-native" if execution_mode is RuntimeExecutionMode.NATIVE else "default"
             )
         entries[runtime_id] = LiveRuntimeCommand(
             runtime_id=runtime_id,
@@ -173,10 +167,7 @@ def _validate_provider_auth_for_native_live_runtime(
     source: Mapping[str, str],
     executable: str,
 ) -> None:
-    if (
-        runtime_id != "codex"
-        or command_entry.execution_mode is not RuntimeExecutionMode.NATIVE
-    ):
+    if runtime_id != "codex" or command_entry.execution_mode is not RuntimeExecutionMode.NATIVE:
         return
 
     check_command = [executable, "login", "status"]

@@ -516,8 +516,7 @@ def _placeholder_section_content(
     section: SemanticSection,
 ) -> str:
     if not (
-        context.document_name == "stage-result.md"
-        and normalized_heading(section.name) == "stage"
+        context.document_name == "stage-result.md" and normalized_heading(section.name) == "stage"
     ):
         return section.content
 
@@ -528,9 +527,7 @@ def _placeholder_section_content(
     end_line = len(context.markdown_lines)
     if heading_index + 1 < len(context.headings):
         end_line = context.headings[heading_index + 1].line_number - 1
-    return "\n".join(
-        context.markdown_lines[heading.line_number:end_line]
-    ).strip()
+    return "\n".join(context.markdown_lines[heading.line_number : end_line]).strip()
 
 
 def extract_review_finding_blocks(section_content: str) -> tuple[str, ...]:
@@ -583,10 +580,7 @@ def review_spec_issue_has_explicit_severity(issue_block: str) -> bool:
     if has_explicit_severity(issue_block):
         return True
     inline_severity_match = REVIEW_SPEC_INLINE_SEVERITY_LABEL_PATTERN.search(issue_block)
-    if (
-        inline_severity_match is not None
-        and inline_severity_match.group(1).lower() != "none"
-    ):
+    if inline_severity_match is not None and inline_severity_match.group(1).lower() != "none":
         return True
     if REVIEW_SPEC_NO_ISSUE_SEVERITY_PATTERN.search(issue_block) is None:
         return False

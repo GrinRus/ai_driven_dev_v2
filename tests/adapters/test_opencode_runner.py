@@ -48,8 +48,8 @@ def test_assemble_command_includes_stage_workspace_brief_and_prompt_packs(
 
     expected_workspace = context.workspace_root.resolve(strict=False).as_posix()
     expected_stage_brief = (
-        context.workspace_root / context.stage_brief_path
-    ).resolve(strict=False).as_posix()
+        (context.workspace_root / context.stage_brief_path).resolve(strict=False).as_posix()
+    )
     expected_prompt_1 = (tmp_path / context.prompt_pack_paths[0]).resolve(strict=False).as_posix()
     expected_prompt_2 = (tmp_path / context.prompt_pack_paths[1]).resolve(strict=False).as_posix()
 
@@ -97,9 +97,10 @@ def test_build_execution_environment_sets_runtime_metadata(tmp_path: Path) -> No
     assert env["AIDD_WORK_ITEM"] == "WI-123"
     assert env["AIDD_RUN_ID"] == "run-001"
     assert env["AIDD_WORKSPACE_ROOT"] == context.workspace_root.resolve(strict=False).as_posix()
-    assert env["AIDD_STAGE_BRIEF_PATH"] == (
-        context.workspace_root / context.stage_brief_path
-    ).resolve(strict=False).as_posix()
+    assert (
+        env["AIDD_STAGE_BRIEF_PATH"]
+        == (context.workspace_root / context.stage_brief_path).resolve(strict=False).as_posix()
+    )
     assert env["AIDD_PROMPT_PACK_PATHS"] == os.pathsep.join(
         (tmp_path / path).resolve(strict=False).as_posix() for path in context.prompt_pack_paths
     )
@@ -145,9 +146,9 @@ def test_build_native_subprocess_spec_uses_prompt_file_without_adapter_flags(
         "--file"
     )
     assert "--dir" in spec.command
-    assert spec.command[spec.command.index("--dir") + 1] == tmp_path.resolve(
-        strict=False
-    ).as_posix()
+    assert (
+        spec.command[spec.command.index("--dir") + 1] == tmp_path.resolve(strict=False).as_posix()
+    )
     assert "--file" in spec.command
     prompt_path = Path(spec.command[spec.command.index("--file") + 1])
     assert prompt_path.relative_to(context.workspace_root) == Path(
@@ -220,9 +221,7 @@ def test_run_subprocess_with_streaming_classifies_zero_exit_provider_error_paylo
     assert result.exit_classification is OpenCodeExitClassification.PROVIDER_ERROR
     assert "usage limit reached" in result.runtime_log_text
     runtime_exit_metadata = json.loads(
-        (runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME).read_text(
-            encoding="utf-8"
-        )
+        (runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME).read_text(encoding="utf-8")
     )
     assert runtime_exit_metadata["exit_classification"] == "provider_error"
 

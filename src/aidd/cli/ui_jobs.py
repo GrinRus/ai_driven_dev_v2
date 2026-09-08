@@ -423,9 +423,7 @@ class UiRunJobStore:
             self._evict_terminal_locked(self._now_utc())
             job = self._require_job(job_id)
             requested_cursor = min(max(cursor, 0), job.next_chunk_cursor)
-            oldest_cursor = (
-                job.chunks[0].start_cursor if job.chunks else job.next_chunk_cursor
-            )
+            oldest_cursor = job.chunks[0].start_cursor if job.chunks else job.next_chunk_cursor
             response_cursor = max(requested_cursor, oldest_cursor)
             truncated = response_cursor != requested_cursor
             remaining_budget = self._max_log_response_bytes
@@ -452,8 +450,7 @@ class UiRunJobStore:
                     "start_cursor": response_cursor,
                     "end_cursor": fragment_end,
                     "partial": (
-                        response_cursor > chunk.start_cursor
-                        or fragment_end < chunk.end_cursor
+                        response_cursor > chunk.start_cursor or fragment_end < chunk.end_cursor
                     ),
                 }
                 if chunk.truncated:
@@ -682,9 +679,7 @@ class UiRunJobStore:
         return max(0, int((self._now_utc() - timestamp).total_seconds()))
 
     def _evict_terminal_locked(self, now: datetime) -> None:
-        terminal_jobs = [
-            job for job in self._jobs.values() if job.status in _TERMINAL_JOB_STATUSES
-        ]
+        terminal_jobs = [job for job in self._jobs.values() if job.status in _TERMINAL_JOB_STATUSES]
         for job in terminal_jobs:
             updated_at = _parse_utc_timestamp(job.updated_at_utc)
             if (
@@ -693,11 +688,7 @@ class UiRunJobStore:
             ):
                 self._jobs.pop(job.job_id, None)
         retained_terminal = sorted(
-            (
-                job
-                for job in self._jobs.values()
-                if job.status in _TERMINAL_JOB_STATUSES
-            ),
+            (job for job in self._jobs.values() if job.status in _TERMINAL_JOB_STATUSES),
             key=lambda job: (
                 _parse_utc_timestamp(job.updated_at_utc) or datetime.min.replace(tzinfo=UTC),
                 job.ordinal,

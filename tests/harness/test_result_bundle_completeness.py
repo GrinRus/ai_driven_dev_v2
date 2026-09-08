@@ -68,9 +68,7 @@ def _build_transcript(*, command: str, exit_code: int = 0) -> HarnessCommandTran
     )
 
 
-def _write_run_artifact_sources(
-    *, source_root: Path, status: str
-) -> tuple[Path, Path, Path]:
+def _write_run_artifact_sources(*, source_root: Path, status: str) -> tuple[Path, Path, Path]:
     source_root.mkdir(parents=True, exist_ok=True)
     runtime_log_path = source_root / "runtime.log"
     validator_report_path = source_root / "validator-report.md"

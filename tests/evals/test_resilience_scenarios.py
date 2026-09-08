@@ -42,8 +42,7 @@ def test_provider_free_resilience_suite_retains_lifecycle_and_raw_evidence() -> 
         assert scenario.terminal_state
         assert scenario.attempt_modes
         assert (
-            scenario.automatic_repair_budget["consumed"]
-            <= scenario.automatic_repair_budget["max"]
+            scenario.automatic_repair_budget["consumed"] <= scenario.automatic_repair_budget["max"]
         )
         assert scenario.canonical_records
         assert scenario.workflow_records

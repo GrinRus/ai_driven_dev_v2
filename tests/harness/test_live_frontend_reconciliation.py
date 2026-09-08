@@ -20,10 +20,13 @@ def test_running_checkpoint_starts_provisional(
     classification: str,
     expected: str,
 ) -> None:
-    assert provisional_frontend_status(
-        phase="running-stage",
-        classification=classification,  # type: ignore[arg-type]
-    ) == expected
+    assert (
+        provisional_frontend_status(
+            phase="running-stage",
+            classification=classification,  # type: ignore[arg-type]
+        )
+        == expected
+    )
 
 
 def test_running_failure_is_superseded_by_durable_success_and_post_pass() -> None:

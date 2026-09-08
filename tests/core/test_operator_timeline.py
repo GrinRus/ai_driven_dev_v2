@@ -68,12 +68,7 @@ def test_operator_run_timeline_uses_existing_metadata_and_artifacts(
         encoding="utf-8",
     )
     questions_path = (
-        workspace_root
-        / "workitems"
-        / "WI-UI"
-        / "stages"
-        / "implement"
-        / "questions.md"
+        workspace_root / "workitems" / "WI-UI" / "stages" / "implement" / "questions.md"
     )
     questions_path.parent.mkdir(parents=True, exist_ok=True)
     questions_path.write_text("# Questions\n\n- `Q1` Need detail.\n", encoding="utf-8")
@@ -93,9 +88,7 @@ def test_operator_run_timeline_uses_existing_metadata_and_artifacts(
     assert "questions" in kinds
     assert any(event.message == "validator.started" for event in view.events)
     stage_frames = [frame for frame in view.frames if frame.kind == "stage-attempt"]
-    assert [frame.identity for frame in stage_frames] == [
-        "stage:implement:attempt:0001"
-    ]
+    assert [frame.identity for frame in stage_frames] == ["stage:implement:attempt:0001"]
     assert "reports/runs/WI-UI/run-ui/stages/implement/attempts/attempt-0001/runtime.log" in (
         stage_frames[0].evidence_refs
     )
@@ -235,16 +228,16 @@ def test_operator_timeline_uses_referenced_stage_attempt_bounds_without_task_tim
             {
                 "schema_version": 1,
                 "task_id": "TL-2",
-                    "task_attempt_number": 1,
-                    "stage": "implement",
-                    "lineage": {
-                        "schema_version": 1,
-                        "scope": "task",
-                        "attempt_kind": "task",
-                        "attempt_number": 1,
-                        "parent_attempt_path": None,
-                    },
-                    "stage_attempts": [
+                "task_attempt_number": 1,
+                "stage": "implement",
+                "lineage": {
+                    "schema_version": 1,
+                    "scope": "task",
+                    "attempt_kind": "task",
+                    "attempt_number": 1,
+                    "parent_attempt_path": None,
+                },
+                "stage_attempts": [
                     {
                         "attempt_number": 1,
                         "path": "reports/runs/WI-UI/run-ui/stages/implement/attempts/attempt-0001",

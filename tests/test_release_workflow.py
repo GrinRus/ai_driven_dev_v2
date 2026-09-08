@@ -74,9 +74,7 @@ def test_release_workflow_has_pypi_install_verification_job() -> None:
 def test_release_workflow_uses_installed_pipx_binary_with_pip_backend() -> None:
     verify_job = _release_workflow_jobs()["verify-pypi-install"]
     run_blocks = _job_run_blocks(verify_job)
-    verification_step = _named_step(
-        verify_job, "Verify published package installability via pipx"
-    )
+    verification_step = _named_step(verify_job, "Verify published package installability via pipx")
 
     assert verification_step["env"]["PIPX_HOME"] == "${{ runner.temp }}/pipx-home"
     assert verification_step["env"]["PIPX_BIN_DIR"] == "${{ runner.temp }}/pipx-bin"
@@ -91,12 +89,12 @@ def test_release_workflow_hash_locks_the_pipx_bootstrap() -> None:
     repo_root = _repo_root()
     verify_job = _release_workflow_jobs()["verify-pypi-install"]
     run_blocks = _job_run_blocks(verify_job)
-    requirements_input = (
-        repo_root / ".github" / "requirements-release-tools.in"
-    ).read_text(encoding="utf-8")
-    requirements_lock = (
-        repo_root / ".github" / "requirements-release-tools.txt"
-    ).read_text(encoding="utf-8")
+    requirements_input = (repo_root / ".github" / "requirements-release-tools.in").read_text(
+        encoding="utf-8"
+    )
+    requirements_lock = (repo_root / ".github" / "requirements-release-tools.txt").read_text(
+        encoding="utf-8"
+    )
 
     assert "pip install --disable-pip-version-check --require-hashes" in run_blocks
     assert "-r .github/requirements-release-tools.txt" in run_blocks
@@ -179,11 +177,9 @@ def test_release_workflow_keeps_runner_context_at_step_scope() -> None:
 
     for job_id, job in jobs.items():
         job_env = job.get("env", {})
-        assert all(
-            "${{ runner." not in str(value)
-            for value in job_env.values()
-        ), f"runner context is not available in job-level env for {job_id}"
-
+        assert all("${{ runner." not in str(value) for value in job_env.values()), (
+            f"runner context is not available in job-level env for {job_id}"
+        )
 
 
 def test_release_workflow_does_not_publish_container_images_for_alpha() -> None:

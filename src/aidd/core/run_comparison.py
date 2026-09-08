@@ -142,9 +142,7 @@ def _prompt_deltas(
             f"Run '{target.run_id}' has no prompt-pack provenance; "
             "prompt deltas may be incomplete.",
         )
-    baseline_prompts = {
-        entry.path: entry.sha256 for entry in baseline.prompt_pack_provenance
-    }
+    baseline_prompts = {entry.path: entry.sha256 for entry in baseline.prompt_pack_provenance}
     target_prompts = {entry.path: entry.sha256 for entry in target.prompt_pack_provenance}
     deltas: list[RunComparisonPromptDelta] = []
     for path in sorted(set(baseline_prompts) | set(target_prompts)):
@@ -272,8 +270,7 @@ def _hash_workspace_artifact(
             except ValidatorReportProtocolError as exc:
                 _append_warning(
                     warnings,
-                    f"Run '{run_id}' validator report for stage '{stage}' is corrupted: "
-                    f"{exc}",
+                    f"Run '{run_id}' validator report for stage '{stage}' is corrupted: {exc}",
                 )
     return digest, byte_size, truncated, verdict
 
@@ -438,13 +435,9 @@ def _validator_deltas(
         if snapshot.kind == "document" and snapshot.key == "validator_report"
     }
     ordered_stages = [
-        stage
-        for stage in STAGES
-        if stage in baseline_validators or stage in target_validators
+        stage for stage in STAGES if stage in baseline_validators or stage in target_validators
     ]
-    extra_stages = sorted(
-        (set(baseline_validators) | set(target_validators)) - set(STAGES)
-    )
+    extra_stages = sorted((set(baseline_validators) | set(target_validators)) - set(STAGES))
     deltas: list[RunComparisonValidatorDelta] = []
     for stage in (*ordered_stages, *extra_stages):
         baseline_snapshot = baseline_validators.get(stage)
@@ -452,17 +445,13 @@ def _validator_deltas(
         baseline_verdict = (
             baseline_snapshot.validator_verdict if baseline_snapshot is not None else None
         )
-        target_verdict = (
-            target_snapshot.validator_verdict if target_snapshot is not None else None
-        )
+        target_verdict = target_snapshot.validator_verdict if target_snapshot is not None else None
         deltas.append(
             RunComparisonValidatorDelta(
                 stage=stage,
                 baseline_verdict=baseline_verdict,
                 target_verdict=target_verdict,
-                baseline_path=(
-                    baseline_snapshot.path if baseline_snapshot is not None else None
-                ),
+                baseline_path=(baseline_snapshot.path if baseline_snapshot is not None else None),
                 target_path=target_snapshot.path if target_snapshot is not None else None,
                 status=_delta_status(baseline_verdict, target_verdict),
             )

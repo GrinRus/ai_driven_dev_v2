@@ -296,9 +296,7 @@ class StageRunMetadata:
         )
         if not payload["status_history"]:
             raise ValueError("Stage metadata requires nonempty status_history.")
-        history = tuple(
-            StageStatusChange.from_dict(change) for change in payload["status_history"]
-        )
+        history = tuple(StageStatusChange.from_dict(change) for change in payload["status_history"])
         repair_history = tuple(
             RepairHistoryEntry.from_dict(entry) for entry in payload["repair_history"]
         )

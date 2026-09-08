@@ -79,9 +79,7 @@ ENTRYPOINT_CONFORMANCE = (
 def _function_calls(path: Path, owner: str) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     definition = next(
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == owner
+        node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == owner
     )
     calls: set[str] = set()
     for node in ast.walk(definition):

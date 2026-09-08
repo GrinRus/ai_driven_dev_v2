@@ -142,7 +142,8 @@ def build_native_prompt_text(
         )
     if (
         resolved_operator_request_path is not None
-        or operator_request_markdown is not None and operator_request_markdown.strip()
+        or operator_request_markdown is not None
+        and operator_request_markdown.strip()
     ):
         lines.extend(("", "## Operator request context", ""))
         if resolved_operator_request_path is not None:

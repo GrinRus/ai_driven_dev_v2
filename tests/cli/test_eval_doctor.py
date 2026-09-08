@@ -64,9 +64,7 @@ def test_eval_doctor_reports_native_live_readiness(
     bin_dir.mkdir()
     codex = bin_dir / "codex"
     codex.write_text(
-        "#!/bin/sh\n"
-        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
-        "exit 0\n",
+        '#!/bin/sh\nif [ "$1" = "login" ] && [ "$2" = "status" ]; then exit 0; fi\nexit 0\n',
         encoding="utf-8",
     )
     codex.chmod(0o755)
@@ -93,7 +91,7 @@ def test_eval_doctor_reports_codex_native_auth_failure(
     codex = bin_dir / "codex"
     codex.write_text(
         "#!/bin/sh\n"
-        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then\n"
+        'if [ "$1" = "login" ] && [ "$2" = "status" ]; then\n'
         "  echo 'not logged in' >&2\n"
         "  exit 7\n"
         "fi\n"

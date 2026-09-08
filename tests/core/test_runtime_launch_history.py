@@ -140,7 +140,10 @@ def test_runtime_launch_history_marks_retired_and_malformed_evidence(tmp_path: P
 
 
 def test_runtime_launch_history_is_empty_without_runs(tmp_path: Path) -> None:
-    assert resolve_runtime_launch_history(
-        workspace_root=tmp_path / ".aidd",
-        work_item="WI-HISTORY",
-    ) == {}
+    assert (
+        resolve_runtime_launch_history(
+            workspace_root=tmp_path / ".aidd",
+            work_item="WI-HISTORY",
+        )
+        == {}
+    )

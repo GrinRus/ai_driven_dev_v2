@@ -24,7 +24,7 @@ def test_owned_supervisor_stops_parent_and_descendant(tmp_path: Path) -> None:
         "import pathlib, subprocess, sys, time\n"
         "ready = pathlib.Path(sys.argv[1])\n"
         "child = \"import pathlib,sys,time; pathlib.Path(sys.argv[1]).write_text('ready'); "
-        "time.sleep(30)\"\n"
+        'time.sleep(30)"\n'
         "subprocess.Popen([sys.executable, '-c', child, str(ready)])\n"
         "while not ready.exists(): time.sleep(0.01)\n"
         "print('ready', flush=True)\n"

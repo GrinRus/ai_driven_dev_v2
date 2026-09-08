@@ -11,8 +11,7 @@ DESCRIPTOR = RuntimeAdapterDescriptor(
         config_section="codex",
         support_tier="tier-2",
         default_command=(
-            "codex exec --dangerously-bypass-approvals-and-sandbox "
-            "--skip-git-repo-check --json -"
+            "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
         ),
         probe_command="codex",
         default_execution_mode="native",

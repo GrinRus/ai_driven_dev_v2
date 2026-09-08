@@ -125,9 +125,7 @@ def test_release_preflight_reports_mismatched_source_version(tmp_path: Path) -> 
         packaged_ui_browser_probe=_passing_browser_probe,
     )
 
-    source_version = next(
-        check for check in result.checks if check.name == "source-version"
-    )
+    source_version = next(check for check in result.checks if check.name == "source-version")
     assert result.success is False
     assert source_version.status == "fail"
     assert "0.1.0a9.dev0" in source_version.detail
@@ -148,9 +146,7 @@ def test_release_preflight_normalizes_command_timeout(tmp_path: Path) -> None:
     )
 
     branch = next(check for check in result.checks if check.name == "branch")
-    remote_tag = next(
-        check for check in result.checks if check.name == "remote-tag-absence"
-    )
+    remote_tag = next(check for check in result.checks if check.name == "remote-tag-absence")
     assert result.success is False
     assert branch.blocker_kind == "timeout"
     assert remote_tag.blocker_kind == "timeout"
@@ -180,6 +176,7 @@ def test_release_preflight_normalizes_registry_failures(
     )
     expected_kinds = ("timeout", "dns", "tls", "server")
     for failure, expected_kind in zip(failures, expected_kinds, strict=True):
+
         def _probe(_version: str, *, error: Exception = failure) -> bool:
             raise error
 
@@ -190,9 +187,7 @@ def test_release_preflight_normalizes_registry_failures(
             pypi_version_exists=_probe,
             packaged_ui_browser_probe=_passing_browser_probe,
         )
-        check = next(
-            item for item in result.checks if item.name == "pypi-version-absence"
-        )
+        check = next(item for item in result.checks if item.name == "pypi-version-absence")
         assert check.status == "fail"
         assert check.blocker_kind == expected_kind
 
@@ -306,12 +301,8 @@ def test_release_evidence_collector_rejects_mismatched_output() -> None:
 def test_release_evidence_rejects_ambiguous_urls_versions_and_exit_status() -> None:
     base = {
         "version": "0.1.0a9",
-        "github_release_url": (
-            "https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a9"
-        ),
-        "release_workflow_url": (
-            "https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/123"
-        ),
+        "github_release_url": ("https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a9"),
+        "release_workflow_url": ("https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/123"),
         "pypi_url": "https://pypi.org/project/ai-driven-dev-v2/0.1.0a9/",
         "pipx_version_output": "aidd 0.1.0a9",
         "pipx_doctor_output": "Version 0.1.0a9",
@@ -363,6 +354,6 @@ def test_release_evidence_payload_without_exit_codes_fails_closed() -> None:
 
 def _write_pyproject(root: Path, version: str) -> None:
     (root / "pyproject.toml").write_text(
-        f"[project]\nname = \"ai-driven-dev-v2\"\nversion = \"{version}\"\n",
+        f'[project]\nname = "ai-driven-dev-v2"\nversion = "{version}"\n',
         encoding="utf-8",
     )

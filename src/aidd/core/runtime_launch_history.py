@@ -36,6 +36,8 @@ _CANONICAL_OUTCOMES = frozenset(
         "launch_failure",
     }
 )
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeLaunchOutcome:
     runtime_id: str
@@ -59,7 +61,6 @@ def _read_outcome(path: Path) -> tuple[RuntimeLaunchOutcomeName, str | None]:
     if adapter_outcome in _CANONICAL_OUTCOMES:
         return cast(RuntimeLaunchOutcomeName, adapter_outcome), None
     return "unknown", "runtime evidence has no recognized canonical adapter_outcome"
-
 
 
 def resolve_runtime_launch_history(
@@ -117,9 +118,11 @@ def resolve_runtime_launch_history(
                 recorded_at_utc = None if index is None else index.updated_at_utc
                 if index is None and warning is None:
                     warning = "attempt has no artifact index timestamp"
-                evidence_path = exit_path.resolve(strict=False).relative_to(
-                    workspace_root.resolve(strict=False)
-                ).as_posix()
+                evidence_path = (
+                    exit_path.resolve(strict=False)
+                    .relative_to(workspace_root.resolve(strict=False))
+                    .as_posix()
+                )
                 item = RuntimeLaunchOutcome(
                     runtime_id=metadata.runtime_id,
                     outcome=outcome,

@@ -122,14 +122,7 @@ def test_operator_request_canonical_path_appears_only_after_complete_write(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-OP")
-    request_root = (
-        workspace_root
-        / "workitems"
-        / "WI-OP"
-        / "stages"
-        / "plan"
-        / "operator-requests"
-    )
+    request_root = workspace_root / "workitems" / "WI-OP" / "stages" / "plan" / "operator-requests"
     publication_ready = threading.Event()
     allow_publication = threading.Event()
     original_replace = Path.replace
@@ -181,14 +174,7 @@ def test_operator_request_failed_write_leaves_no_partial_evidence(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-OP")
-    request_root = (
-        workspace_root
-        / "workitems"
-        / "WI-OP"
-        / "stages"
-        / "plan"
-        / "operator-requests"
-    )
+    request_root = workspace_root / "workitems" / "WI-OP" / "stages" / "plan" / "operator-requests"
     original_replace = Path.replace
 
     def failed_publication(path: Path, target: Path) -> Path:
@@ -276,10 +262,13 @@ def test_intervention_uses_latest_run_and_blocks_succeeded_downstream(
         status=StageState.SUCCEEDED.value,
     )
 
-    assert resolve_intervention_run_id(
-        workspace_root=workspace_root,
-        work_item="WI-OP",
-    ) == "run-op"
+    assert (
+        resolve_intervention_run_id(
+            workspace_root=workspace_root,
+            work_item="WI-OP",
+        )
+        == "run-op"
+    )
     with pytest.raises(ValueError, match="downstream stages already succeeded"):
         ensure_intervention_allowed_for_downstream(
             workspace_root=workspace_root,
@@ -343,8 +332,7 @@ def test_intervention_attempt_includes_existing_outputs_request_and_answers(
 
     invocation = captured["invocation"]
     input_paths = {
-        workspace_relative_path(workspace_root, path)
-        for path in invocation.expected_input_bundle
+        workspace_relative_path(workspace_root, path) for path in invocation.expected_input_bundle
     }
     assert invocation.attempt_mode == "intervention"
     assert invocation.repair_mode is False

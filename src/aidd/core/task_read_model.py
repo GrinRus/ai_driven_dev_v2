@@ -52,9 +52,7 @@ def _critical_path(ledger: TaskLedger) -> list[str]:
             return memo[task_id]
         entry = entries[task_id]
         candidates = [
-            path(dependency)
-            for dependency in entry.dependencies
-            if dependency in remaining
+            path(dependency) for dependency in entry.dependencies if dependency in remaining
         ]
         longest = max(candidates, key=len, default=[])
         memo[task_id] = [*longest, task_id]
@@ -147,10 +145,14 @@ def _task_action_projection(
         if dependency_reason is not None
         else "Task is not eligible for a new run."
     )
-    resume_eligible = entry.status in {
-        TaskExecutionStatus.BLOCKED,
-        TaskExecutionStatus.FAILED,
-    } and entry.id in ready
+    resume_eligible = (
+        entry.status
+        in {
+            TaskExecutionStatus.BLOCKED,
+            TaskExecutionStatus.FAILED,
+        }
+        and entry.id in ready
+    )
     resume_reason = (
         None
         if resume_eligible
@@ -166,8 +168,7 @@ def _task_action_projection(
     finalize_eligible = (
         entry.status is TaskExecutionStatus.SUCCEEDED
         and ledger.all_succeeded()
-        and finalization_status
-        in {TaskFinalizationStatus.PENDING, TaskFinalizationStatus.FAILED}
+        and finalization_status in {TaskFinalizationStatus.PENDING, TaskFinalizationStatus.FAILED}
     )
     finalize_reason = (
         None
@@ -213,11 +214,7 @@ def _task_action_projection(
                 "task_id": recovery_target,
                 "action": recovery_action,
                 "label": f"{recovery_label} {recovery_target}",
-                "reason": (
-                    "Selected task is blocked by "
-                    + ", ".join(missing_dependencies)
-                    + "."
-                ),
+                "reason": ("Selected task is blocked by " + ", ".join(missing_dependencies) + "."),
             }
     return {
         "schema_version": TASK_ACTION_PROJECTION_SCHEMA_VERSION,
@@ -427,9 +424,7 @@ def resolve_task_read_model(
         "finalization_eligibility": {
             "eligible": finalization_eligible,
             "reason": (
-                None
-                if finalization_eligible
-                else "Every task must succeed before finalization."
+                None if finalization_eligible else "Every task must succeed before finalization."
             ),
         },
         "review_eligible": review_eligible,
@@ -451,9 +446,7 @@ def resolve_task_read_model(
         ),
         "critical_path": _critical_path(ledger),
         "preserved_successes": [
-            entry.id
-            for entry in ledger.tasks
-            if entry.status is TaskExecutionStatus.SUCCEEDED
+            entry.id for entry in ledger.tasks if entry.status is TaskExecutionStatus.SUCCEEDED
         ],
         "tasks": tasks,
         "finalization": {

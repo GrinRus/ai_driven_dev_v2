@@ -79,6 +79,8 @@ class QwenRunResult(RuntimeRunResult[QwenExitClassification]):
 
 
 _DOCUMENT_COMPLETION_SETTLE_SECONDS = 30.0
+
+
 def assemble_command(
     *,
     configured_command: str,
@@ -289,9 +291,7 @@ def run_subprocess_with_streaming(
         cancel_requested=cancel_requested,
         completion_requested=completion_requested,
         completion_stop_reason=(
-            QwenExitClassification.DOCUMENT_COMPLETE
-            if completion_requested is not None
-            else None
+            QwenExitClassification.DOCUMENT_COMPLETE if completion_requested is not None else None
         ),
         timeout_stop_reason=QwenExitClassification.TIMEOUT,
         cancel_stop_reason=QwenExitClassification.CANCELLED,

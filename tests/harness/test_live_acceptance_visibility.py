@@ -30,11 +30,7 @@ def _probe_target(tmp_path: Path, label: str) -> VisibilityProbeTarget:
 def _targets_by_label(diagnostics: dict[str, object]) -> dict[str, dict[str, object]]:
     targets = diagnostics["targets"]
     assert isinstance(targets, list)
-    return {
-        str(target["label"]): target
-        for target in targets
-        if isinstance(target, dict)
-    }
+    return {str(target["label"]): target for target in targets if isinstance(target, dict)}
 
 
 def test_visibility_canary_characterizes_current_sibling_root_and_credential_access(

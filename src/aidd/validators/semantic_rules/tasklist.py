@@ -175,12 +175,7 @@ def _render_task_plan_issue_group(group: tuple[TaskPlanParseIssue, ...]) -> str:
 
     task_ids = tuple(dict.fromkeys(issue.task_id for issue in group if issue.task_id))
     missing_fields = tuple(
-        dict.fromkeys(
-            field
-            for issue in group
-            for field in issue.missing_fields
-            if field
-        )
+        dict.fromkeys(field for issue in group for field in issue.missing_fields if field)
     )
     if task_ids:
         ids_text = ", ".join(f"`{task_id}`" for task_id in task_ids)
@@ -207,9 +202,7 @@ def validate_tasklist(context: SemanticDocumentContext) -> tuple[ValidationFindi
     summary = context.section_by_candidates(candidates=("Task summary",))
     findings.extend(_validate_task_summary(context, summary))
     verification_notes = context.section_by_candidates(candidates=("Verification notes",))
-    findings.extend(
-        _unresolved_verification_placeholder_findings(context, verification_notes)
-    )
+    findings.extend(_unresolved_verification_placeholder_findings(context, verification_notes))
     try:
         parse_task_plan("\n".join(context.markdown_lines))
     except TaskPlanParseError as exc:

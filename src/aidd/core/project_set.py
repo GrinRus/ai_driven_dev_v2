@@ -26,8 +26,7 @@ class ResolvedProjectSet:
 def _reject_absolute_root(project: ProjectConfig) -> None:
     if project.root.is_absolute():
         raise ValueError(
-            f"Project `{project.id}` root must be repository-relative: "
-            f"{project.root.as_posix()}."
+            f"Project `{project.id}` root must be repository-relative: {project.root.as_posix()}."
         )
 
 
@@ -130,10 +129,13 @@ def persist_project_set_context(
     work_item: str,
     project_set: ResolvedProjectSet,
 ) -> Path:
-    context_path = work_item_context_root(
-        root=workspace_root,
-        work_item=work_item,
-    ) / PROJECT_SET_CONTEXT_FILENAME
+    context_path = (
+        work_item_context_root(
+            root=workspace_root,
+            work_item=work_item,
+        )
+        / PROJECT_SET_CONTEXT_FILENAME
+    )
     context_path.parent.mkdir(parents=True, exist_ok=True)
     context_path.write_text(render_project_set_context(project_set), encoding="utf-8")
     return context_path

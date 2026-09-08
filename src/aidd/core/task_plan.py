@@ -12,9 +12,7 @@ _TASK_HEADING_PATTERN = re.compile(r"^###\s+(\S+)(?:\s+(.+?))\s*$")
 _FIELD_LINE_PATTERN = re.compile(
     r"^\s*[-*]\s+([^:]+?)\s*:\s*(.*?)\s*$",
 )
-_DEPENDENCY_ENTRY_PATTERN = re.compile(
-    r"^\s*[-*]\s+([^:\s]+)\s*:\s*(.*?)\s*$"
-)
+_DEPENDENCY_ENTRY_PATTERN = re.compile(r"^\s*[-*]\s+([^:\s]+)\s*:\s*(.*?)\s*$")
 _VERIFICATION_ENTRY_PATTERN = _DEPENDENCY_ENTRY_PATTERN
 _TASK_ID_PATTERN = re.compile(rf"\b({_TASK_ID_TEXT})\b")
 _TASK_ID_FULL_PATTERN = re.compile(rf"^{_TASK_ID_TEXT}$")
@@ -516,8 +514,7 @@ def _parse_scope_paths(
             or "\\" in raw_value
             or ".." in candidate.split("/")
             or any(marker in candidate for marker in ("*", "?", "[", "]"))
-            or re.fullmatch(r"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*", candidate)
-            is None
+            or re.fullmatch(r"[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*", candidate) is None
         )
         if invalid:
             issues.append(
@@ -540,11 +537,7 @@ def _parse_scope_paths(
                 task_id=task_id,
                 line_number=line_number,
                 field="in scope",
-                relation=(
-                    TaskPlanIssueRelation.RELATED
-                    if issues
-                    else TaskPlanIssueRelation.ROOT
-                ),
+                relation=(TaskPlanIssueRelation.RELATED if issues else TaskPlanIssueRelation.ROOT),
             )
         )
     return tuple(dict.fromkeys(paths)), issues
@@ -683,16 +676,13 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         # machine-readable value (for example, ``T1: none — establishes M1``).
         # Only the leading dependency value defines the graph; milestone/review
         # ids in the rationale must not turn a valid ``none`` into a dependency.
-        dependency_clause = re.split(
-            r"\s+[—–]\s+", dependency_text, maxsplit=1
-        )[0].strip()
+        dependency_clause = re.split(r"\s+[—–]\s+", dependency_text, maxsplit=1)[0].strip()
         if _NONE_DEPENDENCY_PATTERN.match(dependency_clause.strip("` .")):
             parsed_dependencies[task_id] = ()
         else:
             parsed_dependencies[task_id] = tuple(
                 dict.fromkeys(
-                    match.group(1).upper()
-                    for match in _TASK_ID_PATTERN.finditer(dependency_clause)
+                    match.group(1).upper() for match in _TASK_ID_PATTERN.finditer(dependency_clause)
                 )
             )
             if not parsed_dependencies[task_id]:
@@ -789,9 +779,7 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         issues.append(
             _issue(
                 TaskPlanIssueKind.DUPLICATE_GLOBAL_ACCEPTANCE_ID,
-                "Acceptance ids must be globally unique: "
-                + ", ".join(duplicate_acceptance)
-                + ".",
+                "Acceptance ids must be globally unique: " + ", ".join(duplicate_acceptance) + ".",
                 task_id=duplicate_id.split("-AC", maxsplit=1)[0],
                 line_number=acceptance_lines_by_id.get(duplicate_id),
                 field="acceptance criteria",

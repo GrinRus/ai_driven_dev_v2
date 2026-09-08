@@ -91,9 +91,7 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
             assert cwd != repository_root
             assert (cwd / "pyproject.toml").exists()
             out_dir = Path(command[-1])
-            _write_fake_aidd_wheel(
-                out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
-            )
+            _write_fake_aidd_wheel(out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl")
         elif _is_uv_tool_install_command(command):
             assert "--reinstall" in command
             assert "--refresh" in command
@@ -122,9 +120,7 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
     assert result.source_snapshot_path == (
         tmp_path / "work-root" / "eval-live-test" / "source" / "aidd"
     )
-    assert result.build_dist_path == (
-        tmp_path / "work-root" / "eval-live-test" / "build" / "dist"
-    )
+    assert result.build_dist_path == (tmp_path / "work-root" / "eval-live-test" / "build" / "dist")
     assert result.install_home == tmp_path / "work-root" / "eval-live-test" / "install-home"
     assert result.uv_cache_dir == tmp_path / "work-root" / "eval-live-test" / "uv-cache"
     assert result.source_revision
@@ -150,9 +146,7 @@ def test_prepare_local_wheel_install_overrides_provider_private_xdg_tool_roots(
         env: dict[str, str] | None = None,
     ) -> HarnessCommandTranscript:
         if _is_uv_build_command(command):
-            _write_fake_aidd_wheel(
-                Path(command[-1]) / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
-            )
+            _write_fake_aidd_wheel(Path(command[-1]) / "ai_driven_dev_v2-0.0.0-py3-none-any.whl")
         elif _is_uv_tool_install_command(command):
             assert env is not None
             tool_bin_dir = Path(env["UV_TOOL_BIN_DIR"])
@@ -208,9 +202,7 @@ def test_prepare_local_wheel_install_honors_uv_environment_override(
         assert command[0] == uv_override.as_posix()
         if _is_uv_build_command(command):
             out_dir = Path(command[-1])
-            _write_fake_aidd_wheel(
-                out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
-            )
+            _write_fake_aidd_wheel(out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl")
         elif _is_uv_tool_install_command(command):
             assert env is not None
             home = Path(env["HOME"])
@@ -275,9 +267,7 @@ def test_prepare_local_wheel_install_can_derive_source_checkout_from_cwd(
             assert cwd != source_root
             assert (cwd / "pyproject.toml").exists()
             out_dir = Path(command[-1])
-            _write_fake_aidd_wheel(
-                out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
-            )
+            _write_fake_aidd_wheel(out_dir / "ai_driven_dev_v2-0.0.0-py3-none-any.whl")
         elif _is_uv_tool_install_command(command):
             assert "--reinstall" in command
             assert "--refresh" in command

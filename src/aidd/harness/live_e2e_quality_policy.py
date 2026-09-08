@@ -90,9 +90,7 @@ def evaluate_quality_policy(
             )
 
     accepted_risks = any(
-        finding.disposition == "accepted-risk"
-        for audit in audits
-        for finding in audit.findings
+        finding.disposition == "accepted-risk" for audit in audits for finding in audit.findings
     )
     conditional = accepted_risks or any(
         audit.flow_decision == "continue-with-risk" for audit in audits

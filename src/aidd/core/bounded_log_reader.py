@@ -54,16 +54,10 @@ def read_bounded_log(
         stream.seek(start_byte)
         raw = stream.read(end_byte - start_byte)
     partial_head_line = (
-        start_byte > 0
-        and _byte_before(path, start_byte) != b"\n"
-        and not raw.startswith(b"\n")
+        start_byte > 0 and _byte_before(path, start_byte) != b"\n" and not raw.startswith(b"\n")
     )
-    partial_tail_line = end_byte < byte_size and (
-        not raw.endswith(b"\n")
-    )
-    oversized_line = (
-        partial_head_line and b"\n" not in raw
-    ) or (
+    partial_tail_line = end_byte < byte_size and (not raw.endswith(b"\n"))
+    oversized_line = (partial_head_line and b"\n" not in raw) or (
         partial_tail_line and b"\n" not in raw
     )
     return BoundedLogRead(

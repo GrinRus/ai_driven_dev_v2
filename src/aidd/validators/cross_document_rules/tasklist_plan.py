@@ -66,8 +66,7 @@ def _task_milestones(task: TaskCard) -> tuple[str, ...]:
     )
     return tuple(
         dict.fromkeys(
-            match.group(1).upper()
-            for match in _MILESTONE_ID_PATTERN.finditer(authored_text)
+            match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(authored_text)
         )
     )
 
@@ -185,9 +184,7 @@ def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
             subjects = (
                 tuple(
                     match.group(1).upper()
-                    for match in _MILESTONE_ID_PATTERN.finditer(
-                        explicit_subjects.group("subjects")
-                    )
+                    for match in _MILESTONE_ID_PATTERN.finditer(explicit_subjects.group("subjects"))
                 )
                 if explicit_subjects is not None
                 else line_subjects
@@ -195,26 +192,19 @@ def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
             relations = tuple(_DEPENDENCY_RELATION_PATTERN.finditer(clause))
             for index, relation in enumerate(relations):
                 object_end = (
-                    relations[index + 1].start()
-                    if index + 1 < len(relations)
-                    else len(clause)
+                    relations[index + 1].start() if index + 1 < len(relations) else len(clause)
                 )
                 object_text = clause[relation.end() : object_end]
                 objects = tuple(
-                    match.group(1).upper()
-                    for match in _MILESTONE_ID_PATTERN.finditer(object_text)
+                    match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(object_text)
                 )
                 if relation.group("relation").casefold() == "before":
                     edges.extend(
-                        (target, prerequisite)
-                        for target in objects
-                        for prerequisite in subjects
+                        (target, prerequisite) for target in objects for prerequisite in subjects
                     )
                 else:
                     edges.extend(
-                        (target, prerequisite)
-                        for target in subjects
-                        for prerequisite in objects
+                        (target, prerequisite) for target in subjects for prerequisite in objects
                     )
     return tuple(dict.fromkeys(edges))
 
@@ -260,9 +250,7 @@ def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFin
         task_plan = parse_task_plan(context.tasklist_text)
     except TaskPlanParseError:
         return ()
-    findings: list[ValidationFinding] = list(
-        _tasklist_scope_findings(context, task_plan)
-    )
+    findings: list[ValidationFinding] = list(_tasklist_scope_findings(context, task_plan))
     if context.plan_text is None:
         return tuple(findings)
     milestones = _ordered_milestones(context.plan_text)
@@ -291,10 +279,7 @@ def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFin
                 )
             )
     covered = {
-        milestone
-        for mapped in mappings.values()
-        for milestone in mapped
-        if milestone in known
+        milestone for mapped in mappings.values() for milestone in mapped if milestone in known
     }
     for milestone in milestones:
         if milestone not in covered:

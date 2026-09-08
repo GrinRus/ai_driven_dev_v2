@@ -61,9 +61,7 @@ def test_operator_decision_compare_and_set_has_one_durable_winner(tmp_path: Path
         )
         barrier.wait()
         try:
-            results.append(
-                resolve_operator_decision(attempt_path=attempt_path, decision=decision)
-            )
+            results.append(resolve_operator_decision(attempt_path=attempt_path, decision=decision))
         except OperatorDecisionConflict as exc:
             conflicts.append(exc)
 
@@ -226,14 +224,7 @@ def test_broad_policy_allows_stage_documents_but_denies_core_evidence_writes(
         runtime_id="generic-cli",
         stage="idea",
         kind=RuntimeOperatorRequestKind.FILE_WRITE,
-        paths=(
-            workspace_root
-            / "workitems"
-            / "WI-001"
-            / "stages"
-            / "idea"
-            / "stage-result.md",
-        ),
+        paths=(workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "stage-result.md",),
     )
     report_write_request = RuntimeOperatorRequest.create(
         runtime_id="generic-cli",
@@ -729,12 +720,7 @@ def test_plan_policy_does_not_auto_approve_writes_even_with_broad_preset(
         stage="implement",
         kind=RuntimeOperatorRequestKind.FILE_WRITE,
         paths=(
-            brokered_policy.workspace_root
-            / "workitems"
-            / "WI-001"
-            / "stages"
-            / "plan"
-            / "plan.md",
+            brokered_policy.workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "plan.md",
         ),
     )
 
@@ -748,7 +734,7 @@ def test_broad_policy_auto_allows_bounded_aidd_workspace_shell(tmp_path: Path) -
         "from pathlib import Path\n"
         "base = Path('.aidd/workitems/WI-001/stages/idea')\n"
         "(base / 'idea-brief.md').write_text('repo: https://github.com/acme/project')\n"
-        "PY\""
+        'PY"'
     )
     request = RuntimeOperatorRequest.create(
         runtime_id="generic-cli",
@@ -769,7 +755,7 @@ def test_broad_policy_does_not_auto_approve_unbounded_aidd_workspace_shell(
 ) -> None:
     policy = _policy(tmp_path)
     external_write = (
-        "python3 -c \"from pathlib import Path; "
+        'python3 -c "from pathlib import Path; '
         "Path('.aidd/x').write_text('ok'); "
         "Path('/tmp/out').write_text('bad')\""
     )
@@ -927,12 +913,7 @@ def test_runtime_neutral_policy_has_no_builtin_provider_literals() -> None:
 def test_protected_reads_require_operator_or_fail_closed(tmp_path: Path) -> None:
     brokered = _policy(tmp_path)
     protected_path = (
-        brokered.workspace_root
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-1"
-        / "runtime.log"
+        brokered.workspace_root / "reports" / "runs" / "WI-001" / "run-1" / "runtime.log"
     )
     request = RuntimeOperatorRequest.create(
         runtime_id="generic-cli",

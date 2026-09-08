@@ -44,8 +44,8 @@ def test_validate_semantic_outputs_accepts_review_spec_nested_issue_metadata(
             "`transform` call in prose, but the actual edit target is correct.\n"
             "  - **Severity:** `info`\n"
             "  - **Evidence:** `plan.md` M1 and `cli.py:1179`.\n"
-            "  - **Rationale:** The prose says \"edit `cli.py:1179` ... so the "
-            "transform call is skipped\" because the edit is scoped to the guard "
+            '  - **Rationale:** The prose says "edit `cli.py:1179` ... so the '
+            'transform call is skipped" because the edit is scoped to the guard '
             "line and not to unrelated behavior.\n\n"
             "## Strengths\n\n"
             "- The plan is scoped to a minimal regression fix with targeted tests.\n\n"
@@ -230,8 +230,7 @@ def test_validate_semantic_outputs_flags_review_spec_no_issue_prose_without_meta
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Required section `Issue list` must use bullet items with "
-                "severity and rationale."
+                "Required section `Issue list` must use bullet items with severity and rationale."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -454,10 +453,7 @@ def test_validate_semantic_outputs_flags_invalid_review_spec_fixture_bundle() ->
         ),
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
-            message=(
-                "Each `Issue list` item must include rationale "
-                "(for example `because ...`)."
-            ),
+            message=("Each `Issue list` item must include rationale (for example `because ...`)."),
             severity="medium",
             location=ValidationIssueLocation(
                 workspace_relative_path=(
@@ -509,4 +505,3 @@ def test_validate_semantic_outputs_flags_invalid_review_spec_fixture_bundle() ->
             ),
         ),
     )
-

@@ -51,8 +51,6 @@ Two bounded tasks with complete dependency and verification evidence.
 """
 
 
-
-
 def _safe_presentation_variant() -> str:
     return (
         _tasklist()
@@ -159,9 +157,9 @@ def test_parse_task_plan_preserves_order_and_acceptance() -> None:
 
 
 def test_coupled_behavior_regression_fixture_keeps_runtime_and_test_scope_coherent() -> None:
-    fixture = Path(
-        "contracts/examples/tasklist/coupled-behavior-regression.md"
-    ).read_text(encoding="utf-8")
+    fixture = Path("contracts/examples/tasklist/coupled-behavior-regression.md").read_text(
+        encoding="utf-8"
+    )
 
     plan = parse_task_plan(fixture)
 
@@ -175,12 +173,16 @@ def test_coupled_behavior_regression_fixture_keeps_runtime_and_test_scope_cohere
 
 
 def test_parse_task_plan_allows_dependency_rationale_after_machine_value() -> None:
-    markdown = _tasklist().replace(
-        "- TL-1: none\n",
-        "- TL-1: none — establishes milestone M1\n",
-    ).replace(
-        "- TL-2: TL-1\n",
-        "- TL-2: TL-1; preserves the bounded order\n",
+    markdown = (
+        _tasklist()
+        .replace(
+            "- TL-1: none\n",
+            "- TL-1: none — establishes milestone M1\n",
+        )
+        .replace(
+            "- TL-2: TL-1\n",
+            "- TL-2: TL-1; preserves the bounded order\n",
+        )
     )
 
     plan = parse_task_plan(markdown)
@@ -282,12 +284,14 @@ def test_parse_task_plan_rejects_unknown_execution_mode() -> None:
     with pytest.raises(TaskPlanParseError, match="execution mode"):
         parse_task_plan(markdown)
 
+
 @pytest.mark.parametrize("value", ("", ".", "..", "../task", "task/child", "/task"))
 def test_safe_identifier_rejects_unsafe_path_components(tmp_path: Path, value: str) -> None:
     with pytest.raises(ValueError):
         SafeIdentifier.parse(value, label="task id")
     with pytest.raises(ValueError):
         resolve_contained_component(tmp_path, value, label="task id")
+
 
 @pytest.mark.parametrize(
     "invalid_text",
@@ -304,9 +308,11 @@ def test_parse_task_plan_rejects_each_missing_card_field(invalid_text: str) -> N
     with pytest.raises(TaskPlanParseError):
         parse_task_plan(markdown)
 
+
 def test_parse_task_plan_rejects_unknown_dependency() -> None:
     with pytest.raises(TaskPlanParseError, match="unknown dependencies"):
         parse_task_plan(_tasklist(second_dependency="TL-9"))
+
 
 def test_parse_task_plan_rejects_dependency_cycle() -> None:
     markdown = _tasklist().replace("- TL-1: none", "- TL-1: TL-2")
@@ -314,11 +320,13 @@ def test_parse_task_plan_rejects_dependency_cycle() -> None:
     with pytest.raises(TaskPlanParseError, match="cycle"):
         parse_task_plan(markdown)
 
+
 def test_parse_task_plan_rejects_forward_dependency() -> None:
     markdown = _tasklist(second_dependency="none").replace("- TL-1: none", "- TL-1: TL-2")
 
     with pytest.raises(TaskPlanParseError, match="do not appear earlier"):
         parse_task_plan(markdown)
+
 
 @pytest.mark.parametrize(
     "scope",
@@ -335,6 +343,7 @@ def test_parse_task_plan_rejects_missing_or_unsafe_scope_path(scope: str) -> Non
     with pytest.raises(TaskPlanParseError, match="in-scope path|repository-relative"):
         parse_task_plan(markdown)
 
+
 def test_parse_task_plan_rejects_duplicate_and_mixed_task_ids() -> None:
     duplicate = _tasklist().replace(
         "### TL-2 — Add enforcement",
@@ -346,6 +355,7 @@ def test_parse_task_plan_rejects_duplicate_and_mixed_task_ids() -> None:
     mixed = _tasklist().replace("TL-2", "T2")
     with pytest.raises(TaskPlanParseError, match="must not mix"):
         parse_task_plan(mixed)
+
 
 def test_parse_task_plan_rejects_malformed_and_duplicate_acceptance_ids() -> None:
     malformed = _tasklist().replace("TL-1-AC1", "TL-1-C1")

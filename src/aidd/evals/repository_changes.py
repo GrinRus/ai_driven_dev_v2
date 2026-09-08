@@ -88,9 +88,7 @@ class LiveWorkspaceSnapshot:
     deleted_files: tuple[str, ...] = tuple()
 
     def to_payload(self) -> dict[str, object]:
-        inventory = self.ignored_inventory or build_bounded_path_inventory(
-            self.ignored_files
-        )
+        inventory = self.ignored_inventory or build_bounded_path_inventory(self.ignored_files)
         return {
             "tracked_files": list(self.tracked_files),
             "untracked_files": list(self.untracked_files),
@@ -153,12 +151,8 @@ class LiveWorkspaceClassification:
                 self.setup_baseline_ignored_churn_inventory.to_payload()
             ),
             "known_harness_files": list(self.known_harness_files),
-            "unexpected_non_aidd_untracked_files": list(
-                self.unexpected_non_aidd_untracked_files
-            ),
-            "unexpected_top_level_workitems_files": list(
-                self.unexpected_top_level_workitems_files
-            ),
+            "unexpected_non_aidd_untracked_files": list(self.unexpected_non_aidd_untracked_files),
+            "unexpected_top_level_workitems_files": list(self.unexpected_top_level_workitems_files),
             "unexpected_aidd_internal_files": list(self.unexpected_aidd_internal_files),
             "unexpected_ignored_workspace_inventory": build_bounded_path_inventory(
                 self.unexpected_ignored_workspace_files
@@ -321,8 +315,7 @@ def collect_repository_changes(repo_root: Path) -> RepositoryChanges:
     )
     if command_errors:
         summary_parts.append(
-            "Git change collection errors:\n"
-            + "\n".join(f"- {error}" for error in command_errors)
+            "Git change collection errors:\n" + "\n".join(f"- {error}" for error in command_errors)
         )
 
     return RepositoryChanges(
@@ -420,9 +413,7 @@ def _bounded_inventory_from_payload(value: object) -> BoundedPathInventory | Non
                 and isinstance(count, int)
                 and count >= 0
             ):
-                groups.append(
-                    IgnoredPathGroup(root=root, path_type=path_type, count=count)
-                )
+                groups.append(IgnoredPathGroup(root=root, path_type=path_type, count=count))
     total_count = value.get("total_count")
     group_count = value.get("group_count")
     sha256 = value.get("sha256")
@@ -511,13 +502,11 @@ def classify_live_workspace_changes(
         for path in new_untracked_files
         if path.startswith(".aidd/") and not _is_allowed_aidd_untracked_path(path)
     )
-    baseline_inventory = (
-        baseline_snapshot.ignored_inventory
-        or build_bounded_path_inventory(baseline_snapshot.ignored_files)
+    baseline_inventory = baseline_snapshot.ignored_inventory or build_bounded_path_inventory(
+        baseline_snapshot.ignored_files
     )
-    final_inventory = (
-        final_snapshot.ignored_inventory
-        or build_bounded_path_inventory(final_snapshot.ignored_files)
+    final_inventory = final_snapshot.ignored_inventory or build_bounded_path_inventory(
+        final_snapshot.ignored_files
     )
     new_ignored_files = (
         tuple()
@@ -525,9 +514,7 @@ def classify_live_workspace_changes(
             baseline_inventory.total_count == final_inventory.total_count
             and baseline_inventory.sha256 == final_inventory.sha256
         )
-        else tuple(
-            path for path in final_snapshot.ignored_files if path not in baseline_ignored
-        )
+        else tuple(path for path in final_snapshot.ignored_files if path not in baseline_ignored)
     )
     baseline_ignored_workspace_roots = {
         _ignored_workspace_root(path)
@@ -618,19 +605,14 @@ def classify_live_workspace_changes(
                 ),
             )
         )
-    bounded_unexpected_ignored = build_bounded_path_inventory(
-        unexpected_ignored_workspace_files
-    )
+    bounded_unexpected_ignored = build_bounded_path_inventory(unexpected_ignored_workspace_files)
     for path in bounded_unexpected_ignored.sample:
         findings.append(
             LiveWorkspaceFinding(
                 kind="unexpected-ignored-workspace-artifact",
                 severity="warning",
                 path=path,
-                message=(
-                    "A new ignored workspace artifact appeared after the setup "
-                    "baseline."
-                ),
+                message=("A new ignored workspace artifact appeared after the setup baseline."),
                 manual_quality_implication=(
                     "Manual quality review should inspect whether verification or "
                     "debugging left local environment, cache, coverage, or build "
@@ -664,9 +646,7 @@ def classify_live_workspace_changes(
         baseline_ignored_files=baseline_snapshot.ignored_files,
         new_ignored_files=new_ignored_files,
         setup_baseline_ignored_churn_files=setup_baseline_ignored_churn_files,
-        baseline_ignored_inventory=(
-            baseline_inventory
-        ),
+        baseline_ignored_inventory=(baseline_inventory),
         new_ignored_inventory=build_bounded_path_inventory(new_ignored_files),
         setup_baseline_ignored_churn_inventory=build_bounded_path_inventory(
             setup_baseline_ignored_churn_files

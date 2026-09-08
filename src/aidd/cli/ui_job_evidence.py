@@ -106,9 +106,7 @@ def _runtime_exit_evidence(
             _optional_text(payload, "adapter_outcome") if payload is not None else None
         ),
         exit_classification=(
-            _optional_text(payload, "exit_classification")
-            if payload is not None
-            else None
+            _optional_text(payload, "exit_classification") if payload is not None else None
         ),
         exit_code=_optional_int(payload, "exit_code") if payload is not None else None,
         stop_reason=_optional_text(payload, "stop_reason") if payload is not None else None,
@@ -240,9 +238,7 @@ def build_ui_job_terminal_evidence(
         exit_code=exit_code,
         attempt_path=attempt_path.as_posix() if attempt_path is not None else None,
         runtime_exit=runtime_exit,
-        adapter_outcome=(
-            runtime_exit.adapter_outcome if runtime_exit is not None else None
-        ),
+        adapter_outcome=(runtime_exit.adapter_outcome if runtime_exit is not None else None),
         durable_mutation_winner=winner,
         first_decisive_cause=_first_decisive_cause(
             status=status,
@@ -258,11 +254,7 @@ def build_ui_job_terminal_evidence(
         },
         operator_wait=_operator_wait_payload(
             status=status,
-            result=(
-                operator_wait_result
-                if operator_wait_result is not None
-                else result
-            ),
+            result=(operator_wait_result if operator_wait_result is not None else result),
             attempt_path=attempt_path,
         ),
     )

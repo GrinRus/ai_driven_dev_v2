@@ -26,8 +26,7 @@ def _manual_evidence(
     for report in reports:
         report.write_text(
             (
-                "# Quality\n\n"
-                f"- Final decision: {decision}\n"
+                f"# Quality\n\n- Final decision: {decision}\n"
                 if report.name == "quality-report.md"
                 else "# Review\n"
             ),

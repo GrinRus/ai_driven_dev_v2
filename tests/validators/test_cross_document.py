@@ -123,9 +123,7 @@ def _write_review_implementation_pair(
     review_evidence: str = "`implementation-report.md`, `src/app.py`, and EV-1",
     follow_up_reference: str = "RV-1",
 ) -> None:
-    implement_output = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "output"
-    )
+    implement_output = workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "output"
     implement_output.mkdir(parents=True, exist_ok=True)
     (implement_output / "implementation-report.md").write_text(
         "# Implementation Report\n\n"
@@ -134,9 +132,7 @@ def _write_review_implementation_pair(
         encoding="utf-8",
     )
     (implement_output / "stage-result.md").write_text("# Stage Result\n", encoding="utf-8")
-    (implement_output / "validator-report.md").write_text(
-        "# Validator Report\n", encoding="utf-8"
-    )
+    (implement_output / "validator-report.md").write_text("# Validator Report\n", encoding="utf-8")
     review_root = _stage_root(workspace_root)
     review_root.mkdir(parents=True, exist_ok=True)
     (review_root / "review-report.md").write_text(
@@ -238,9 +234,7 @@ def _write_live_shaped_plan_tasklist_pair(workspace_root: Path) -> None:
         )
     tasklist_root.joinpath("tasklist.md").write_text(
         "# Tasklist\n\n"
-        "## Ordered tasks\n\n"
-        + "\n".join(cards)
-        + "\n## Dependencies\n\n"
+        "## Ordered tasks\n\n" + "\n".join(cards) + "\n## Dependencies\n\n"
         "- T1: none\n"
         "- T2: T1\n"
         "- T3: T1\n"
@@ -257,13 +251,7 @@ def _write_live_shaped_plan_tasklist_pair(workspace_root: Path) -> None:
 
 
 def _write_allowed_scope(workspace_root: Path, *paths: str) -> None:
-    scope_path = (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "context"
-        / "allowed-write-scope.md"
-    )
+    scope_path = workspace_root / "workitems" / "WI-001" / "context" / "allowed-write-scope.md"
     scope_path.parent.mkdir(parents=True, exist_ok=True)
     scope_path.write_text(
         "# Allowed Write Scope\n\n" + "".join(f"- `{path}`\n" for path in paths),
@@ -371,9 +359,7 @@ def test_tasklist_scope_rejects_live_discovered_out_of_boundary_card_paths(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_plan_tasklist_pair(workspace_root)
-    tasklist_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
-    )
+    tasklist_path = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
     tasklist_path.write_text(
         tasklist_path.read_text(encoding="utf-8").replace(
             "- In scope: `src/model.py`.",
@@ -407,9 +393,7 @@ def test_tasklist_scope_rejects_live_discovered_out_of_boundary_card_paths(
 def test_tasklist_scope_uses_component_boundaries(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_plan_tasklist_pair(workspace_root)
-    tasklist_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
-    )
+    tasklist_path = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
     tasklist_path.write_text(
         tasklist_path.read_text(encoding="utf-8").replace(
             "- In scope: `src/api.py`.",
@@ -529,9 +513,7 @@ def test_tasklist_plan_cross_validation_rejects_ad_hoc_milestone_field_with_acti
         task_one_milestone="unmapped",
         task_two_milestone="M2",
     )
-    tasklist_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
-    )
+    tasklist_path = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
     tasklist_path.write_text(
         tasklist_path.read_text(encoding="utf-8").replace(
             "- Dominant deliverable: `src/model.py`.\n",
@@ -609,9 +591,7 @@ def test_tasklist_plan_allows_secondary_milestone_evidence_on_a_task(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_live_shaped_plan_tasklist_pair(workspace_root)
-    tasklist_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
-    )
+    tasklist_path = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
     tasklist_path.write_text(
         tasklist_path.read_text(encoding="utf-8").replace(
             "  - T1-AC1: M1 is complete.",
@@ -634,9 +614,7 @@ def test_tasklist_plan_cross_validation_scopes_each_relation_to_its_objects(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_live_shaped_plan_tasklist_pair(workspace_root)
-    plan_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
-    )
+    plan_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
     plan_path.write_text(
         plan_path.read_text(encoding="utf-8").replace(
             "- M2 and M3 may proceed independently after M1, but both must complete before M4.\n"
@@ -662,9 +640,7 @@ def test_tasklist_plan_cross_validation_rejects_inverted_live_shaped_graph(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_live_shaped_plan_tasklist_pair(workspace_root)
-    tasklist_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
-    )
+    tasklist_path = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
     tasklist_path.write_text(
         tasklist_path.read_text(encoding="utf-8").replace("- T2: T1", "- T2: none"),
         encoding="utf-8",
@@ -676,9 +652,7 @@ def test_tasklist_plan_cross_validation_rejects_inverted_live_shaped_graph(
         workspace_root=workspace_root,
     )
 
-    dependency_findings = [
-        item for item in findings if item.code == TASKLIST_PLAN_DEPENDENCY_CODE
-    ]
+    dependency_findings = [item for item in findings if item.code == TASKLIST_PLAN_DEPENDENCY_CODE]
     assert len(dependency_findings) == 1
     assert "Task `T2` covers `M2`" in dependency_findings[0].message
     assert "`M1`" in dependency_findings[0].message
@@ -870,9 +844,7 @@ def test_validate_cross_document_consistency_reports_answer_without_question(
     assert findings == (
         ValidationFinding(
             code=ANSWER_WITHOUT_QUESTION_CODE,
-            message=(
-                "Answer references `Q9` but no matching question exists in questions.md."
-            ),
+            message=("Answer references `Q9` but no matching question exists in questions.md."),
             severity="high",
             location=ValidationIssueLocation(
                 workspace_relative_path="workitems/WI-001/stages/review/answers.md",
@@ -1517,9 +1489,7 @@ def test_review_cross_validation_accepts_existing_upstream_evidence_paths(
     verification_path.write_text("# Verification Output\n", encoding="utf-8")
 
     findings = validate_review_implementation(
-        CrossDocumentContext.load(
-            stage="review", work_item="WI-001", workspace_root=workspace_root
-        )
+        CrossDocumentContext.load(stage="review", work_item="WI-001", workspace_root=workspace_root)
     )
 
     assert findings == ()
@@ -1535,9 +1505,7 @@ def test_review_cross_validation_does_not_allow_missing_reserved_path(
     )
 
     findings = validate_review_implementation(
-        CrossDocumentContext.load(
-            stage="review", work_item="WI-001", workspace_root=workspace_root
-        )
+        CrossDocumentContext.load(stage="review", work_item="WI-001", workspace_root=workspace_root)
     )
 
     assert [finding.code for finding in findings] == [REVIEW_IMPLEMENT_PATH_CODE]
@@ -1565,23 +1533,18 @@ def _write_qa_upstream_bundle(
     *,
     risk: str = "- QR-1 (`medium`, Evidence: EV-1): bounded residual risk.",
     evidence: str = (
-        "- EV-1: `workitems/WI-001/stages/implement/output/implementation-report.md` "
-        "passed."
+        "- EV-1: `workitems/WI-001/stages/implement/output/implementation-report.md` passed."
     ),
     review_status: str = "approved-with-conditions",
     disposition: str = "follow-up",
 ) -> None:
-    implement_root = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "output"
-    )
+    implement_root = workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "output"
     implement_root.mkdir(parents=True, exist_ok=True)
     (implement_root / "implementation-report.md").write_text(
         "# Implementation Report\n\n## Verification notes\n\n- EV-1: `pytest -q` -> pass.\n",
         encoding="utf-8",
     )
-    review_root = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "review" / "output"
-    )
+    review_root = workspace_root / "workitems" / "WI-001" / "stages" / "review" / "output"
     review_root.mkdir(parents=True, exist_ok=True)
     (review_root / "review-report.md").write_text(
         "# Review Report\n\n"
@@ -1972,13 +1935,7 @@ def test_review_cross_validation_rejects_generic_success_without_task_finalizati
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist = (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     tasklist.parent.mkdir(parents=True)
     tasklist.write_text(

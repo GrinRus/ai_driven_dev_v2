@@ -112,9 +112,7 @@ def resolve_operator_questions_view(
                 answer_text=answer.text if answer else None,
                 answer_resolution=answer.resolution if answer else None,
                 answer_evidence_links=answer.evidence_links if answer else (),
-                answer_unblock_consequence=(
-                    answer.unblock_consequence if answer else None
-                ),
+                answer_unblock_consequence=(answer.unblock_consequence if answer else None),
             )
         )
 
@@ -131,9 +129,7 @@ def resolve_operator_questions_view(
             stage=stage,
         ),
         questions=tuple(question_views),
-        unresolved_blocking_question_ids=tuple(
-            question.question_id for question in unresolved
-        ),
+        unresolved_blocking_question_ids=tuple(question.question_id for question in unresolved),
     )
 
 
@@ -389,9 +385,7 @@ def _interview_candidate_diagnostics(
         raw_candidate=candidate_text,
         raw_candidate_truncated=candidate_truncated,
         disposition_path=(
-            _workspace_optional_path(workspace_root, disposition_path)
-            if rejected
-            else None
+            _workspace_optional_path(workspace_root, disposition_path) if rejected else None
         ),
         source_attempt=source_attempt,
         attempt_mode=_attempt_mode_for_candidate(
@@ -698,13 +692,16 @@ def _approval_queue_diagnostics(
         stage=stage,
     )
     if attempt_root is None:
-        requests_path = run_attempt_root(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage=stage,
-            attempt_number=1,
-        ) / OPERATOR_REQUESTS_FILENAME
+        requests_path = (
+            run_attempt_root(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                attempt_number=1,
+            )
+            / OPERATOR_REQUESTS_FILENAME
+        )
         decisions_path = requests_path.with_name(OPERATOR_DECISIONS_FILENAME)
         requests: tuple[RuntimeOperatorRequest, ...] = ()
         decisions: tuple[RuntimeOperatorDecision, ...] = ()
@@ -714,21 +711,13 @@ def _approval_queue_diagnostics(
         requests = load_operator_requests(requests_path)
         decisions = load_operator_decisions(decisions_path)
     decision_by_request = {decision.request_id: decision for decision in decisions}
-    pending_ids = tuple(
-        request.id
-        for request in requests
-        if request.id not in decision_by_request
-    )
+    pending_ids = tuple(request.id for request in requests if request.id not in decision_by_request)
     approved = sum(1 for decision in decisions if decision.is_approval)
     denied = sum(
-        1
-        for decision in decisions
-        if decision.action is RuntimeOperatorDecisionAction.DENY
+        1 for decision in decisions if decision.action is RuntimeOperatorDecisionAction.DENY
     )
     cancelled = sum(
-        1
-        for decision in decisions
-        if decision.action is RuntimeOperatorDecisionAction.CANCEL
+        1 for decision in decisions if decision.action is RuntimeOperatorDecisionAction.CANCEL
     )
     return OperatorRuntimeApprovalQueueDiagnostics(
         status="approval-waiting" if pending_ids else "clear",
@@ -778,15 +767,12 @@ def _request_change_context(
         status = "blocked-downstream-succeeded"
     elif latest_request is not None:
         status = "has-request"
-    reason = (
-        eligibility_reason
-        or (
-            "Latest operator request is available."
-            if latest_request is not None
-            else "Target documents are available."
-            if target_documents
-            else "No current-stage writable target documents are indexed yet."
-        )
+    reason = eligibility_reason or (
+        "Latest operator request is available."
+        if latest_request is not None
+        else "Target documents are available."
+        if target_documents
+        else "No current-stage writable target documents are indexed yet."
     )
     return OperatorRequestChangeContext(
         status=status,
@@ -798,9 +784,7 @@ def _request_change_context(
             else None
         ),
         latest_request_excerpt=(
-            latest_request.request_text[:240]
-            if latest_request is not None
-            else None
+            latest_request.request_text[:240] if latest_request is not None else None
         ),
         target_documents=target_documents,
         reason=reason,
@@ -838,9 +822,7 @@ def _request_change_target_documents(
     return tuple(
         path
         for key, path in sorted(artifact_index.documents.items())
-        if key not in _REQUEST_CHANGE_BLOCKED_KEYS
-        and path.endswith(".md")
-        and stage_marker in path
+        if key not in _REQUEST_CHANGE_BLOCKED_KEYS and path.endswith(".md") and stage_marker in path
     )
 
 
@@ -964,6 +946,7 @@ def persist_operator_answer(
         work_item=work_item,
         stage=stage,
     )
+
 
 __all__ = [
     "persist_operator_answer",

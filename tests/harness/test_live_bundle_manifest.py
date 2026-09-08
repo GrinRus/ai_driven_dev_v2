@@ -56,25 +56,10 @@ def _sealed_bundle(tmp_path: Path) -> tuple[Path, LiveBundleSealInputs]:
     tmp_path.mkdir(parents=True, exist_ok=True)
     source, source_commit = _repository(tmp_path, "source")
     target, target_revision = _repository(tmp_path, "target")
-    stage = (
-        target
-        / ".aidd"
-        / "workitems"
-        / "WI-MANIFEST"
-        / "stages"
-        / "qa"
-        / "output"
-    )
+    stage = target / ".aidd" / "workitems" / "WI-MANIFEST" / "stages" / "qa" / "output"
     stage.mkdir(parents=True)
     (stage / "stage-result.md").write_text("# Result\n", encoding="utf-8")
-    run_evidence = (
-        target
-        / ".aidd"
-        / "reports"
-        / "runs"
-        / "WI-MANIFEST"
-        / "manifest-run"
-    )
+    run_evidence = target / ".aidd" / "reports" / "runs" / "WI-MANIFEST" / "manifest-run"
     run_evidence.mkdir(parents=True)
     (run_evidence / "finalization.json").write_text("{}\n", encoding="utf-8")
 
@@ -140,13 +125,7 @@ def test_digest_mismatch_and_orphan_browser_file_fail_closed(tmp_path: Path) -> 
         validate_live_bundle_manifest(bundle_root=bundle)
 
     bundle, _ = _sealed_bundle(tmp_path / "orphan")
-    browser = (
-        bundle
-        / "canonical-evidence"
-        / "final"
-        / "manual-frontend-evidence"
-        / "375x812.png"
-    )
+    browser = bundle / "canonical-evidence" / "final" / "manual-frontend-evidence" / "375x812.png"
     browser.write_bytes(b"orphan")
     with pytest.raises(LiveBundleManifestError, match="orphan file"):
         validate_live_bundle_manifest(bundle_root=bundle)

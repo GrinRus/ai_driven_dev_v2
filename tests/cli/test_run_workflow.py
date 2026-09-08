@@ -33,10 +33,15 @@ _RUNTIME_COMMANDS: dict[str, str] = {
 def _patch_stage_runner(monkeypatch: pytest.MonkeyPatch, stage_runner: Callable[..., Any]) -> None:
     def run_attempt(options: StageRunOptions) -> None:
         stage_runner(
-            stage=options.stage, work_item=options.work_item, runtime=options.runtime,
-            run_id=options.run_id, root=options.root, config=options.config,
+            stage=options.stage,
+            work_item=options.work_item,
+            runtime=options.runtime,
+            run_id=options.run_id,
+            root=options.root,
+            config=options.config,
             log_follow=options.log_follow,
         )
+
     monkeypatch.setattr(cli_run, "stage_run", stage_runner)
     monkeypatch.setattr(cli_run, "run_stage_attempt_command", run_attempt)
 

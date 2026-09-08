@@ -121,9 +121,7 @@ _PACKAGE_MANAGERS = frozenset(
 _NETWORK_COMMANDS = frozenset({"curl", "wget"})
 _PUBLISH_COMMANDS = frozenset({"release", "publish", "twine"})
 _NETWORK_GIT_SUBCOMMANDS = frozenset({"clone", "fetch", "pull", "push"})
-_AIDD_WORKSPACE_PATH_RE = re.compile(
-    r"(?<![\w./-])(?:\./)?\.aidd(?:/[^\s'\"`$<>|;&)]+)?"
-)
+_AIDD_WORKSPACE_PATH_RE = re.compile(r"(?<![\w./-])(?:\./)?\.aidd(?:/[^\s'\"`$<>|;&)]+)?")
 _ABSOLUTE_PATH_RE = re.compile(r"(?<![\w./:-])/[^\s'\"`$<>|;&)]+")
 _SHELL_DELETE_OR_PERMISSION_COMMANDS = frozenset(
     {
@@ -356,11 +354,7 @@ class RuntimeOperatorRequest:
             runtime_id=str(payload["runtime_id"]),
             stage=str(payload["stage"]),
             kind=RuntimeOperatorRequestKind(str(payload.get("kind", "unknown"))),
-            tool_name=(
-                None
-                if payload.get("tool_name") is None
-                else str(payload.get("tool_name"))
-            ),
+            tool_name=(None if payload.get("tool_name") is None else str(payload.get("tool_name"))),
             payload=dict(payload.get("payload", {})),
             cwd=None if payload.get("cwd") is None else Path(str(payload["cwd"])),
             paths=tuple(Path(str(path)) for path in payload.get("paths", ())),
@@ -420,9 +414,11 @@ def assess_runtime_operator_request(
             capability = RuntimeOperatorCapability.SHELL_VERIFY
         elif _is_configured_command(command, configured_command_prefixes):
             capability = RuntimeOperatorCapability.SHELL_VERIFY
-        elif executable in _VERIFY_COMMANDS or (
-            executable in {"python", "python3"} and "pytest" in tokens
-        ) or (executable == "uv" and len(tokens) >= 3 and tokens[1] == "run"):
+        elif (
+            executable in _VERIFY_COMMANDS
+            or (executable in {"python", "python3"} and "pytest" in tokens)
+            or (executable == "uv" and len(tokens) >= 3 and tokens[1] == "run")
+        ):
             capability = RuntimeOperatorCapability.SHELL_VERIFY
         elif executable in _PROJECT_WRITE_COMMANDS or executable in {
             "bash",
@@ -860,8 +856,10 @@ def _requires_operator_for_shell(command: str) -> bool:
         return True
     if executable in _PUBLISH_COMMANDS:
         return True
-    if executable == "git" and len(tokens) >= 2 and tokens[1] in (
-        _ASK_GIT_SUBCOMMANDS | _NETWORK_GIT_SUBCOMMANDS
+    if (
+        executable == "git"
+        and len(tokens) >= 2
+        and tokens[1] in (_ASK_GIT_SUBCOMMANDS | _NETWORK_GIT_SUBCOMMANDS)
     ):
         return True
     if executable in _PACKAGE_MANAGERS:
@@ -1055,16 +1053,11 @@ def _is_aidd_workspace_shell_path(
         return False
     if _is_relative_to(path, workspace_root):
         return True
-    return (
-        _AIDD_WORKSPACE_DIRNAME in path.parts
-        and _is_relative_to_any(path, allowed_roots)
-    )
+    return _AIDD_WORKSPACE_DIRNAME in path.parts and _is_relative_to_any(path, allowed_roots)
 
 
 def _command_mentions_aidd_workspace(command: str, *, workspace_root: Path) -> bool:
-    return bool(_AIDD_WORKSPACE_PATH_RE.search(command)) or (
-        workspace_root.as_posix() in command
-    )
+    return bool(_AIDD_WORKSPACE_PATH_RE.search(command)) or (workspace_root.as_posix() in command)
 
 
 def _shell_contains_delete_or_permission_command(command: str) -> bool:
@@ -1097,13 +1090,10 @@ def _explicit_shell_paths(*, command: str, cwd: Path) -> tuple[Path, ...]:
                 )
             )
             paths.extend(_aidd_workspace_path_literals(command=stripped_inner, cwd=cwd))
-            paths.extend(
-                _absolute_path_literals(tokens=_shell_tokens(stripped_inner), cwd=cwd)
-            )
+            paths.extend(_absolute_path_literals(tokens=_shell_tokens(stripped_inner), cwd=cwd))
     else:
         paths.extend(
-            resolved_path
-            for _, resolved_path in _shell_path_operands(command=command, cwd=cwd)
+            resolved_path for _, resolved_path in _shell_path_operands(command=command, cwd=cwd)
         )
         paths.extend(_aidd_workspace_path_literals(command=command, cwd=cwd))
         paths.extend(_absolute_path_literals(tokens=tokens[1:], cwd=cwd))
@@ -1263,8 +1253,7 @@ def _contains_destructive_root_or_home_remove(tokens: tuple[str, ...]) -> bool:
             continue
         following = tokens[index + 1 :]
         recursive_force = any(
-            option.startswith("-") and "r" in option and "f" in option
-            for option in following
+            option.startswith("-") and "r" in option and "f" in option for option in following
         )
         if not recursive_force:
             continue

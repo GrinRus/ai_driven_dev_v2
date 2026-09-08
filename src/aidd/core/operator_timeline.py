@@ -140,11 +140,14 @@ def _state_payload(path: Path) -> dict[str, object]:
 
 
 def _manifest_payload(*, workspace_root: Path, work_item: str, run_id: str) -> dict[str, Any]:
-    path = run_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    ) / "run-manifest.json"
+    path = (
+        run_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        )
+        / "run-manifest.json"
+    )
     if not path.exists():
         return {}
     try:
@@ -366,10 +369,13 @@ def _frame_metadata(
         timestamp_payloads,
         ("started_at_utc", "created_at_utc", "start_time_utc", "started_at"),
     )
-    updated_at = _first_text(
-        timestamp_payloads,
-        ("updated_at_utc", "completed_at_utc", "finished_at_utc", "ended_at_utc"),
-    ) or frame.time_utc
+    updated_at = (
+        _first_text(
+            timestamp_payloads,
+            ("updated_at_utc", "completed_at_utc", "finished_at_utc", "ended_at_utc"),
+        )
+        or frame.time_utc
+    )
     if frame.kind == "task-attempt" and referenced_task_payloads:
         if started_at is None:
             started_at = _extreme_timestamp(
@@ -463,12 +469,15 @@ def _retained_refs(workspace_root: Path, root: Path) -> tuple[str, ...]:
 def _stage_attempt_frames(
     *, workspace_root: Path, work_item: str, run_id: str, stage: str
 ) -> list[OperatorTimelineFrame]:
-    stage_attempts_root = run_stage_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-    ) / "attempts"
+    stage_attempts_root = (
+        run_stage_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        / "attempts"
+    )
     metadata = load_stage_metadata(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -494,12 +503,15 @@ def _stage_attempt_frames(
 def _task_attempt_frames(
     *, workspace_root: Path, work_item: str, run_id: str
 ) -> list[OperatorTimelineFrame]:
-    tasks_root = run_stage_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage="implement",
-    ) / "tasks"
+    tasks_root = (
+        run_stage_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage="implement",
+        )
+        / "tasks"
+    )
     frames: list[OperatorTimelineFrame] = []
     for task_path in sorted(path for path in tasks_root.glob("*") if path.is_dir()):
         for attempt_path in sorted(
@@ -529,12 +541,16 @@ def _task_attempt_frames(
 def _finalization_frames(
     *, workspace_root: Path, work_item: str, run_id: str
 ) -> list[OperatorTimelineFrame]:
-    attempts_root = run_stage_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage="implement",
-    ) / "finalization" / "attempts"
+    attempts_root = (
+        run_stage_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage="implement",
+        )
+        / "finalization"
+        / "attempts"
+    )
     frames: list[OperatorTimelineFrame] = []
     for path in sorted(attempts_root.glob("attempt-[0-9][0-9][0-9][0-9]")):
         attempt_number = int(path.name.removeprefix("attempt-"))
@@ -568,10 +584,7 @@ def _event_marker_frames(events: list[OperatorTimelineEvent]) -> list[OperatorTi
         attempt = event.attempt_number or 0
         frames.append(
             OperatorTimelineFrame(
-                identity=(
-                    f"event:{stage}:{event.kind}:attempt:{attempt:04d}:"
-                    f"{counts[key]:04d}"
-                ),
+                identity=(f"event:{stage}:{event.kind}:attempt:{attempt:04d}:{counts[key]:04d}"),
                 kind="event-marker",
                 stage=event.stage,
                 task_id=None,
@@ -620,8 +633,7 @@ def _metadata_events(
                 attempt_number=repair.attempt_number,
                 time_utc=repair.recorded_at_utc,
                 message=(
-                    f"{stage} {repair.trigger} attempt "
-                    f"{repair.attempt_number}: {repair.outcome}"
+                    f"{stage} {repair.trigger} attempt {repair.attempt_number}: {repair.outcome}"
                 ),
                 path=repair.validator_report_path or repair.repair_brief_path,
             )
@@ -889,9 +901,7 @@ def resolve_operator_run_history(
         warnings.append("Run history root is unavailable; no runs were listed.")
         return OperatorRunHistoryView(work_item, None, (), tuple(warnings))
     candidates = (
-        sorted(runs_root.iterdir(), key=lambda path: path.name)
-        if runs_root.exists()
-        else ()
+        sorted(runs_root.iterdir(), key=lambda path: path.name) if runs_root.exists() else ()
     )
     for candidate in candidates:
         if not candidate.is_dir():
@@ -914,9 +924,7 @@ def resolve_operator_run_history(
         )
         primary_frames = tuple(frame for frame in timeline.frames if frame.kind != "event-marker")
         modes = tuple(
-            dict.fromkeys(
-                frame.attempt_mode for frame in primary_frames if frame.attempt_mode
-            )
+            dict.fromkeys(frame.attempt_mode for frame in primary_frames if frame.attempt_mode)
         )
         if attempt_mode and attempt_mode not in modes:
             continue
@@ -926,11 +934,15 @@ def resolve_operator_run_history(
         lineage = manifest.get("lineage")
         lineage_payload = lineage if isinstance(lineage, dict) else {}
         raw_children = lineage_payload.get("child_work_item_candidates")
-        child_ids = tuple(
-            str(child.get("work_item_id"))
-            for child in raw_children
-            if isinstance(child, dict) and str(child.get("work_item_id", "")).strip()
-        ) if isinstance(raw_children, list) else ()
+        child_ids = (
+            tuple(
+                str(child.get("work_item_id"))
+                for child in raw_children
+                if isinstance(child, dict) and str(child.get("work_item_id", "")).strip()
+            )
+            if isinstance(raw_children, list)
+            else ()
+        )
         try:
             archive = resolve_run_archive_decision(
                 workspace_root=workspace_root,

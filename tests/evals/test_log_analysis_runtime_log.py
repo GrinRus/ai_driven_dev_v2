@@ -111,7 +111,7 @@ def test_summarize_runtime_provider_diagnostics_ignores_long_thinking_text() -> 
                 (
                     '{"source":"stdout","type":"assistant","message":{"content":['
                     '{"type":"thinking","thinking":"I should inspect rate limit notes later."}'
-                    ']}}'
+                    "]}}"
                 ),
                 (
                     '{"source":"stdout","type":"system","subtype":"api_retry",'
@@ -124,6 +124,5 @@ def test_summarize_runtime_provider_diagnostics_ignores_long_thinking_text() -> 
     summary = summarize_runtime_provider_diagnostics(events)
 
     assert summary.rate_limit_signals == (
-        "line 2: source=stdout; type=system; subtype=api_retry; "
-        "error=rate_limit; error_status=429",
+        "line 2: source=stdout; type=system; subtype=api_retry; error=rate_limit; error_status=429",
     )

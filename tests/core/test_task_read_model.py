@@ -76,13 +76,7 @@ def _tasklist(*, summary: str = "four dependency-aware tasks") -> str:
 
 def _write_tasklist(workspace_root: Path, text: str | None = None) -> None:
     path = (
-        workspace_root
-        / "workitems"
-        / "WI-READ"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / "WI-READ" / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text or _tasklist(), encoding="utf-8")
@@ -255,11 +249,14 @@ def test_task_workspace_preserves_success_and_projects_partial_progress(tmp_path
         ledger=ledger,
     )
 
-    model = cast(dict[str, Any], resolve_task_read_model(
-        workspace_root=workspace_root,
-        work_item="WI-READ",
-        run_id="run-1",
-    ))
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+        ),
+    )
 
     assert model["groups"] == {
         "Ready": ["TL-2", "TL-3"],
@@ -281,12 +278,16 @@ def test_task_workspace_preserves_success_and_projects_partial_progress(tmp_path
 def test_task_workspace_exposes_running_attempt_and_durable_event(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_tasklist(workspace_root)
-    attempt_path = task_root(
-        workspace_root=workspace_root,
-        work_item="WI-READ",
-        run_id="run-1",
-        task_id="TL-1",
-    ) / "attempts" / "attempt-0001"
+    attempt_path = (
+        task_root(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+            task_id="TL-1",
+        )
+        / "attempts"
+        / "attempt-0001"
+    )
     attempt_path.mkdir(parents=True)
     (attempt_path / "attempt-state.json").write_text(
         json.dumps({"status": "executing", "task_id": "TL-1", "attempt_number": 1}),
@@ -305,11 +306,14 @@ def test_task_workspace_exposes_running_attempt_and_durable_event(tmp_path: Path
         ledger=ledger,
     )
 
-    model = cast(dict[str, Any], resolve_task_read_model(
-        workspace_root=workspace_root,
-        work_item="WI-READ",
-        run_id="run-1",
-    ))
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+        ),
+    )
     task = next(item for item in model["tasks"] if item["id"] == "TL-1")
 
     assert model["groups"]["Running"] == ["TL-1"]
@@ -329,11 +333,14 @@ def test_task_workspace_has_no_ready_task_while_current_attempt_runs(tmp_path: P
         ledger=ledger,
     )
 
-    model = cast(dict[str, Any], resolve_task_read_model(
-        workspace_root=workspace_root,
-        work_item="WI-READ",
-        run_id="run-1",
-    ))
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+        ),
+    )
 
     assert model["next_ready_task"] is None
     assert model["groups"]["Running"] == ["TL-1"]

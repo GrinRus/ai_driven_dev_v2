@@ -267,8 +267,7 @@ def test_validate_semantic_outputs_flags_review_cleanup_claim_with_setup_residue
     )
 
     assert any(
-        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
-        and "cleanup passed" in finding.message
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE and "cleanup passed" in finding.message
         for finding in findings
     )
 
@@ -408,8 +407,7 @@ def test_validate_semantic_outputs_does_not_infer_review_severity_from_prose(
     )
 
     assert any(
-        finding.code == INCOMPLETE_SECTION_CODE
-        and "explicit severity" in finding.message
+        finding.code == INCOMPLETE_SECTION_CODE and "explicit severity" in finding.message
         for finding in findings
     )
 
@@ -548,8 +546,7 @@ def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each finding must include explicit severity "
-                "(critical/high/medium/low/info/none)."
+                "Each finding must include explicit severity (critical/high/medium/low/info/none)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -562,8 +559,7 @@ def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each finding must include rationale "
-                "(for example `Rationale:` or `because ...`)."
+                "Each finding must include rationale (for example `Rationale:` or `because ...`)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -604,8 +600,7 @@ def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each finding must include rationale "
-                "(for example `Rationale:` or `because ...`)."
+                "Each finding must include rationale (for example `Rationale:` or `because ...`)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -632,8 +627,7 @@ def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Approval status cannot be `approved` while unresolved "
-                "`must-fix` findings remain."
+                "Approval status cannot be `approved` while unresolved `must-fix` findings remain."
             ),
             severity="high",
             location=ValidationIssueLocation(
@@ -644,4 +638,3 @@ def test_validate_semantic_outputs_flags_invalid_review_fixture_bundle() -> None
             ),
         ),
     )
-

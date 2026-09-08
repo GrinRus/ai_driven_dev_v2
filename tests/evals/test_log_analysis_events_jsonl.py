@@ -59,7 +59,7 @@ def test_normalized_event_failure_selection_preserves_nonfailure_signals(
     event_kind: str,
     expected_category: str,
 ) -> None:
-    events = parse_events_jsonl_text('\n' + '{"event":"' + event_kind + '"}\n')
+    events = parse_events_jsonl_text("\n" + '{"event":"' + event_kind + '"}\n')
 
     selection = select_first_failure_boundary(normalized_events=events)
 

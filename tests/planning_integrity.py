@@ -116,9 +116,7 @@ def parent_status_rollup_errors(roadmap: str) -> tuple[str, ...]:
             for child in children.get(key, [])
         ]
         result = (
-            "done"
-            if child_states and all(state == "done" for state in child_states)
-            else "planned"
+            "done" if child_states and all(state == "done" for state in child_states) else "planned"
         )
         effective[key] = result
         return result
@@ -135,18 +133,12 @@ def parent_status_rollup_errors(roadmap: str) -> tuple[str, ...]:
 
 
 def _task_blocks(lines: list[str]) -> list[tuple[re.Match[str], list[str]]]:
-    starts = [
-        (index, match)
-        for index, line in enumerate(lines)
-        if (match := _TASK_RE.match(line))
-    ]
+    starts = [(index, match) for index, line in enumerate(lines) if (match := _TASK_RE.match(line))]
     return [
         (
             match,
             lines[
-                index + 1 : starts[position + 1][0]
-                if position + 1 < len(starts)
-                else len(lines)
+                index + 1 : starts[position + 1][0] if position + 1 < len(starts) else len(lines)
             ],
         )
         for position, (index, match) in enumerate(starts)
@@ -285,9 +277,7 @@ def roadmap_backlog_integrity_errors(roadmap: str, backlog: str) -> tuple[str, .
         if entry.section == "Next" and entry.task_id in by_id
     ]
     soon_entries = (
-        entry
-        for entry in entries
-        if entry.section == "Soon" and entry.task_id in by_id
+        entry for entry in entries if entry.section == "Soon" and entry.task_id in by_id
     )
     for entry in soon_entries:
         task = by_id[entry.task_id]

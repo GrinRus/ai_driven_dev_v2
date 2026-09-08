@@ -245,10 +245,7 @@ def validate_review_spec_report(context: SemanticDocumentContext) -> tuple[Valid
                     )
                 )
             else:
-                if any(
-                    not review_spec_issue_has_explicit_severity(item)
-                    for item in issue_blocks
-                ):
+                if any(not review_spec_issue_has_explicit_severity(item) for item in issue_blocks):
                     findings.append(
                         context.finding(
                             code=INCOMPLETE_SECTION_CODE,
@@ -260,10 +257,7 @@ def validate_review_spec_report(context: SemanticDocumentContext) -> tuple[Valid
                             location=section.location,
                         )
                     )
-                if any(
-                    REVIEW_SPEC_RATIONALE_PATTERN.search(item) is None
-                    for item in issue_blocks
-                ):
+                if any(REVIEW_SPEC_RATIONALE_PATTERN.search(item) is None for item in issue_blocks):
                     findings.append(
                         context.finding(
                             code=INCOMPLETE_SECTION_CODE,

@@ -25,9 +25,7 @@ def _attempt(
                 "adapter_outcome": adapter_outcome,
                 "exit_classification": exit_classification,
                 "exit_code": 0 if adapter_outcome == "success" else 1,
-                "stop_reason": (
-                    None if adapter_outcome == "success" else adapter_outcome
-                ),
+                "stop_reason": (None if adapter_outcome == "success" else adapter_outcome),
             }
         ),
         encoding="utf-8",
@@ -101,9 +99,12 @@ def test_ui_job_store_retains_typed_terminal_evidence(
     assert evidence["attempt_number"] == 3
     assert evidence["job_status"] == job_status
     assert evidence["adapter_outcome"] == adapter_outcome
-    assert evidence["runtime_exit"]["artifact_path"] == (  # type: ignore[index]
-        attempt_path / "runtime-exit.json"
-    ).as_posix()
+    assert (
+        evidence["runtime_exit"]["artifact_path"]
+        == (  # type: ignore[index]
+            attempt_path / "runtime-exit.json"
+        ).as_posix()
+    )
     assert evidence["durable_mutation_winner"]["status"] == (  # type: ignore[index]
         "passed" if transition == "complete" else "executing"
     )

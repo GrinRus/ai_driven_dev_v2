@@ -124,9 +124,7 @@ def test_lifecycle_projection_has_a_fixed_total_size_bound() -> None:
             attempt="attempt-0001",
         ),
     )
-    encoded = b"".join(
-        json.dumps(row, sort_keys=True).encode() + b"\n" for row in projected
-    )
+    encoded = b"".join(json.dumps(row, sort_keys=True).encode() + b"\n" for row in projected)
 
     assert len(projected) == MAX_LIFECYCLE_EVENTS + 1
     assert projected[-1]["event_kind"] == "projection-truncated"
@@ -179,6 +177,7 @@ def test_live_jsonl_keeps_native_payload_only_in_runtime_artifact(
         "stage": "qa",
         "attempt": "attempt-0002",
     }
+
 
 def test_detect_question_or_pause_events_ignores_invalid_runtime_question_ids() -> None:
     detection = detect_question_or_pause_events(

@@ -136,11 +136,7 @@ def _profile_signal_for_event(event: NormalizedRuntimeEvent) -> str | None:
     if "model" not in values and "provider" not in values and "profile" not in values:
         return None
 
-    parts = [
-        f"{label}={values[label]}"
-        for label in PROFILE_LABEL_ORDER
-        if label in values
-    ]
+    parts = [f"{label}={values[label]}" for label in PROFILE_LABEL_ORDER if label in values]
     return f"line {event.line_number}: {_single_line('; '.join(parts))}"
 
 
@@ -165,9 +161,7 @@ def _event_contains_signal(event: NormalizedRuntimeEvent, tokens: tuple[str, ...
         return True
     for key, value in _walk_payload_items(event.payload):
         key_text = _normalize_payload_key(key)
-        if key_text not in SIGNAL_KEY_LABELS and not any(
-            token in key_text for token in tokens
-        ):
+        if key_text not in SIGNAL_KEY_LABELS and not any(token in key_text for token in tokens):
             continue
         scalar = _scalar_text(value)
         value_text = "" if scalar is None else scalar[:300].replace("-", "_").lower()
@@ -250,16 +244,14 @@ def parse_events_jsonl_text(events_jsonl_text: str) -> tuple[NormalizedRuntimeEv
         if not isinstance(payload, dict):
             payload_type = type(payload).__name__
             raise ValueError(
-                "events.jsonl line "
-                f"{line_number} must be a JSON object, got {payload_type}."
+                f"events.jsonl line {line_number} must be a JSON object, got {payload_type}."
             )
 
-        event_kind = str(
-            payload.get("event_kind")
-            or payload.get("event")
-            or payload.get("type")
-            or ""
-        ).strip().lower()
+        event_kind = (
+            str(payload.get("event_kind") or payload.get("event") or payload.get("type") or "")
+            .strip()
+            .lower()
+        )
         source_value = payload.get("source")
         source = source_value.strip().lower() if isinstance(source_value, str) else None
         events.append(
@@ -304,9 +296,7 @@ def parse_validator_report_failures_text(
 
 def _is_environment_signal(message: str) -> bool:
     normalized = message.lower().replace("_", " ").replace("-", " ")
-    return bool(
-        re.search(r"\b(?:http(?: status)?|status code)\s+[45]\d\d\b", normalized)
-    ) or any(
+    return bool(re.search(r"\b(?:http(?: status)?|status code)\s+[45]\d\d\b", normalized)) or any(
         token in normalized
         for token in (
             "certificate verify failed",

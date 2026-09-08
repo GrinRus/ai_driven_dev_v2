@@ -32,8 +32,7 @@ class AllowedWriteScope:
             label="repository path",
         )
         return any(
-            candidate == prefix or candidate.startswith(f"{prefix}/")
-            for prefix in self.prefixes
+            candidate == prefix or candidate.startswith(f"{prefix}/") for prefix in self.prefixes
         )
 
 
@@ -85,10 +84,13 @@ def resolve_allowed_write_scope(
     workspace_root: Path,
     work_item: str,
 ) -> AllowedWriteScope | None:
-    source_path = work_item_context_root(
-        root=workspace_root,
-        work_item=work_item,
-    ) / ALLOWED_WRITE_SCOPE_FILENAME
+    source_path = (
+        work_item_context_root(
+            root=workspace_root,
+            work_item=work_item,
+        )
+        / ALLOWED_WRITE_SCOPE_FILENAME
+    )
     if not source_path.exists():
         return None
     return parse_allowed_write_scope(

@@ -61,8 +61,7 @@ def test_run_artifacts_lists_document_and_log_paths(tmp_path: Path) -> None:
     assert "runtime_log" in result.stdout
     assert "workitems/WI-777/stages/plan/stage-result.md" in result.stdout
     assert (
-        "reports/runs/WI-777/run-777/stages/plan/attempts/attempt-0001/runtime.log"
-        in result.stdout
+        "reports/runs/WI-777/run-777/stages/plan/attempts/attempt-0001/runtime.log" in result.stdout
     )
 
 

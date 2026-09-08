@@ -55,9 +55,7 @@ def test_live_scenarios_are_manual_only() -> None:
             if scenario.live_matrix_role == "flow-regression":
                 assert scenario.feature_size == "small", path.as_posix()
             else:
-                assert scenario.feature_size in {"medium", "large", "xlarge"}, (
-                    path.as_posix()
-                )
+                assert scenario.feature_size in {"medium", "large", "xlarge"}, path.as_posix()
                 assert scenario.feature_source is not None, path.as_posix()
                 for task in scenario.feature_source.tasks:
                     assert task.visible_request, path.as_posix()
@@ -129,9 +127,7 @@ def test_live_matrix_roles_match_black_box_product_evaluation_policy() -> None:
     scenario_ids = {scenario.scenario_id for scenario in live}
 
     flow_regression_ids = {
-        scenario.scenario_id
-        for scenario in live
-        if scenario.live_matrix_role == "flow-regression"
+        scenario.scenario_id for scenario in live if scenario.live_matrix_role == "flow-regression"
     }
     assert flow_regression_ids == {
         "AIDD-LIVE-004",
@@ -149,9 +145,7 @@ def test_live_matrix_roles_match_black_box_product_evaluation_policy() -> None:
         if scenario.feature_size in {"medium", "large", "xlarge"}
     )
     product_repos = {
-        scenario.repo.url
-        for scenario in live
-        if scenario.live_matrix_role == "product-evaluation"
+        scenario.repo.url for scenario in live if scenario.live_matrix_role == "product-evaluation"
     }
     assert len(product_repos) >= 5
 
@@ -161,17 +155,17 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
     live = [scenario for _path, scenario in entries if scenario.is_live]
     deterministic = [scenario for _path, scenario in entries if not scenario.is_live]
 
-    assert any(
-        scenario.canonical_runtime == "generic-cli" for scenario in deterministic
-    ), "Expected a generic-cli deterministic baseline scenario."
+    assert any(scenario.canonical_runtime == "generic-cli" for scenario in deterministic), (
+        "Expected a generic-cli deterministic baseline scenario."
+    )
     assert any(
         scenario.scenario_class == "deterministic-workflow"
         and "opencode" in scenario.runtime_targets
         for scenario in deterministic
     ), "Expected an opencode deterministic workflow lane."
-    assert any(
-        "claude-code" in scenario.runtime_targets for scenario in deterministic
-    ), "Expected at least one deterministic Claude Code lane."
+    assert any("claude-code" in scenario.runtime_targets for scenario in deterministic), (
+        "Expected at least one deterministic Claude Code lane."
+    )
     assert any(
         scenario.canonical_runtime == "codex" and scenario.feature_size == "small"
         for scenario in live
@@ -182,12 +176,12 @@ def test_provider_rollout_policy_matches_manifest_set() -> None:
         and scenario.feature_size == "medium"
         for scenario in live
     ), "Expected a medium live lane with codex as canonical runtime."
-    assert any(
-        scenario.canonical_runtime == "opencode" for scenario in live
-    ), "Expected at least one live opencode lane."
-    assert all(
-        "generic-cli" not in scenario.runtime_targets for scenario in live
-    ), "Live rollout must remain off generic-cli in Wave 13."
+    assert any(scenario.canonical_runtime == "opencode" for scenario in live), (
+        "Expected at least one live opencode lane."
+    )
+    assert all("generic-cli" not in scenario.runtime_targets for scenario in live), (
+        "Live rollout must remain off generic-cli in Wave 13."
+    )
     claude_live_targets = [
         scenario.scenario_id for scenario in live if "claude-code" in scenario.runtime_targets
     ]
@@ -219,9 +213,7 @@ def test_hono_medium_live_scenario_uses_focused_verification_gate() -> None:
 
 
 def test_scenario_matrix_doc_mentions_all_representative_buckets() -> None:
-    matrix_doc = (_repo_root() / "docs" / "e2e" / "scenario-matrix.md").read_text(
-        encoding="utf-8"
-    )
+    matrix_doc = (_repo_root() / "docs" / "e2e" / "scenario-matrix.md").read_text(encoding="utf-8")
 
     for needle in (
         "AIDD-SMOKE-001",
@@ -263,9 +255,7 @@ def test_live_catalog_mentions_manual_matrix_coverage() -> None:
 
 
 def test_ci_workflow_does_not_reference_live_scenarios() -> None:
-    ci_workflow = (_repo_root() / ".github" / "workflows" / "ci.yml").read_text(
-        encoding="utf-8"
-    )
+    ci_workflow = (_repo_root() / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "harness/scenarios/live/" not in ci_workflow
     assert "AIDD_EVAL_PUBLISHED_PACKAGE_SPEC" not in ci_workflow

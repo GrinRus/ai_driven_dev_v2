@@ -879,8 +879,7 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             classification.baseline_ignored_files,
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
-                "`target-workspace-evidence.json` field "
-                "`classification.baseline_ignored_inventory`"
+                "`target-workspace-evidence.json` field `classification.baseline_ignored_inventory`"
             ),
         ),
         "",
@@ -898,8 +897,7 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             classification.new_ignored_files,
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
-                "`target-workspace-evidence.json` field "
-                "`classification.new_ignored_inventory`"
+                "`target-workspace-evidence.json` field `classification.new_ignored_inventory`"
             ),
         ),
         "- Setup-baseline ignored churn files:",
@@ -1477,9 +1475,7 @@ def _load_or_create_context(
     manual_frontend_evidence: Path | None,
 ) -> FlowContext:
     normalized_run_id = (
-        SafeIdentifier.parse(run_id, label="run_id").value
-        if run_id is not None
-        else None
+        SafeIdentifier.parse(run_id, label="run_id").value if run_id is not None else None
     )
     expected_scenario = (
         load_scenario(
@@ -1494,13 +1490,9 @@ def _load_or_create_context(
         report_root=report_root,
         run_id=normalized_run_id,
         scenario_path=scenario_path,
-        scenario_id=(
-            expected_scenario.scenario_id if expected_scenario is not None else ""
-        ),
+        scenario_id=(expected_scenario.scenario_id if expected_scenario is not None else ""),
         runtime_id=runtime_id,
-        work_item=(
-            derive_work_item(expected_scenario) if expected_scenario is not None else ""
-        ),
+        work_item=(derive_work_item(expected_scenario) if expected_scenario is not None else ""),
         work_root=work_root,
     )
     if resume_state is not None:
@@ -2326,12 +2318,8 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
         flow_status=cast(str | None, consistency["flow_state_status"]),
         verdict_status=cast(str | None, consistency["verdict_status"]),
         grader_status=cast(str | None, consistency["grader_execution_status"]),
-        stage_quality_audit_paths=tuple(
-            Path(str(audit["path"])) for audit in stage_quality_audits
-        ),
-        final_report_paths=tuple(
-            Path(str(report["path"])) for report in final_reports
-        ),
+        stage_quality_audit_paths=tuple(Path(str(audit["path"])) for audit in stage_quality_audits),
+        final_report_paths=tuple(Path(str(report["path"])) for report in final_reports),
         quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
     )
     return {
@@ -2416,10 +2404,7 @@ def _render_product_evaluation_bundle_summary_markdown(
         f"- Manual quality stop: `{acceptance['manual_quality_stop']}`",
         "- Not-clean reasons:",
         *(
-            [
-                f"- {reason}"
-                for reason in cast(list[str], acceptance["not_clean_reasons"])
-            ]
+            [f"- {reason}" for reason in cast(list[str], acceptance["not_clean_reasons"])]
             or ["- none"]
         ),
         "",
@@ -2883,9 +2868,7 @@ def _run_setup(ctx: FlowContext) -> None:
             scenario=ctx.scenario,
             working_copy_path=working_copy,
             environment=_harness_environment_for_context(ctx),
-            lifecycle_budget=HarnessLifecycleBudget.start(
-                DEFAULT_TARGET_READINESS_TIMEOUT_SECONDS
-            ),
+            lifecycle_budget=HarnessLifecycleBudget.start(DEFAULT_TARGET_READINESS_TIMEOUT_SECONDS),
         )
     except HarnessSetupError as exc:
         transcripts = _transcripts_from_error(exc)
@@ -2964,12 +2947,8 @@ def _run_target_readiness(ctx: FlowContext) -> None:
             ctx=ctx,
             action="target-setup",
             classification="infra-fail",
-            decision=(
-                "Stop before provider allocation because target readiness failed."
-            ),
-            plan=(
-                "Run provider-free authored verification smoke after dependency setup."
-            ),
+            decision=("Stop before provider allocation because target readiness failed."),
+            plan=("Run provider-free authored verification smoke after dependency setup."),
             command_results=tuple(
                 BlackBoxCommandResult(
                     command=("/bin/sh", "-c", transcript.command),
@@ -3381,8 +3360,7 @@ def _task_flow_checkpoint(
         else (
             str(ctx.preserved_install_payload.get("source_revision"))
             if ctx.preserved_install_payload is not None
-            and ctx.preserved_install_payload.get("source_revision")
-            is not None
+            and ctx.preserved_install_payload.get("source_revision") is not None
             else None
         )
     )
@@ -3715,9 +3693,7 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                 lines.append(f"  - `{check.get('name', 'check')}`: ok=`{check.get('ok', False)}`")
         lines.append("")
     reconciliations_raw = payload.get("reconciliations")
-    reconciliations = (
-        reconciliations_raw if isinstance(reconciliations_raw, list) else []
-    )
+    reconciliations = reconciliations_raw if isinstance(reconciliations_raw, list) else []
     lines.extend(("## Reconciliations", ""))
     if not reconciliations:
         lines.append("- none")
@@ -5094,11 +5070,7 @@ def _stage_first_attempt_runtime_log_path(ctx: FlowContext, stage: str) -> Path:
 
 
 def _runtime_capture_candidates(attempt_root: Path, prefix: str) -> tuple[Path, ...]:
-    candidates = [
-        path
-        for path in attempt_root.glob(f".{prefix}.*.tmp")
-        if path.is_file()
-    ]
+    candidates = [path for path in attempt_root.glob(f".{prefix}.*.tmp") if path.is_file()]
     candidates.sort(
         key=lambda path: path.stat().st_mtime_ns,
         reverse=True,
@@ -5152,9 +5124,7 @@ def _salvage_partial_runtime_evidence(
         attempt_root = max(
             attempt_roots,
             key=lambda path: (
-                int(path.name.rsplit("-", 1)[-1])
-                if path.name.rsplit("-", 1)[-1].isdigit()
-                else -1,
+                int(path.name.rsplit("-", 1)[-1]) if path.name.rsplit("-", 1)[-1].isdigit() else -1,
                 path.stat().st_mtime_ns,
             ),
         )
@@ -5191,9 +5161,7 @@ def _salvage_partial_runtime_evidence(
                 adapter_outcome=RuntimeAdapterOutcome.RUNTIME_FAILURE,
                 exit_classification="provider-no-progress",
                 exit_code=(
-                    provider_exit_code
-                    if provider_exit_code is not None
-                    else stage_result.exit_code
+                    provider_exit_code if provider_exit_code is not None else stage_result.exit_code
                 ),
                 stdout_text="",
                 stderr_text="",
@@ -5204,9 +5172,7 @@ def _salvage_partial_runtime_evidence(
                 runtime_log_char_count=len(runtime_text),
             )
         )
-        metadata = json.loads(
-            evidence.runtime_exit_metadata_path.read_text(encoding="utf-8")
-        )
+        metadata = json.loads(evidence.runtime_exit_metadata_path.read_text(encoding="utf-8"))
         metadata.update(
             {
                 "partial_runtime_capture": True,
@@ -5217,9 +5183,7 @@ def _salvage_partial_runtime_evidence(
             }
         )
         _write_json(evidence.runtime_exit_metadata_path, metadata)
-        evidence_paths.extend(
-            [evidence.runtime_log_path, evidence.runtime_exit_metadata_path]
-        )
+        evidence_paths.extend([evidence.runtime_log_path, evidence.runtime_exit_metadata_path])
         details.update(
             {
                 "salvaged": True,
@@ -5481,8 +5445,7 @@ def _reconcile_failed_incomplete_stage_run(
     previous_status = None if before is None else before.status
     expected_state = (
         previous_status
-        if previous_status is not None
-        and previous_status not in TERMINAL_STAGE_METADATA_STATUSES
+        if previous_status is not None and previous_status not in TERMINAL_STAGE_METADATA_STATUSES
         else "executing"
     )
     operation_payload: dict[str, object]
@@ -6645,8 +6608,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             task_checkpoint_payload = _read_json_object(checkpoint_path)
         checkpoint_findings = task_checkpoint_payload.get("findings", [])
         status_drift = isinstance(checkpoint_findings, list) and any(
-            str(item).startswith("implementation-status-drift:")
-            for item in checkpoint_findings
+            str(item).startswith("implementation-status-drift:") for item in checkpoint_findings
         )
         if task_checkpoint_classification == "fail" and (
             classification != "blocked" or status_drift
@@ -7200,10 +7162,11 @@ def _write_validator_report_from_steps(
     if status != "pass":
         for step in _load_steps(ctx.bundle_root):
             classification = step.get("classification")
-            if (
-                classification not in {"fail", "blocked", "infra-fail"}
-                or is_nondecisive_provisional_frontend_step(step)
-            ):
+            if classification not in {
+                "fail",
+                "blocked",
+                "infra-fail",
+            } or is_nondecisive_provisional_frontend_step(step):
                 continue
             finding_lines.append(
                 f"- `{classification}` in `{step.get('action', 'unknown')}`: "
@@ -7360,9 +7323,7 @@ def _stage_timing_payload_from_flow(
     summary = payload.get("summary")
     if isinstance(summary, dict):
         summary["process_segment_count"] = len(process_segments)
-        summary["process_segment_duration_seconds"] = (
-            _cumulative_flow_duration_seconds(ctx)
-        )
+        summary["process_segment_duration_seconds"] = _cumulative_flow_duration_seconds(ctx)
     return payload
 
 
@@ -7956,16 +7917,8 @@ def _materialize_canonical_live_result(ctx: FlowContext) -> None:
             else ctx.prepared_working_copy.resolved_revision
         ),
         source_repository_root=ctx.source_repository_root,
-        source_commit=(
-            None
-            if ctx.install_result is None
-            else ctx.install_result.source_revision
-        ),
-        wheel_path=(
-            None
-            if ctx.install_result is None
-            else ctx.install_result.artifact_path
-        ),
+        source_commit=(None if ctx.install_result is None else ctx.install_result.source_revision),
+        wheel_path=(None if ctx.install_result is None else ctx.install_result.artifact_path),
     )
 
 
@@ -8239,10 +8192,7 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
         return _finalize_reports(
             ctx=ctx,
             status="infra-fail",
-            summary=(
-                "Target setup readiness failed before provider allocation: "
-                f"{exc}"
-            ),
+            summary=(f"Target setup readiness failed before provider allocation: {exc}"),
             verification_failed=True,
             teardown_result=None,
             teardown_error=None,

@@ -217,9 +217,7 @@ def test_evaluate_stage_eligibility_reports_missing_required_input_documents(
 
     assert eligibility.dependencies == ("plan",)
     assert eligibility.missing_prerequisites == ()
-    assert eligibility.missing_input_documents == (
-        "workitems/WI-001/context/repository-state.md",
-    )
+    assert eligibility.missing_input_documents == ("workitems/WI-001/context/repository-state.md",)
     assert eligibility.is_eligible is False
 
 
@@ -264,9 +262,7 @@ def test_evaluate_stage_eligibility_rejects_non_readable_required_inputs(
         stage="review-spec",
     )
 
-    assert eligibility.missing_input_documents == (
-        "workitems/WI-001/context/repository-state.md",
-    )
+    assert eligibility.missing_input_documents == ("workitems/WI-001/context/repository-state.md",)
     assert eligibility.is_eligible is False
 
 

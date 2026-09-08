@@ -166,9 +166,7 @@ class MarkdownSectionIndex:
         return cls(
             headings=headings,
             markdown_lines=tuple(markdown_text.splitlines()),
-            headings_by_title={
-                title: tuple(matches) for title, matches in grouped.items()
-            },
+            headings_by_title={title: tuple(matches) for title, matches in grouped.items()},
         )
 
     def matches(self, heading: str) -> tuple[tuple[int, MarkdownHeading], ...]:

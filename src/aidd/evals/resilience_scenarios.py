@@ -27,10 +27,7 @@ from aidd.evals.failure_corpus import (
 
 RESILIENCE_SCENARIO_SCHEMA_VERSION = 1
 DEFAULT_RESILIENCE_FIXTURE_ROOT = (
-    Path(__file__).resolve().parents[3]
-    / "tests"
-    / "fixtures"
-    / "w43-e5-s1-t1-resilience"
+    Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "w43-e5-s1-t1-resilience"
 )
 _SCENARIO_ID_PATTERN = r"^[a-z0-9][a-z0-9-]+$"
 
@@ -107,8 +104,7 @@ def _string_tuple(value: object, *, context: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not value:
         raise ResilienceScenarioError(f"{context} must be a non-empty list of strings.")
     values = tuple(
-        _required_string(item, context=f"{context}[{index}]")
-        for index, item in enumerate(value)
+        _required_string(item, context=f"{context}[{index}]") for index, item in enumerate(value)
     )
     if len(values) != len(set(values)):
         raise ResilienceScenarioError(f"{context} must not contain duplicates.")
@@ -177,9 +173,7 @@ def _load_definition(raw: object, *, index: int, root: Path) -> ResilienceScenar
             raw.get("workflow_records"), context=f"scenarios[{index}].workflow_records"
         ),
         expected_root_findings=tuple(
-            str(item).strip()
-            for item in raw.get("expected_root_findings", [])
-            if str(item).strip()
+            str(item).strip() for item in raw.get("expected_root_findings", []) if str(item).strip()
         ),
         required_evidence=_string_tuple(
             raw.get("required_evidence"), context=f"scenarios[{index}].required_evidence"

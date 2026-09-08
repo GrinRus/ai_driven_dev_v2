@@ -55,11 +55,17 @@ def test_two_project_job_lifecycle_isolation(tmp_path: Path) -> None:
     assert view_a["project_root"] == project_a.as_posix()
     assert view_b["status"] == "running"
     assert view_b["project_root"] == project_b.as_posix()
-    assert store.active_job_for_context(
-        project_root=project_a,
-        workspace_root=workspace_a,
-    ) is None
-    assert store.active_job_for_context(
-        project_root=project_b,
-        workspace_root=workspace_b,
-    )["job_id"] == job_b
+    assert (
+        store.active_job_for_context(
+            project_root=project_a,
+            workspace_root=workspace_a,
+        )
+        is None
+    )
+    assert (
+        store.active_job_for_context(
+            project_root=project_b,
+            workspace_root=workspace_b,
+        )["job_id"]
+        == job_b
+    )

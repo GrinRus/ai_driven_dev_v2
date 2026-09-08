@@ -766,9 +766,7 @@ def test_load_live_product_evaluation_requires_black_box_task_fields(
         "audit_rubric": "      audit_rubric: Check stage quality.",
         "complexity_axes": "      complexity_axes:\n        - cross-module",
     }
-    task_extra = "\n".join(
-        line for field, line in optional_lines.items() if field != removed_field
-    )
+    task_extra = "\n".join(line for field, line in optional_lines.items() if field != removed_field)
     manifest = _write_manifest(
         live_root / f"missing-{removed_field}.yaml",
         f"""

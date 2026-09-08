@@ -167,9 +167,7 @@ def reconcile_frontend_checkpoints(
         )
 
     effective: EffectiveFrontendClassification = (
-        "pass"
-        if running_observed and running_classification == "pass"
-        else "skipped"
+        "pass" if running_observed and running_classification == "pass" else "skipped"
     )
     return FrontendCheckpointReconciliation(
         running_observed=running_observed,
@@ -180,9 +178,7 @@ def reconcile_frontend_checkpoints(
         running_status=("provisional-pass" if effective == "pass" else None),
         post_stage_status=post_status,
         effective_classification=effective,
-        decisive_reason=(
-            "No decisive post-stage frontend failure was observed."
-        ),
+        decisive_reason=("No decisive post-stage frontend failure was observed."),
     )
 
 
@@ -228,22 +224,14 @@ def apply_frontend_checkpoint_reconciliation(
     if running_checkpoint is not None and reconciliation.running_status is not None:
         running_checkpoint["reconciliation_status"] = reconciliation.running_status
         running_checkpoint["reconciled_at_utc"] = reconciled_at_utc
-        running_checkpoint["effective_classification"] = (
-            reconciliation.effective_classification
-        )
+        running_checkpoint["effective_classification"] = reconciliation.effective_classification
     if post_stage_checkpoint is not None:
-        post_stage_checkpoint["reconciliation_status"] = (
-            reconciliation.post_stage_status
-        )
+        post_stage_checkpoint["reconciliation_status"] = reconciliation.post_stage_status
         post_stage_checkpoint["reconciled_at_utc"] = reconciled_at_utc
-        post_stage_checkpoint["effective_classification"] = (
-            reconciliation.effective_classification
-        )
+        post_stage_checkpoint["effective_classification"] = reconciliation.effective_classification
 
     raw_reconciliations = checkpoint_payload.get("reconciliations")
-    reconciliations = (
-        raw_reconciliations if isinstance(raw_reconciliations, list) else []
-    )
+    reconciliations = raw_reconciliations if isinstance(raw_reconciliations, list) else []
     if not isinstance(raw_reconciliations, list):
         checkpoint_payload["reconciliations"] = reconciliations
     reconciliations.append(reconciliation_payload)
@@ -259,8 +247,7 @@ def apply_frontend_checkpoint_reconciliation(
             (
                 candidate
                 for candidate in reversed(flow_steps)
-                if candidate.get("action") == action
-                and candidate.get("stage") == stage
+                if candidate.get("action") == action and candidate.get("stage") == stage
             ),
             None,
         )
@@ -268,9 +255,7 @@ def apply_frontend_checkpoint_reconciliation(
             continue
         raw_details = step.get("details")
         details = (
-            dict(cast(dict[str, object], raw_details))
-            if isinstance(raw_details, dict)
-            else {}
+            dict(cast(dict[str, object], raw_details)) if isinstance(raw_details, dict) else {}
         )
         details["reconciliation_status"] = status
         details["effective_classification"] = reconciliation.effective_classification

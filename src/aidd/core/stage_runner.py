@@ -261,10 +261,7 @@ def _canonical_stage_result_blockers(
     findings: tuple[ValidationFinding, ...],
     interview_routing: StageInterviewRouting | None = None,
 ) -> tuple[str, ...]:
-    blockers = tuple(
-        f"`{finding.code}`: {finding.message.strip()}"
-        for finding in findings
-    )
+    blockers = tuple(f"`{finding.code}`: {finding.message.strip()}" for finding in findings)
     if interview_routing is not None and interview_routing.requires_interview:
         blockers = (
             *blockers,
@@ -384,8 +381,7 @@ def _retain_interview_candidate_evidence(
         lines.append(f"- QID: `{error.entry_id}`")
     lines.extend(
         (
-            "- Raw candidate: `"
-            f"runtime-{document_name.removesuffix('.md')}-candidate.md`",
+            f"- Raw candidate: `runtime-{document_name.removesuffix('.md')}-candidate.md`",
             "",
             "The canonical interview ledger was not mutated by this candidate.",
             "",
@@ -575,9 +571,7 @@ def _restore_and_merge_questions_after_runtime_attempt(
             return
 
     merged = list(previous_questions)
-    index_by_question_id = {
-        question.question_id: index for index, question in enumerate(merged)
-    }
+    index_by_question_id = {question.question_id: index for index, question in enumerate(merged)}
     for question in current_questions:
         existing_index = index_by_question_id.get(question.question_id)
         if existing_index is None:
@@ -734,8 +728,7 @@ def _terminalize_unhandled_post_execution_exception(
         )
     except Exception as cleanup_error:
         exception.add_note(
-            "Could not persist failed stage state: "
-            f"{type(cleanup_error).__name__}: {cleanup_error}"
+            f"Could not persist failed stage state: {type(cleanup_error).__name__}: {cleanup_error}"
         )
     try:
         write_adapter_exception_artifact(
@@ -1158,9 +1151,7 @@ def _prepare_stage_validation(
     )
     exhausted_stage_result_path: Path | None = None
     if exhausted_repair_budget:
-        ensure_repair_brief_records_exhausted_budget(
-            prepared.adapter_invocation.repair_brief_path
-        )
+        ensure_repair_brief_records_exhausted_budget(prepared.adapter_invocation.repair_brief_path)
         exhausted_stage_result_path = force_stage_result_failed_for_exhausted_budget(
             workspace_root=workspace_root,
             work_item=work_item,

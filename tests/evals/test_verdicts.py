@@ -107,8 +107,7 @@ def test_render_scenario_verdict_markdown_uses_stable_layout() -> None:
     assert "- Artifact: `reports/evals/eval-run-004/validator-report.md`" in markdown
     assert "## Analysis" in markdown
     assert (
-        "- First Failure Note: Validation was blocked waiting for user clarification."
-        in markdown
+        "- First Failure Note: Validation was blocked waiting for user clarification." in markdown
     )
     assert (
         "- Verification Summary: Verification steps skipped because run terminated as blocked."
@@ -299,8 +298,7 @@ def test_build_scenario_verdict_integration_from_qa_success_bundle(tmp_path: Pat
             infrastructure_failure=False,
         ),
         summary=(
-            "QA integration scenario produced evidence-backed "
-            "ready-with-risks release output."
+            "QA integration scenario produced evidence-backed ready-with-risks release output."
         ),
         created_at_utc="2026-04-22T12:00:00Z",
         artifact_links=(
@@ -315,11 +313,7 @@ def test_build_scenario_verdict_integration_from_qa_success_bundle(tmp_path: Pat
     )
 
     verdict_path = (
-        tmp_path
-        / "reports"
-        / "evals"
-        / "eval-stage-qa-verdict-integration"
-        / "verdict.md"
+        tmp_path / "reports" / "evals" / "eval-stage-qa-verdict-integration" / "verdict.md"
     )
     write_scenario_verdict_markdown(path=verdict_path, verdict=verdict)
     verdict_text = verdict_path.read_text(encoding="utf-8")

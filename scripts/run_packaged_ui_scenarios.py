@@ -144,11 +144,15 @@ def main() -> int:
         print(f"packaged-ui preflight failed: {exc}", file=sys.stderr)
         return 2
     failed = [result.journey_id for result in results if result.return_code != 0]
-    print(json.dumps({
-        "discovered_ids": [result.journey_id for result in results],
-        "executed_ids": [result.journey_id for result in results],
-        "failed_ids": failed,
-    }))
+    print(
+        json.dumps(
+            {
+                "discovered_ids": [result.journey_id for result in results],
+                "executed_ids": [result.journey_id for result in results],
+                "failed_ids": failed,
+            }
+        )
+    )
     return 1 if failed else 0
 
 

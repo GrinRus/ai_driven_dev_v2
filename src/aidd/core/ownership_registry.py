@@ -63,14 +63,13 @@ class DocumentOwnershipRegistry:
         try:
             return self.by_path_pattern[path_pattern]
         except KeyError as exc:
-            raise OwnershipRegistryError(
-                f"Unknown document path pattern: {path_pattern}"
-            ) from exc
+            raise OwnershipRegistryError(f"Unknown document path pattern: {path_pattern}") from exc
 
     def for_stage(self, stage: str) -> tuple[OwnershipMatrixRow, ...]:
         if not is_valid_stage(stage):
             raise OwnershipRegistryError(f"Unknown stage: {stage}")
         return tuple(row for row in self.rows if row.applies_to(stage))
+
 
 DEFAULT_OWNERSHIP_MATRIX_PATH = default_document_contracts_root() / "ownership-matrix.md"
 
@@ -216,8 +215,7 @@ def _canonical_section_lines(markdown_text: str) -> list[tuple[int, str]]:
 def parse_ownership_matrix(
     markdown_text: str,
     *,
-    expected_row_shapes: dict[str, tuple[tuple[str, ...] | None, OwnershipClass]]
-    | None = None,
+    expected_row_shapes: dict[str, tuple[tuple[str, ...] | None, OwnershipClass]] | None = None,
 ) -> DocumentOwnershipRegistry:
     """Parse and validate the canonical Markdown ownership matrix.
 

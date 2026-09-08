@@ -70,15 +70,15 @@ def test_probe_handles_nonzero_version_command(tmp_path: Path) -> None:
     fake_cli = tmp_path / "fake-codex-cli"
     fake_cli.write_text(
         "#!/bin/sh\n"
-        "if [ \"$1\" = \"--version\" ]; then\n"
-        "  echo \"codex-cli 0.1.0\" >&2\n"
+        'if [ "$1" = "--version" ]; then\n'
+        '  echo "codex-cli 0.1.0" >&2\n'
         "  exit 1\n"
         "fi\n"
-        "if [ \"$1\" = \"--help\" ]; then\n"
-        "  echo \"--jsonl --non-interactive --resume --cwd --env subagent\"\n"
+        'if [ "$1" = "--help" ]; then\n'
+        '  echo "--jsonl --non-interactive --resume --cwd --env subagent"\n'
         "  exit 0\n"
         "fi\n"
-        "echo \"ok\"\n",
+        'echo "ok"\n',
         encoding="utf-8",
     )
     fake_cli.chmod(0o755)
@@ -98,15 +98,15 @@ def test_probe_handles_malformed_version_output(tmp_path: Path) -> None:
     fake_cli = tmp_path / "fake-codex-cli-malformed-version"
     fake_cli.write_text(
         "#!/bin/sh\n"
-        "if [ \"$1\" = \"--version\" ]; then\n"
-        "  echo \"???\"\n"
+        'if [ "$1" = "--version" ]; then\n'
+        '  echo "???"\n'
         "  exit 0\n"
         "fi\n"
-        "if [ \"$1\" = \"--help\" ]; then\n"
-        "  echo \"--non-interactive\"\n"
+        'if [ "$1" = "--help" ]; then\n'
+        '  echo "--non-interactive"\n'
         "  exit 0\n"
         "fi\n"
-        "echo \"ok\"\n",
+        'echo "ok"\n',
         encoding="utf-8",
     )
     fake_cli.chmod(0o755)

@@ -363,8 +363,7 @@ def _runtime_log_heartbeat_label(path: Path | None) -> str:
     if path.exists():
         bounded = read_bounded_log(path, mode="tail", requested_bytes=4096)
         status = (
-            f"present; retained bytes {bounded.start_byte}:{bounded.end_byte}"
-            f"/{bounded.byte_size}"
+            f"present; retained bytes {bounded.start_byte}:{bounded.end_byte}/{bounded.byte_size}"
         )
     return f"{path.resolve(strict=False).as_posix()} ({status})"
 

@@ -13,7 +13,9 @@ def _config() -> AiddConfig:
         runtime_configs={
             "generic-cli": RuntimeConfig("python", RuntimeExecutionMode.ADAPTER_FLAGS, None, {}),
             "claude-code": RuntimeConfig(
-                "claude", RuntimeExecutionMode.NATIVE, 1200,
+                "claude",
+                RuntimeExecutionMode.NATIVE,
+                1200,
                 {"research": 1500, "implement": 1800},
             ),
             "codex": RuntimeConfig("codex", RuntimeExecutionMode.NATIVE, 900, {}),
@@ -27,14 +29,20 @@ def _config() -> AiddConfig:
 def test_runtime_timeout_prefers_stage_specific_override() -> None:
     cfg = _config()
 
-    assert _runtime_timeout_for_runtime(
-        runtime="claude-code",
-        cfg=cfg,
-        stage="research",
-    ) == 1500
-    assert _runtime_timeout_for_runtime(
-        runtime="claude-code",
-        cfg=cfg,
-        stage="qa",
-    ) == 1200
+    assert (
+        _runtime_timeout_for_runtime(
+            runtime="claude-code",
+            cfg=cfg,
+            stage="research",
+        )
+        == 1500
+    )
+    assert (
+        _runtime_timeout_for_runtime(
+            runtime="claude-code",
+            cfg=cfg,
+            stage="qa",
+        )
+        == 1200
+    )
     assert _runtime_timeout_for_runtime(runtime="codex", cfg=cfg, stage="plan") == 900

@@ -123,8 +123,7 @@ def normalize_auto_approval_preset(
     except ValueError as exc:
         supported = ", ".join(preset.value for preset in AutoApprovalPreset)
         raise ValueError(
-            f"Unsupported runtime auto_approval_preset {raw_value!r}. "
-            f"Supported: {supported}."
+            f"Unsupported runtime auto_approval_preset {raw_value!r}. Supported: {supported}."
         ) from exc
 
 
@@ -136,9 +135,7 @@ def command_contains_permission_bypass(command: str) -> bool:
 
     executable = Path(tokens[0]).name if tokens else ""
     for index, token in enumerate(tokens):
-        if token in _BYPASS_FLAGS or any(
-            token.startswith(f"{flag}=") for flag in _BYPASS_FLAGS
-        ):
+        if token in _BYPASS_FLAGS or any(token.startswith(f"{flag}=") for flag in _BYPASS_FLAGS):
             return True
         if executable == "qwen" and token == "-y":
             return True
@@ -149,10 +146,7 @@ def command_contains_permission_bypass(command: str) -> bool:
             return True
         if token.startswith("--approval-policy=") and token.split("=", 1)[1] == "never":
             return True
-        if (
-            token.startswith("--permission-mode=")
-            and token.split("=", 1)[1] == "bypassPermissions"
-        ):
+        if token.startswith("--permission-mode=") and token.split("=", 1)[1] == "bypassPermissions":
             return True
         if token.startswith("--sandbox=") and token.split("=", 1)[1] in {
             "danger-full-access",
@@ -177,10 +171,15 @@ def command_contains_permission_bypass(command: str) -> bool:
             and tokens[index + 1] == "bypassPermissions"
         ):
             return True
-        if token == "--sandbox" and index + 1 < len(tokens) and tokens[index + 1] in {
-            "danger-full-access",
-            "full-access",
-        }:
+        if (
+            token == "--sandbox"
+            and index + 1 < len(tokens)
+            and tokens[index + 1]
+            in {
+                "danger-full-access",
+                "full-access",
+            }
+        ):
             return True
     return False
 

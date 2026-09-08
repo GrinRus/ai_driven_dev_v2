@@ -70,9 +70,12 @@ def test_resolve_run_artifacts_summary_uses_latest_run_and_attempt(tmp_path: Pat
 
     assert resolved.run_id == "run-002"
     assert resolved.attempt_number == 2
-    assert resolved.logs["runtime_log"] == (
-        run_attempt_root(workspace_root, "WI-001", "run-002", "plan", 2) / "runtime.log"
-    ).relative_to(workspace_root).as_posix()
+    assert (
+        resolved.logs["runtime_log"]
+        == (run_attempt_root(workspace_root, "WI-001", "run-002", "plan", 2) / "runtime.log")
+        .relative_to(workspace_root)
+        .as_posix()
+    )
     assert resolved.documents["stage_brief"] == "workitems/WI-001/stages/plan/stage-brief.md"
 
 
@@ -133,7 +136,10 @@ def test_resolve_run_artifacts_summary_keeps_terminal_runs_readable(tmp_path: Pa
     )
 
     resolved = resolve_run_artifacts_summary(
-        workspace_root=workspace_root, work_item="WI-001", stage="plan", run_id="run-001",
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+        run_id="run-001",
     )
     assert resolved.run_id == "run-001"
     assert resolved.attempt_number == 1

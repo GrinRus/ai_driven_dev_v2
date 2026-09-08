@@ -137,11 +137,7 @@ def _run_shell_commands(
 ) -> tuple[HarnessCommandTranscript, ...]:
     command_transcripts: list[HarnessCommandTranscript] = []
     for command in commands:
-        timeout_seconds = (
-            None
-            if lifecycle_budget is None
-            else lifecycle_budget.remaining_seconds()
-        )
+        timeout_seconds = None if lifecycle_budget is None else lifecycle_budget.remaining_seconds()
         completed = run_owned_process(
             command=("/bin/sh", "-c", command),
             cwd=working_copy_path,
@@ -170,9 +166,7 @@ def _run_shell_commands(
                 command_transcripts=tuple(command_transcripts),
                 failed_command=command,
                 failed_exit_code=completed.exit_code,
-                duration_seconds=sum(
-                    item.duration_seconds for item in command_transcripts
-                ),
+                duration_seconds=sum(item.duration_seconds for item in command_transcripts),
             )
             raise error
     return tuple(command_transcripts)
@@ -227,15 +221,9 @@ def _invoke_aidd_process(
         if scenario.run.timeout_minutes is not None
         else None
     )
-    remaining_seconds = (
-        None
-        if lifecycle_budget is None
-        else lifecycle_budget.remaining_seconds()
-    )
+    remaining_seconds = None if lifecycle_budget is None else lifecycle_budget.remaining_seconds()
     timeout_candidates = tuple(
-        value
-        for value in (configured_timeout_seconds, remaining_seconds)
-        if value is not None
+        value for value in (configured_timeout_seconds, remaining_seconds) if value is not None
     )
     timeout_seconds = min(timeout_candidates) if timeout_candidates else None
     completed = run_owned_process(

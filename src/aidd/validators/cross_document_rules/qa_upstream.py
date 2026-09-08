@@ -63,15 +63,18 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
     work_item_root = context.workspace_root / "workitems" / context.work_item
     upstream_artifact_roots = (
         work_item_root / "context",
-        *(work_item_root / "stages" / stage / "output" for stage in (
-            "idea",
-            "research",
-            "plan",
-            "review-spec",
-            "tasklist",
-            "implement",
-            "review",
-        )),
+        *(
+            work_item_root / "stages" / stage / "output"
+            for stage in (
+                "idea",
+                "research",
+                "plan",
+                "review-spec",
+                "tasklist",
+                "implement",
+                "review",
+            )
+        ),
     )
     available_paths = {
         reference
@@ -87,8 +90,7 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
 
     def resolved_upstream_reference(text: str) -> bool:
         if any(
-            match.group(0).upper() in available_ids
-            for match in _EVIDENCE_ID_PATTERN.finditer(text)
+            match.group(0).upper() in available_ids for match in _EVIDENCE_ID_PATTERN.finditer(text)
         ):
             return True
         if any(
@@ -126,8 +128,7 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
         ):
             definition = _EVIDENCE_DEFINITION_PATTERN.match(entry)
             if definition is not None and (
-                resolved_upstream_reference(entry)
-                or resolved_qa_local_command_evidence(entry)
+                resolved_upstream_reference(entry) or resolved_qa_local_command_evidence(entry)
             ):
                 local_evidence_ids.add(definition.group("evidence_id").upper())
 
@@ -165,10 +166,7 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
     for entry in re.split(r"(?=^\s*-\s+)", evidence_sections, flags=re.MULTILINE):
         definition = _EVIDENCE_DEFINITION_PATTERN.match(entry)
         reference_resolved = (
-            (
-                resolved_upstream_reference(entry)
-                or resolved_qa_local_command_evidence(entry)
-            )
+            (resolved_upstream_reference(entry) or resolved_qa_local_command_evidence(entry))
             if definition is not None
             else resolved_reference(entry)
         )

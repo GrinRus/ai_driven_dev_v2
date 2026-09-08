@@ -274,8 +274,7 @@ def test_collect_live_workspace_snapshot_records_git_execution_errors(
 
 def test_ignored_inventory_is_digest_backed_and_bounded_at_large_scale() -> None:
     ignored_files = tuple(
-        f"node_modules/package-{index:05d}/cache/file-{index:05d}.js"
-        for index in range(20_000)
+        f"node_modules/package-{index:05d}/cache/file-{index:05d}.js" for index in range(20_000)
     )
     snapshot = LiveWorkspaceSnapshot(
         tracked_files=("src/modified.py", "src/deleted.py"),
@@ -292,9 +291,7 @@ def test_ignored_inventory_is_digest_backed_and_bounded_at_large_scale() -> None
     assert isinstance(inventory, dict)
     assert inventory["total_count"] == 20_000
     assert inventory["group_count"] == 1
-    assert inventory["groups"] == [
-        {"root": "node_modules/", "type": "dependency", "count": 20_000}
-    ]
+    assert inventory["groups"] == [{"root": "node_modules/", "type": "dependency", "count": 20_000}]
     assert len(inventory["sample"]) == 50
     assert inventory["truncated"] is True
     assert inventory["groups_truncated"] is False

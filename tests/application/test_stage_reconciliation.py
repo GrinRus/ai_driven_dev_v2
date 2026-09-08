@@ -202,7 +202,8 @@ def test_reconcile_terminal_stage_does_not_rewrite_identity_mismatch(
 
 @pytest.mark.parametrize("missing_field", ("schema_version", "status_history", "repair_history"))
 def test_reconciliation_rejects_incomplete_metadata_without_rewriting_evidence(
-    tmp_path: Path, missing_field: str,
+    tmp_path: Path,
+    missing_field: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     metadata_path = _prepare_stage(workspace_root)

@@ -79,9 +79,9 @@ def test_catalog_projects_adapter_owned_registration_without_compatibility_drift
 
 
 def test_runtime_catalog_has_no_built_in_provider_registration_literals() -> None:
-    catalog_source = (
-        Path(__file__).parents[2] / "src" / "aidd" / "runtime_catalog.py"
-    ).read_text(encoding="utf-8")
+    catalog_source = (Path(__file__).parents[2] / "src" / "aidd" / "runtime_catalog.py").read_text(
+        encoding="utf-8"
+    )
 
     for provider_literal in (".claude", ".codex", ".opencode", ".qwen", "auth.json"):
         assert provider_literal not in catalog_source

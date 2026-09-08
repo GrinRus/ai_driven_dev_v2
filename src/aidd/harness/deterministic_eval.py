@@ -114,9 +114,7 @@ def _bootstrap_work_item(
 def _config_path(working_copy: Path) -> Path:
     path = working_copy / "aidd.example.toml"
     if not path.is_file():
-        raise RuntimeError(
-            "Deterministic scenario setup must create `aidd.example.toml`."
-        )
+        raise RuntimeError("Deterministic scenario setup must create `aidd.example.toml`.")
     return path
 
 
@@ -259,17 +257,12 @@ def _classification(
         )
     if state.aidd_run_result is None or state.aidd_run_result.exit_code != expected_exit_code:
         exit_code = (
-            "missing"
-            if state.aidd_run_result is None
-            else str(state.aidd_run_result.exit_code)
+            "missing" if state.aidd_run_result is None else str(state.aidd_run_result.exit_code)
         )
         mismatch_summary = (
             f"AIDD execution failed with exit code {exit_code}."
             if expected_exit_code == 0
-            else (
-                f"AIDD execution returned exit code {exit_code}; expected "
-                f"{expected_exit_code}."
-            )
+            else (f"AIDD execution returned exit code {exit_code}; expected {expected_exit_code}.")
         )
         return EvalClassification(
             status="fail",

@@ -340,13 +340,7 @@ def test_repair_history_markdown_reports_no_repair_attempts(tmp_path: Path) -> N
 def test_stage_timing_does_not_infer_repair_from_resume_ordinal(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     stage_root = (
-        workspace_root
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-20260426T100000Z"
-        / "stages"
-        / "idea"
+        workspace_root / "reports" / "runs" / "WI-001" / "run-20260426T100000Z" / "stages" / "idea"
     )
     stage_root.mkdir(parents=True)
     (stage_root / "stage-metadata.json").write_text(
@@ -390,13 +384,7 @@ def test_stage_timing_does_not_infer_repair_from_resume_ordinal(tmp_path: Path) 
 def test_stage_timing_rejects_attempt_without_lineage(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     stage_root = (
-        workspace_root
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-20260426T100000Z"
-        / "stages"
-        / "idea"
+        workspace_root / "reports" / "runs" / "WI-001" / "run-20260426T100000Z" / "stages" / "idea"
     )
     stage_root.mkdir(parents=True)
     (stage_root / "stage-metadata.json").write_text(

@@ -434,20 +434,29 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
 
 @pytest.mark.parametrize("invalid_version", (None, 1, "2", True, 99))
 def test_task_cli_rejects_retired_ledger_before_runtime_or_state_writes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid_version: object,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    invalid_version: object,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_tasklist(workspace_root)
     create_run_manifest(
-        workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1",
-        runtime_id="generic-cli", stage_target="qa", workflow_stage_start="tasklist",
+        workspace_root=workspace_root,
+        work_item="WI-TASK",
+        run_id="run-1",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        workflow_stage_start="tasklist",
         workflow_stage_end="qa",
         config_snapshot=_manifest_config_snapshot(workspace_root, "generic-cli"),
     )
     tasklist_path = workspace_root / "workitems/WI-TASK/stages/tasklist/output/tasklist.md"
     ledger = TaskLedger.create(parse_task_plan(tasklist_path.read_text()))
     ledger_path = persist_task_ledger(
-        workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1", ledger=ledger,
+        workspace_root=workspace_root,
+        work_item="WI-TASK",
+        run_id="run-1",
+        ledger=ledger,
     )
     payload = ledger.to_dict()
     if invalid_version is None:
@@ -463,11 +472,25 @@ def test_task_cli_rejects_retired_ledger_before_runtime_or_state_writes(
         raise AssertionError("Malformed ledger must not reach runtime")
 
     monkeypatch.setattr("aidd.cli.task._task_attempt_port", lambda **kwargs: runtime)
-    result = runner.invoke(app, [
-        "task", "run", "TL-1", "--work-item", "WI-TASK", "--run-id", "run-1",
-        "--runtime", "generic-cli", "--root", str(workspace_root),
-        "--config", str(Path("aidd.example.toml").resolve()), "--no-log-follow",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "task",
+            "run",
+            "TL-1",
+            "--work-item",
+            "WI-TASK",
+            "--run-id",
+            "run-1",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(Path("aidd.example.toml").resolve()),
+            "--no-log-follow",
+        ],
+    )
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
     assert "schema_version=2" in str(result.exception)

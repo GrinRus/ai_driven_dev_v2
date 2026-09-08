@@ -54,13 +54,16 @@ def _materialize_project_set_context(tmp_path: Path, workspace_root: Path, work_
     (tmp_path / "services" / "api").mkdir(parents=True)
     (tmp_path / "apps" / "web").mkdir(parents=True)
     persist_project_set_context(
-        workspace_root=workspace_root, work_item=work_item,
+        workspace_root=workspace_root,
+        work_item=work_item,
         project_set=resolve_project_set(
             repository_root=tmp_path,
-            project_set=ProjectSetConfig(projects=(
-                ProjectConfig(id="api", root=Path("services/api")),
-                ProjectConfig(id="web", root=Path("apps/web")),
-            )),
+            project_set=ProjectSetConfig(
+                projects=(
+                    ProjectConfig(id="api", root=Path("services/api")),
+                    ProjectConfig(id="web", root=Path("apps/web")),
+                )
+            ),
         ),
     )
 
@@ -99,8 +102,18 @@ def test_substantive_only_runtime_leaves_workflow_records_to_aidd(
         max_repair_attempts=1 if attempt_mode == "repair" else 0,
     )
     common_args = [
-        "plan", "--work-item", work_item, "--runtime", "generic-cli", "--run-id", run_id,
-        "--root", str(workspace_root), "--config", str(config), "--no-log-follow",
+        "plan",
+        "--work-item",
+        work_item,
+        "--runtime",
+        "generic-cli",
+        "--run-id",
+        run_id,
+        "--root",
+        str(workspace_root),
+        "--config",
+        str(config),
+        "--no-log-follow",
     ]
     result = runner.invoke(app, ["stage", "run", *common_args])
     assert result.exit_code == 0, result.output
@@ -131,7 +144,10 @@ def test_substantive_only_runtime_leaves_workflow_records_to_aidd(
     assert "Verdict: `pass`" in (output / "validator-report.md").read_text(encoding="utf-8")
     attempt_number = 1 if attempt_mode == "initial" else 2
     artifact_path = run_attempt_artifact_index_path(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="plan",
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="plan",
         attempt_number=attempt_number,
     )
     artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
@@ -198,11 +214,25 @@ def test_bootstrap_reconciliation_preserves_real_failures_and_runtime_draft_evid
         runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer.as_posix())}",
         max_repair_attempts=0,
     )
-    result = runner.invoke(app, [
-        "stage", "run", "plan", "--work-item", work_item, "--runtime", "generic-cli",
-        "--run-id", "run-bootstrap-fail", "--root", str(workspace_root), "--config", str(config),
-        "--no-log-follow",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--run-id",
+            "run-bootstrap-fail",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config),
+            "--no-log-follow",
+        ],
+    )
 
     assert result.exit_code == 1, result.output
     assert "action=stop state=failed" in result.output
@@ -213,8 +243,11 @@ def test_bootstrap_reconciliation_preserves_real_failures_and_runtime_draft_evid
     if failure == "lookalike-runtime-draft":
         assert "SEM-INCOMPLETE-SECTION" in (stage_root / "validator-report.md").read_text()
         artifact_path = run_attempt_artifact_index_path(
-            workspace_root=workspace_root, work_item=work_item, run_id="run-bootstrap-fail",
-            stage="plan", attempt_number=1,
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id="run-bootstrap-fail",
+            stage="plan",
+            attempt_number=1,
         )
         artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
         evidence_path = workspace_root / artifact["documents"]["runtime_stage_result_draft"]
@@ -242,7 +275,9 @@ def test_substantive_only_runtime_routes_completion_blockers_to_interview(
         "intervention": {"plan.md": plan},
     }[attempt_mode]
     writer = _write_runtime_writer_script(
-        tmp_path=tmp_path, documents=first_documents, next_documents=blocked_documents,
+        tmp_path=tmp_path,
+        documents=first_documents,
+        next_documents=blocked_documents,
         exit_code=0,
     )
     config = _write_cli_config(
@@ -251,15 +286,32 @@ def test_substantive_only_runtime_routes_completion_blockers_to_interview(
         max_repair_attempts=1 if attempt_mode == "repair" else 0,
     )
     common_args = [
-        "plan", "--work-item", work_item, "--runtime", "generic-cli", "--run-id", "run-blocked",
-        "--root", str(workspace_root), "--config", str(config), "--no-log-follow",
+        "plan",
+        "--work-item",
+        work_item,
+        "--runtime",
+        "generic-cli",
+        "--run-id",
+        "run-blocked",
+        "--root",
+        str(workspace_root),
+        "--config",
+        str(config),
+        "--no-log-follow",
     ]
     result = runner.invoke(app, ["stage", "run", *common_args])
     if attempt_mode == "intervention":
         assert result.exit_code == 0, result.output
-        result = runner.invoke(app, [
-            "stage", "interact", *common_args, "--request", "Add migration fallback",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "stage",
+                "interact",
+                *common_args,
+                "--request",
+                "Add migration fallback",
+            ],
+        )
 
     assert result.exit_code == 1, result.output
     assert "action=wait state=blocked" in result.output
@@ -2040,14 +2092,16 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
         exit_code=0,
     )
     counter_path = tmp_path / "runtime-calls.txt"
-    writer_script.write_text(writer_script.read_text().replace(
-        "first_documents =",
-        f"counter_path = Path({str(counter_path)!r})\n"
-        "counter = int(counter_path.read_text()) if counter_path.exists() else 0\n"
-        "counter_path.write_text(str(counter + 1))\n"
-        "first_documents =",
-        1,
-    ))
+    writer_script.write_text(
+        writer_script.read_text().replace(
+            "first_documents =",
+            f"counter_path = Path({str(counter_path)!r})\n"
+            "counter = int(counter_path.read_text()) if counter_path.exists() else 0\n"
+            "counter_path.write_text(str(counter + 1))\n"
+            "first_documents =",
+            1,
+        )
+    )
     runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
@@ -2076,16 +2130,27 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
     assert first_run.exit_code == 1, first_run.output
     assert "action=wait state=blocked" in first_run.stdout
     blocked_run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-006")
-    attempts_root = (
-        workspace_root / "reports/runs/WI-006" / blocked_run_id / "stages/plan/attempts"
-    )
+    attempts_root = workspace_root / "reports/runs/WI-006" / blocked_run_id / "stages/plan/attempts"
     first_attempt = attempts_root / "attempt-0001"
     retained = {path.name: path.read_bytes() for path in first_attempt.iterdir() if path.is_file()}
     runtime_calls_before_resume = counter_path.read_text()
-    unanswered_run = runner.invoke(app, [
-        "stage", "run", "plan", "--work-item", "WI-006", "--runtime", "generic-cli",
-        "--root", str(workspace_root), "--config", str(config_path), "--no-log-follow",
-    ])
+    unanswered_run = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            "WI-006",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
     assert unanswered_run.exit_code == 1, unanswered_run.output
     assert counter_path.read_text() == runtime_calls_before_resume
     assert sorted(path.name for path in attempts_root.iterdir() if path.is_dir()) == [
@@ -2153,9 +2218,9 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert payload["status"] == "succeeded"
 
-
     assert sorted(path.name for path in attempts_root.iterdir() if path.is_dir()) == [
-        "attempt-0001", "attempt-0002",
+        "attempt-0001",
+        "attempt-0002",
     ]
     assert int(counter_path.read_text()) == int(runtime_calls_before_resume) + 1
     assert {

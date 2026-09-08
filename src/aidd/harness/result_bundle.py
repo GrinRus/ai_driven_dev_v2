@@ -58,9 +58,7 @@ AIDD_EVIDENCE_DIRNAME = "canonical-evidence"
 RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
 SUMMARY_FILENAME = "summary.md"
 BUNDLE_INTEGRITY_FAILURE_FILENAME = "bundle-integrity-failure.md"
-_BUNDLE_STATUSES: frozenset[BundleStatus] = frozenset(
-    ("pass", "fail", "blocked", "infra-fail")
-)
+_BUNDLE_STATUSES: frozenset[BundleStatus] = frozenset(("pass", "fail", "blocked", "infra-fail"))
 _REQUIRED_BUNDLE_FILENAMES = (
     HARNESS_METADATA_FILENAME,
     INSTALL_TRANSCRIPT_FILENAME,
@@ -81,6 +79,8 @@ _REQUIRED_BUNDLE_FILENAMES = (
     VERDICT_FILENAME,
     SUMMARY_FILENAME,
 )
+
+
 @dataclass(frozen=True, slots=True)
 class ResultBundleLayout:
     run_root: Path
@@ -356,12 +356,8 @@ def write_command_transcripts(
                 setup_result.command_transcripts if setup_result is not None else tuple()
             ),
             duration_seconds=setup_result.duration_seconds if setup_result is not None else 0.0,
-            failed_command=(
-                setup_result.failed_command if setup_result is not None else None
-            ),
-            failed_exit_code=(
-                setup_result.failed_exit_code if setup_result is not None else None
-            ),
+            failed_command=(setup_result.failed_command if setup_result is not None else None),
+            failed_exit_code=(setup_result.failed_exit_code if setup_result is not None else None),
         ),
     )
     run_path = _write_json(
@@ -395,14 +391,10 @@ def write_command_transcripts(
                 verification_result.duration_seconds if verification_result is not None else 0.0
             ),
             failed_command=(
-                verification_result.failed_command
-                if verification_result is not None
-                else None
+                verification_result.failed_command if verification_result is not None else None
             ),
             failed_exit_code=(
-                verification_result.failed_exit_code
-                if verification_result is not None
-                else None
+                verification_result.failed_exit_code if verification_result is not None else None
             ),
         ),
     )
@@ -417,14 +409,10 @@ def write_command_transcripts(
                 teardown_result.duration_seconds if teardown_result is not None else 0.0
             ),
             failed_command=(
-                teardown_result.failed_command
-                if teardown_result is not None
-                else None
+                teardown_result.failed_command if teardown_result is not None else None
             ),
             failed_exit_code=(
-                teardown_result.failed_exit_code
-                if teardown_result is not None
-                else None
+                teardown_result.failed_exit_code if teardown_result is not None else None
             ),
         ),
     )
@@ -523,9 +511,7 @@ def collect_aidd_evidence_sources(
             )
         )
     for category, source_root in roots:
-        destination_root = layout.run_root / AIDD_EVIDENCE_DIRNAME / category.replace(
-            "_", "-"
-        )
+        destination_root = layout.run_root / AIDD_EVIDENCE_DIRNAME / category.replace("_", "-")
         enumerated = _iter_evidence_sources(
             source_root=source_root,
             destination_root=destination_root,
@@ -550,9 +536,7 @@ def collect_aidd_evidence_sources(
                 references.setdefault("runtime_attempt_jsonl", relative)
             elif filename == EVENTS_JSONL_FILENAME:
                 references.setdefault("events_attempt_jsonl", relative)
-    return {
-        key: (source, destination) for key, source, destination in sources
-    }, references
+    return {key: (source, destination) for key, source, destination in sources}, references
 
 
 def _atomic_write_json(path: Path, payload: Any) -> Path:
@@ -603,8 +587,7 @@ def copy_or_link_run_artifacts(
     try:
         for key, (source_path, destination_path) in sources.items():
             staged_path = staging_root / _relative_destination(
-                layout=layout,
-                destination=destination_path
+                layout=layout, destination=destination_path
             )
             if staged_path.exists():
                 raise ValueError(f"Duplicate result bundle artifact path: {destination_path}")

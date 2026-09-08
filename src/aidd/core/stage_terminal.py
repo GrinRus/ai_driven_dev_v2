@@ -183,18 +183,10 @@ def _canonical_default_next_actions(
     return ("- Review the canonical validator report and prepare the next bounded repair attempt.",)
 
 
-def _project_set_evidence_lines(
-    *, workspace_root: Path | None, work_item: str
-) -> tuple[str, ...]:
+def _project_set_evidence_lines(*, workspace_root: Path | None, work_item: str) -> tuple[str, ...]:
     if workspace_root is None:
         return ()
-    context_path = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "context"
-        / "project-set.md"
-    )
+    context_path = workspace_root / "workitems" / work_item / "context" / "project-set.md"
     if not context_path.exists():
         return ()
     try:
@@ -204,11 +196,7 @@ def _project_set_evidence_lines(
     projects = tuple(
         (match.group(1), match.group(2))
         for line in context_text.splitlines()
-        if (
-            match := re.match(
-                r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|", line.strip()
-            )
-        )
+        if (match := re.match(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|", line.strip()))
     )
     context_relative = _workspace_relative_path(workspace_root, context_path)
     lines: list[str] = [
@@ -219,8 +207,7 @@ def _project_set_evidence_lines(
     if projects:
         lines.append("- Declared project roots:")
         lines.extend(
-            f"  - `{project_id}` at `{project_root}`"
-            for project_id, project_root in projects
+            f"  - `{project_id}` at `{project_root}`" for project_id, project_root in projects
         )
     else:
         lines.append("- No declared project roots were recorded in the context document.")
@@ -234,17 +221,22 @@ def _project_set_evidence_lines(
 
 
 def prepare_bootstrap_stage_result_for_validation(
-    *, workspace_root: Path, work_item: str, stage: str,
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
 ) -> bool:
     """Project AIDD-owned context onto an exact bootstrap record without claiming success."""
-    stage_result_path = workspace_stage_root(
-        root=workspace_root, work_item=work_item, stage=stage
-    ) / "stage-result.md"
+    stage_result_path = (
+        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+        / "stage-result.md"
+    )
     if not stage_result_path.exists():
         return False
     text = stage_result_path.read_text(encoding="utf-8", errors="replace").strip()
     project_evidence = _project_set_evidence_lines(
-        workspace_root=workspace_root, work_item=work_item,
+        workspace_root=workspace_root,
+        work_item=work_item,
     )
     prepared = STAGE_RESULT_BOOTSTRAP_TEMPLATE.rstrip()
     if project_evidence:
@@ -627,9 +619,7 @@ def _replace_success_produced_outputs(
         work_item=work_item,
         workspace_root=workspace_root,
     )
-    body = "".join(
-        f"- `{_workspace_relative_path(workspace_root, path)}`\n" for path in paths
-    )
+    body = "".join(f"- `{_workspace_relative_path(workspace_root, path)}`\n" for path in paths)
     match = _PRODUCED_OUTPUTS_PATTERN.search(markdown)
     if match is None:
         return markdown.rstrip() + "\n\n## Produced outputs\n\n" + body

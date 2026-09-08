@@ -484,13 +484,7 @@ def test_validate_required_sections_reports_duplicate_required_heading(tmp_path:
     )
     stage_result_path.parent.mkdir(parents=True, exist_ok=True)
     stage_result_path.write_text(
-        (
-            "# Stage Result\n\n"
-            "## Status\n\n"
-            "- first status\n\n"
-            "## Status\n\n"
-            "- second status\n"
-        ),
+        ("# Stage Result\n\n## Status\n\n- first status\n\n## Status\n\n- second status\n"),
         encoding="utf-8",
     )
 
@@ -505,8 +499,7 @@ def test_validate_required_sections_reports_duplicate_required_heading(tmp_path:
         ValidationFinding(
             code=DUPLICATE_REQUIRED_SECTION_CODE,
             message=(
-                "Duplicate required section `Status` "
-                "in workitems/WI-001/stages/qa/stage-result.md"
+                "Duplicate required section `Status` in workitems/WI-001/stages/qa/stage-result.md"
             ),
             severity="high",
             location=ValidationIssueLocation(
@@ -548,12 +541,7 @@ def test_validate_required_sections_reports_empty_required_heading(tmp_path: Pat
     )
     stage_result_path.parent.mkdir(parents=True, exist_ok=True)
     stage_result_path.write_text(
-        (
-            "# Stage Result\n\n"
-            "## Validation summary\n\n"
-            "## Next actions\n\n"
-            "- rerun checks\n"
-        ),
+        ("# Stage Result\n\n## Validation summary\n\n## Next actions\n\n- rerun checks\n"),
         encoding="utf-8",
     )
 
@@ -647,10 +635,7 @@ def test_validate_required_sections_reports_stale_stage_result_placeholder(
     assert findings == (
         ValidationFinding(
             code=STALE_STAGE_RESULT_PLACEHOLDER_CODE,
-            message=(
-                "stage-result.md retains stale placeholder text "
-                "`Stage not run yet.`"
-            ),
+            message=("stage-result.md retains stale placeholder text `Stage not run yet.`"),
             severity="high",
             location=ValidationIssueLocation(
                 workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md",
@@ -696,9 +681,7 @@ def test_validate_required_sections_maps_document_read_failures_to_one_located_f
     )
 
     workspace_root = tmp_path / ".aidd"
-    output_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "stage-result.md"
-    )
+    output_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "stage-result.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if materialize == "directory":
         output_path.mkdir()
@@ -722,6 +705,5 @@ def test_validate_required_sections_maps_document_read_failures_to_one_located_f
         workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md"
     )
     assert finding.message.startswith(
-        "Unable to read Markdown document "
-        "`workitems/WI-001/stages/qa/stage-result.md`:"
+        "Unable to read Markdown document `workitems/WI-001/stages/qa/stage-result.md`:"
     )

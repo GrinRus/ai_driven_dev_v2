@@ -31,11 +31,7 @@ def derive_live_product_acceptance(
     quality_report_path: Path,
 ) -> LiveProductAcceptance:
     manual_quality_stop = flow_status == "manual-quality-stop"
-    execution_pass = (
-        flow_status == "pass"
-        and verdict_status == "pass"
-        and grader_status == "pass"
-    )
+    execution_pass = flow_status == "pass" and verdict_status == "pass" and grader_status == "pass"
     quality_reviewed = (
         bool(stage_quality_audit_paths)
         and all(path.is_file() for path in stage_quality_audit_paths)
@@ -49,10 +45,7 @@ def derive_live_product_acceptance(
     )
     manual_counted_clean = _COUNTED_CLEAN_PATTERN.search(quality_text) is not None
     counted_clean = (
-        execution_pass
-        and quality_reviewed
-        and manual_counted_clean
-        and not manual_quality_stop
+        execution_pass and quality_reviewed and manual_counted_clean and not manual_quality_stop
     )
     reasons: list[str] = []
     if not execution_pass:

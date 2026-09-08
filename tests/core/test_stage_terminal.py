@@ -23,7 +23,8 @@ from aidd.core.workspace import STAGE_RESULT_BOOTSTRAP_TEMPLATE
 
 @pytest.mark.parametrize("runtime_suffix", ("", "\nRuntime-authored extra evidence.\n"))
 def test_bootstrap_context_projection_is_idempotent_and_preserves_runtime_drafts(
-    tmp_path: Path, runtime_suffix: str,
+    tmp_path: Path,
+    runtime_suffix: str,
 ) -> None:
     stage_root = tmp_path / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True)
@@ -35,7 +36,9 @@ def test_bootstrap_context_projection_is_idempotent_and_preserves_runtime_drafts
     stage_result.write_text(original)
 
     recognized = prepare_bootstrap_stage_result_for_validation(
-        workspace_root=tmp_path, work_item="WI-001", stage="plan",
+        workspace_root=tmp_path,
+        work_item="WI-001",
+        stage="plan",
     )
     prepared = stage_result.read_text()
     assert recognized is (not runtime_suffix)
@@ -47,7 +50,9 @@ def test_bootstrap_context_projection_is_idempotent_and_preserves_runtime_drafts
         assert "## Status" not in prepared
         assert "Validator verdict" not in prepared
         assert prepare_bootstrap_stage_result_for_validation(
-            workspace_root=tmp_path, work_item="WI-001", stage="plan",
+            workspace_root=tmp_path,
+            work_item="WI-001",
+            stage="plan",
         )
         assert stage_result.read_text() == prepared
 
@@ -192,14 +197,20 @@ def test_repair_brief_terminal_budget_detection_uses_context_or_document(
         encoding="utf-8",
     )
 
-    assert repair_brief_exhausts_terminal_budget(
-        repair_brief_path=repair_brief_path,
-        repair_context_markdown=None,
-    ) is False
-    assert repair_brief_exhausts_terminal_budget(
-        repair_brief_path=None,
-        repair_context_markdown="Repair budget status: `repair-budget-exhausted`.",
-    ) is True
+    assert (
+        repair_brief_exhausts_terminal_budget(
+            repair_brief_path=repair_brief_path,
+            repair_context_markdown=None,
+        )
+        is False
+    )
+    assert (
+        repair_brief_exhausts_terminal_budget(
+            repair_brief_path=None,
+            repair_context_markdown="Repair budget status: `repair-budget-exhausted`.",
+        )
+        is True
+    )
 
     ensure_repair_brief_records_exhausted_budget(repair_brief_path)
     assert "Repair budget status: `repair-budget-exhausted`." in repair_brief_path.read_text(
@@ -254,9 +265,7 @@ def test_force_stage_result_failed_canonicalizes_conflicting_status_markers(
     )
 
     reconciled = stage_result_path.read_text(encoding="utf-8")
-    status_body = reconciled.split("## Status\n\n", 1)[1].split(
-        "\n## Terminal state notes", 1
-    )[0]
+    status_body = reconciled.split("## Status\n\n", 1)[1].split("\n## Terminal state notes", 1)[0]
     assert status_body == "- Status: `failed`\n"
     assert "Attempt `1` (`initial`) -> failed validation." in reconciled
     assert "Preserve this historical note." in reconciled
@@ -375,9 +384,7 @@ def test_normalize_success_stage_result_blockers_if_empty_repairs_prose(
     stage_result_path = _stage_result_path(workspace_root)
     stage_result_path.parent.mkdir(parents=True, exist_ok=True)
     stage_result_path.write_text(
-        "# Stage Result\n\n"
-        "## Status\n\n- Status: `succeeded`\n\n"
-        "## Blockers\n\nNo blockers.\n",
+        "# Stage Result\n\n## Status\n\n- Status: `succeeded`\n\n## Blockers\n\nNo blockers.\n",
         encoding="utf-8",
     )
 
@@ -458,8 +465,7 @@ def test_ensure_stage_result_references_repair_brief_appends_trace_note(
     assert result_path == stage_result_path
     stage_result_text = stage_result_path.read_text(encoding="utf-8")
     assert (
-        "- Repair decision context recorded in "
-        "`workitems/WI-001/stages/plan/repair-brief.md`."
+        "- Repair decision context recorded in `workitems/WI-001/stages/plan/repair-brief.md`."
     ) in stage_result_text
 
 
@@ -478,6 +484,5 @@ def test_exhausted_budget_validation_finding_points_at_stage_result(
     assert finding.severity == "critical"
     assert finding.location is not None
     assert (
-        finding.location.workspace_relative_path
-        == "workitems/WI-001/stages/plan/stage-result.md"
+        finding.location.workspace_relative_path == "workitems/WI-001/stages/plan/stage-result.md"
     )

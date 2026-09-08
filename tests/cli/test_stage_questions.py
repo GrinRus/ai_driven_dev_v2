@@ -69,11 +69,7 @@ def test_stage_questions_reports_resolved_blocking_questions(tmp_path: Path) -> 
         root,
         stage="plan",
         work_item="WI-001",
-        body=(
-            "# Answers\n\n"
-            "## Answers\n\n"
-            "- Q1 [resolved] Release owner approval is recorded.\n"
-        ),
+        body=("# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n"),
     )
 
     result = runner.invoke(

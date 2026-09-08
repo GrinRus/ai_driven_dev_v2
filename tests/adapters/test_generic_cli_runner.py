@@ -364,10 +364,7 @@ def test_run_subprocess_with_streaming_classifies_non_zero_exit(tmp_path: Path) 
 
 def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:
     script = (
-        "import time\n"
-        "print('started', flush=True)\n"
-        "time.sleep(5)\n"
-        "print('finished', flush=True)\n"
+        "import time\nprint('started', flush=True)\ntime.sleep(5)\nprint('finished', flush=True)\n"
     )
     spec = GenericCliSubprocessSpec(
         command=(sys.executable, "-c", script),

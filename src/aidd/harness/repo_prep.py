@@ -158,8 +158,7 @@ def _materialize_local_directory_repository(
         )
     except OSError as exc:
         raise RepoPreparationError(
-            "Failed to materialize local fixture repository "
-            f"'{source_path.as_posix()}': {exc}"
+            f"Failed to materialize local fixture repository '{source_path.as_posix()}': {exc}"
         ) from exc
 
     _run_git(["init"], cwd=repo_path)
@@ -248,10 +247,7 @@ def prepare_scenario_repository(*, cache_root: Path, scenario: Scenario) -> Prep
     local_source_path = _local_directory_source(scenario.repo.url)
 
     with _acquire_cache_lock(lock_path=repo_lock_path):
-        if (
-            local_source_path is not None
-            and not _is_standalone_git_worktree(local_source_path)
-        ):
+        if local_source_path is not None and not _is_standalone_git_worktree(local_source_path):
             return _materialize_local_directory_repository(
                 source_path=local_source_path,
                 repo_path=repo_path,
@@ -292,11 +288,7 @@ def prepare_working_copy(
     normalized_run_id = run_id.strip() if run_id is not None else None
     if normalized_run_id == "":
         raise RepoPreparationError("run_id must be non-empty when provided.")
-    working_copy_name = (
-        slug
-        if normalized_run_id is None
-        else f"{slug}__{normalized_run_id}"
-    )
+    working_copy_name = slug if normalized_run_id is None else f"{slug}__{normalized_run_id}"
     working_copy_path = working_copy_root / working_copy_name
     workdir_lock_path = cache_root / ".locks" / f"workdir-{working_copy_name}.lock"
 

@@ -106,9 +106,7 @@ def _validate_roots(
     external = _resolved(external_root)
     lexical_provider = Path(os.path.abspath(provider_root.expanduser()))
     if lexical_provider.is_symlink():
-        raise LiveAcceptanceIsolationError(
-            "Provider root must be a real directory, not a symlink."
-        )
+        raise LiveAcceptanceIsolationError("Provider root must be a real directory, not a symlink.")
     provider = _resolved(lexical_provider)
     if not source.is_dir():
         raise LiveAcceptanceIsolationError("AIDD source checkout must exist.")
@@ -155,9 +153,7 @@ def _private_environment(
 def _prepare_private_root(provider_root: Path) -> Path:
     private_root = provider_root / ".live-provider-private"
     if private_root.is_symlink():
-        raise LiveAcceptanceIsolationError(
-            "Provider-private root must not be a symlink."
-        )
+        raise LiveAcceptanceIsolationError("Provider-private root must not be a symlink.")
     private_root.mkdir(parents=True, exist_ok=True, mode=0o700)
     for relative in set(_PRIVATE_ENVIRONMENT_PATHS.values()):
         path = private_root / relative
@@ -182,17 +178,11 @@ def _macos_profile(
     literal_read_directories: Sequence[Path] = (),
 ) -> str:
     read_roots = tuple(dict.fromkeys((source_checkout, provider_root, *tool_read_roots)))
-    read_filters = " ".join(
-        f'(subpath "{_sbpl_string(root)}")' for root in read_roots
-    )
+    read_filters = " ".join(f'(subpath "{_sbpl_string(root)}")' for root in read_roots)
     literal_read_filters = " ".join(
         f'(literal "{_sbpl_string(root)}")' for root in literal_read_directories
     )
-    literal_read_rule = (
-        f"(allow file-read* {literal_read_filters})"
-        if literal_read_filters
-        else ""
-    )
+    literal_read_rule = f"(allow file-read* {literal_read_filters})" if literal_read_filters else ""
     return " ".join(
         (
             "(version 1)",
@@ -269,9 +259,7 @@ def _linux_prefix(
     for hidden in hidden_roots:
         prefix.extend(("--tmpfs", hidden.as_posix()))
 
-    restored_roots = tuple(
-        dict.fromkeys((source_checkout, provider_root, *tool_read_roots))
-    )
+    restored_roots = tuple(dict.fromkeys((source_checkout, provider_root, *tool_read_roots)))
     for root in restored_roots:
         containing_hidden = next(
             (hidden for hidden in hidden_roots if root.is_relative_to(hidden)),
@@ -376,9 +364,7 @@ def prepare_live_acceptance_isolation(
         )
     provider.mkdir(mode=0o700, exist_ok=True)
     if not provider.is_dir() or provider.is_symlink():
-        raise LiveAcceptanceIsolationError(
-            "Provider root must be a real directory, not a symlink."
-        )
+        raise LiveAcceptanceIsolationError("Provider root must be a real directory, not a symlink.")
     private_root = _prepare_private_root(provider)
     explicit_tool_roots = tuple(_resolved(path) for path in tool_read_roots)
     all_tool_roots = tuple(
@@ -511,14 +497,8 @@ def probe_live_acceptance_isolation_capability(
         list[dict[str, Any]],
         result.diagnostics["environment"],
     )
-    targets = {
-        str(item["label"]): item
-        for item in target_items
-    }
-    environment = {
-        str(item["key"]): item
-        for item in environment_items
-    }
+    targets = {str(item["label"]): item for item in target_items}
+    environment = {str(item["key"]): item for item in environment_items}
     source_ops = targets["source"]["operations"]
     own_ops = targets["own-provider"]["operations"]
     sibling_ops = targets["sibling-provider"]["operations"]
@@ -634,11 +614,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ] = (
                 "existing-private-home"
                 if args.resume_existing_provider
-                else (
-                    "seeded-from-operator-home"
-                    if args.seed_provider_auth_from_home
-                    else "none"
-                )
+                else ("seeded-from-operator-home" if args.seed_provider_auth_from_home else "none")
             )
             session.record_provider_auth(
                 runtime=runtime,

@@ -75,8 +75,7 @@ class StageManifest:
         if overlap:
             joined = ", ".join(overlap)
             raise ValueError(
-                f"Document declaration cannot appear in both {left_name} and "
-                f"{right_name}: {joined}"
+                f"Document declaration cannot appear in both {left_name} and {right_name}: {joined}"
             )
 
     @classmethod

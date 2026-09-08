@@ -20,8 +20,7 @@ from aidd.harness.live_acceptance_preflight import (
 @pytest.fixture(autouse=True)
 def _isolation_capability(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_preflight."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_preflight.require_live_acceptance_isolation_capability",
         lambda: LiveAcceptanceIsolationCapability(
             backend="macos-seatbelt",
             supported=True,
@@ -204,8 +203,7 @@ def test_preflight_blocks_when_platform_isolation_is_unavailable(
         raise LiveAcceptanceIsolationError("no supported backend")
 
     monkeypatch.setattr(
-        "aidd.harness.live_acceptance_preflight."
-        "require_live_acceptance_isolation_capability",
+        "aidd.harness.live_acceptance_preflight.require_live_acceptance_isolation_capability",
         _unavailable,
     )
 

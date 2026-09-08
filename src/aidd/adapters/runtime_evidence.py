@@ -97,9 +97,7 @@ def adapter_outcome_for_classification(
     try:
         return _CLASSIFICATION_OUTCOMES[exit_classification]
     except KeyError as exc:
-        raise ValueError(
-            f"Unknown runtime exit classification: {exit_classification!r}"
-        ) from exc
+        raise ValueError(f"Unknown runtime exit classification: {exit_classification!r}") from exc
 
 
 def stop_reason_for_outcome(

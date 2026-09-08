@@ -245,21 +245,13 @@ def select_next_runnable_stage(
 def _summarize_eligibility_blockers(eligibility: StageEligibility) -> str:
     reasons: list[str] = []
     if eligibility.missing_prerequisites:
-        reasons.append(
-            "missing prerequisites: " + ", ".join(eligibility.missing_prerequisites)
-        )
+        reasons.append("missing prerequisites: " + ", ".join(eligibility.missing_prerequisites))
     if eligibility.blocked_upstream_stages:
-        reasons.append(
-            "blocked upstream stages: " + ", ".join(eligibility.blocked_upstream_stages)
-        )
+        reasons.append("blocked upstream stages: " + ", ".join(eligibility.blocked_upstream_stages))
     if eligibility.failed_upstream_stages:
-        reasons.append(
-            "failed upstream stages: " + ", ".join(eligibility.failed_upstream_stages)
-        )
+        reasons.append("failed upstream stages: " + ", ".join(eligibility.failed_upstream_stages))
     if eligibility.missing_input_documents:
-        reasons.append(
-            "missing required inputs: " + ", ".join(eligibility.missing_input_documents)
-        )
+        reasons.append("missing required inputs: " + ", ".join(eligibility.missing_input_documents))
     return "; ".join(reasons)
 
 

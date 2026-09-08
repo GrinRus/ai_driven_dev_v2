@@ -86,8 +86,7 @@ def load_implementation_evidence_context(
     execution_mode = TaskExecutionMode.REPOSITORY_CHANGE
     if (
         execution_mode_match is not None
-        and execution_mode_match.group(1).casefold()
-        == TaskExecutionMode.VERIFICATION_ONLY.value
+        and execution_mode_match.group(1).casefold() == TaskExecutionMode.VERIFICATION_ONLY.value
     ):
         execution_mode = TaskExecutionMode.VERIFICATION_ONLY
     acceptance_section = _section_content(selection or "", "Acceptance criteria")

@@ -56,14 +56,7 @@ def test_next_flow_complete_visible_accepts_stage_audit_and_dashboard_states(
 
 def test_implement_frontend_checkpoint_includes_task_projection_probe(tmp_path: Path) -> None:
     tasklist_path = (
-        tmp_path
-        / ".aidd"
-        / "workitems"
-        / "WI-1"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        tmp_path / ".aidd" / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     tasklist_path.parent.mkdir(parents=True)
     tasklist_path.write_text("### TL-1 — Task\n", encoding="utf-8")
@@ -73,9 +66,7 @@ def test_implement_frontend_checkpoint_includes_task_projection_probe(tmp_path: 
         {
             "run_id": "run-1",
             "work_item": "WI-1",
-            "prepared_working_copy": type(
-                "WorkingCopy", (), {"working_copy_path": tmp_path}
-            )(),
+            "prepared_working_copy": type("WorkingCopy", (), {"working_copy_path": tmp_path})(),
         },
     )()
     targets = dict(_frontend_probe_targets(context, "implement"))
@@ -83,8 +74,9 @@ def test_implement_frontend_checkpoint_includes_task_projection_probe(tmp_path: 
     assert targets["tasks-api"] == "/api/tasks?run_id=run-1"
 
 
-def test_implement_surface_check_requires_recovery_projection_when_ready_prerequisite_exists(
-) -> None:
+def test_implement_surface_check_requires_recovery_projection_when_ready_prerequisite_exists() -> (
+    None
+):
     context = type("Context", (), {"work_item": "WI-1", "run_id": "run-1"})()
     probes = [
         {
@@ -103,9 +95,7 @@ def test_implement_surface_check_requires_recovery_projection_when_ready_prerequ
                         "status": "pending",
                         "ready": False,
                         "missing_dependencies": ["TL-2"],
-                        "action_projection": {
-                            "recovery": {"task_id": "TL-2", "action": "resume"}
-                        },
+                        "action_projection": {"recovery": {"task_id": "TL-2", "action": "resume"}},
                     },
                 ],
             },
@@ -117,9 +107,7 @@ def test_implement_surface_check_requires_recovery_projection_when_ready_prerequ
         probes=probes,
     )
     check = next(
-        item
-        for item in result["checks"]
-        if item["name"] == "task-recovery-projection-visible"
+        item for item in result["checks"] if item["name"] == "task-recovery-projection-visible"
     )
     assert check["ok"] is True
 
@@ -1092,13 +1080,7 @@ def _write_scenario_manifest(
         else "small"
     )
     live_matrix_role = "product-evaluation" if product_evaluation else "flow-regression"
-    patch_budget_files = (
-        60
-        if feature_size == "xlarge"
-        else 20
-        if feature_size == "medium"
-        else 8
-    )
+    patch_budget_files = 60 if feature_size == "xlarge" else 20 if feature_size == "medium" else 8
     limits: dict[str, int] = {
         "timeout_minutes": 240,
         "patch_budget_files": patch_budget_files,
@@ -1158,11 +1140,7 @@ def _write_scenario_manifest(
                         else {}
                     ),
                     **(
-                        {
-                            "interview": [
-                                "Ask which behavior should be implemented before planning."
-                            ]
-                        }
+                        {"interview": ["Ask which behavior should be implemented before planning."]}
                         if interview_required
                         else {}
                     ),
@@ -1334,9 +1312,7 @@ def _prepare_live_test(
         inspect_fail_command=inspect_fail_command,
         log_blocking_text=log_blocking_text,
         stage_result_validator_verdict=stage_result_validator_verdict,
-        stage_result_direct_qa_next_action_stage=(
-            stage_result_direct_qa_next_action_stage
-        ),
+        stage_result_direct_qa_next_action_stage=(stage_result_direct_qa_next_action_stage),
         stage_result_generic_next_action_stage=stage_result_generic_next_action_stage,
         stray_top_level_workitems_stage=stray_top_level_workitems_stage,
         ignored_pollution_stage=ignored_pollution_stage,
@@ -1361,9 +1337,7 @@ def _prepare_live_test(
     )
     monkeypatch.setattr(
         "aidd.harness.live_e2e_black_box_orchestration.prepare_local_wheel_install",
-        lambda *, work_root, run_id, repository_root: _install_result_for_fake_aidd(
-            fake_aidd
-        ),
+        lambda *, work_root, run_id, repository_root: _install_result_for_fake_aidd(fake_aidd),
     )
     return scenario_path, tmp_path / "work-root", tmp_path / ".aidd" / "reports" / "evals"
 
@@ -1484,19 +1458,13 @@ def test_running_frontend_checkpoint_routes_stage_transition_to_post_stage(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     idea_checkpoints = [
-        checkpoint
-        for checkpoint in payload["checkpoints"]
-        if checkpoint["stage"] == "idea"
+        checkpoint for checkpoint in payload["checkpoints"] if checkpoint["stage"] == "idea"
     ]
     running = next(
-        checkpoint
-        for checkpoint in idea_checkpoints
-        if checkpoint["phase"] == "running-stage"
+        checkpoint for checkpoint in idea_checkpoints if checkpoint["phase"] == "running-stage"
     )
     post_stage = next(
-        checkpoint
-        for checkpoint in idea_checkpoints
-        if checkpoint["phase"] == "post-stage"
+        checkpoint for checkpoint in idea_checkpoints if checkpoint["phase"] == "post-stage"
     )
     assert running["classification"] == "skipped"
     assert running["reconciliation_status"] == "superseded-transition"
@@ -1552,9 +1520,7 @@ def test_running_frontend_failure_is_superseded_after_durable_success(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     idea_reconciliation = next(
-        item
-        for item in payload["reconciliations"]
-        if item["stage_run_id"] == "stage-0001-idea"
+        item for item in payload["reconciliations"] if item["stage_run_id"] == "stage-0001-idea"
     )
     assert idea_reconciliation["running_classification"] == "fail"
     assert idea_reconciliation["post_stage_classification"] == "pass"
@@ -1564,15 +1530,12 @@ def test_running_frontend_failure_is_superseded_after_durable_success(
     running = next(
         item
         for item in payload["checkpoints"]
-        if item["stage_run_id"] == "stage-0001-idea"
-        and item["phase"] == "running-stage"
+        if item["stage_run_id"] == "stage-0001-idea" and item["phase"] == "running-stage"
     )
     assert running["classification"] == "fail"
     assert running["reconciliation_status"] == "superseded-transition"
     audit = json.loads(
-        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(encoding="utf-8")
     )
     assert audit["classifications"]["frontend_checkpoint"] == "pass"
 
@@ -1614,9 +1577,7 @@ def test_persistent_frontend_outage_is_confirmed_failure(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     reconciliation = next(
-        item
-        for item in payload["reconciliations"]
-        if item["stage_run_id"] == "stage-0001-idea"
+        item for item in payload["reconciliations"] if item["stage_run_id"] == "stage-0001-idea"
     )
     assert reconciliation["running_classification"] == "fail"
     assert reconciliation["post_stage_classification"] == "fail"
@@ -1640,8 +1601,10 @@ def _write_stage_quality_audit(
         required_stage_run_id = state_payload.get("quality_review_required_stage_run_id")
         if isinstance(required_stage_run_id, str) and required_stage_run_id:
             stage_run_id = required_stage_run_id
-        path = Path(required_path) if isinstance(required_path, str) else (
-            bundle_root / "stage-quality-audits" / f"{stage}.md"
+        path = (
+            Path(required_path)
+            if isinstance(required_path, str)
+            else (bundle_root / "stage-quality-audits" / f"{stage}.md")
         )
     else:
         path = bundle_root / "stage-quality-audits" / f"{stage}.md"
@@ -1649,9 +1612,7 @@ def _write_stage_quality_audit(
     if remediation_request is not None:
         raw_source_ids = remediation_request.get("source_ids", ())
         source_ids = (
-            raw_source_ids
-            if isinstance(raw_source_ids, list | tuple)
-            else (raw_source_ids,)
+            raw_source_ids if isinstance(raw_source_ids, list | tuple) else (raw_source_ids,)
         )
         remediation_lines = [
             "",
@@ -1788,18 +1749,12 @@ def _fake_remediation_ui_job(
             "result": {
                 "completed": True,
                 "status": {
-                    "stale_stages": [
-                        {"stage": stale_stage} for stale_stage in stale_stages
-                    ],
+                    "stale_stages": [{"stage": stale_stage} for stale_stage in stale_stages],
                 },
             },
         },
     }
-    evidence_path = (
-        bundle_root
-        / "remediation-actions"
-        / f"fake-{stage_run_id}-{action}.json"
-    )
+    evidence_path = bundle_root / "remediation-actions" / f"fake-{stage_run_id}-{action}.json"
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(json.dumps(evidence_payload, indent=2) + "\n", encoding="utf-8")
     return "pass", evidence_path, evidence_payload
@@ -1864,20 +1819,13 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         for command in step["commands"]
     )
     assert all(
-        "stdout_text" not in command
-        and (result.bundle_root / command["evidence_path"]).is_file()
+        "stdout_text" not in command and (result.bundle_root / command["evidence_path"]).is_file()
         for step in steps
         for command in step["commands"]
     )
-    assert not (
-        result.bundle_root / "canonical-evidence" / "final" / "command-evidence"
-    ).exists()
-    assert "black-box" in (result.bundle_root / "harness-metadata.json").read_text(
-        encoding="utf-8"
-    )
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    assert not (result.bundle_root / "canonical-evidence" / "final" / "command-evidence").exists()
+    assert "black-box" in (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["work_root"] == work_root.as_posix()
     assert state_payload["report_root"] == report_root.as_posix()
     assert state_payload["run_work_root"] == (work_root / result.run_id).as_posix()
@@ -1931,9 +1879,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
     )
-    run_stage_timing_steps = [
-        step for step in stage_timing["steps"] if step["step"] == "run-stage"
-    ]
+    run_stage_timing_steps = [step for step in stage_timing["steps"] if step["step"] == "run-stage"]
     assert run_stage_timing_steps
     assert all(step["timeout_seconds"] == 14400.0 for step in run_stage_timing_steps)
     log_analysis = (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
@@ -1959,27 +1905,20 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert metadata_payload["black_box"]["frontend_checkpoint_evidence"].endswith(
         "frontend-checkpoints.json"
     )
-    assert metadata_payload["aidd_artifact_references"][
-        "target_workspace_evidence"
-    ].endswith("target-workspace-evidence.json")
+    assert metadata_payload["aidd_artifact_references"]["target_workspace_evidence"].endswith(
+        "target-workspace-evidence.json"
+    )
     target_workspace_evidence = json.loads(
-        (result.bundle_root / "target-workspace-evidence.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "target-workspace-evidence.json").read_text(encoding="utf-8")
     )
     assert target_workspace_evidence["classification"]["known_harness_files"] == [
         "aidd.example.toml"
     ]
-    assert "setup.log" in target_workspace_evidence["classification"][
-        "baseline_untracked_files"
-    ]
+    assert "setup.log" in target_workspace_evidence["classification"]["baseline_untracked_files"]
     assert target_workspace_evidence["non_gating_findings"] == []
-    finish_step = next(
-        step for step in steps if step["action"] == "finish"
-    )
+    finish_step = next(step for step in steps if step["action"] == "finish")
     assert any(
-        path.endswith("target-workspace-evidence.json")
-        for path in finish_step["evidence_paths"]
+        path.endswith("target-workspace-evidence.json") for path in finish_step["evidence_paths"]
     )
     frontend_payload = json.loads(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
@@ -2020,10 +1959,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         for checkpoint in frontend_payload["checkpoints"]
         if checkpoint["stage"] == STAGES[0] and checkpoint["phase"] == "post-stage"
     )
-    assert {
-        check["name"]
-        for check in first_operator_surface["checks"]
-    }.issuperset(
+    assert {check["name"] for check in first_operator_surface["checks"]}.issuperset(
         {
             "operator-shell-visible",
             "work-item-context-visible",
@@ -2035,19 +1971,13 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
             "artifact-surface-visible",
         }
     )
-    frontend_markdown = (
-        result.bundle_root / "frontend-checkpoints.md"
-    ).read_text(encoding="utf-8")
-    assert "- Scope: raw UI/API and operator-surface run-integrity evidence" in (
-        frontend_markdown
-    )
+    frontend_markdown = (result.bundle_root / "frontend-checkpoints.md").read_text(encoding="utf-8")
+    assert "- Scope: raw UI/API and operator-surface run-integrity evidence" in (frontend_markdown)
     assert "not a UI/UX audit, not screenshot evidence, and not a quality gate" in (
         frontend_markdown
     )
     assert "## Manual Visual Review Checklist" in frontend_markdown
-    assert "Visible next action and active stage match the checkpoint stage." in (
-        frontend_markdown
-    )
+    assert "Visible next action and active stage match the checkpoint stage." in (frontend_markdown)
     assert "without clipped single-letter chips" in frontend_markdown
     assert "Record screenshot paths or browser notes in the manual final report" in (
         frontend_markdown
@@ -2065,9 +1995,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "ui_ux_gate" not in next_flow_payload
     assert next_flow_payload["flow_complete_visible"] is True
     assert next_flow_payload["source_run_summary"]["source_run_id"] == result.run_id
-    assert next_flow_payload["source_run_summary"]["source_work_item_id"] == (
-        "WI-LIVE-BLACKBOX"
-    )
+    assert next_flow_payload["source_run_summary"]["source_work_item_id"] == ("WI-LIVE-BLACKBOX")
     assert next_flow_payload["source_run_summary"]["final_qa_status"] == "ready"
     assert next_flow_payload["source_run_summary"]["qa_stage_state"] == "passed"
     assert next_flow_payload["next_flow_actions"]["operator_decision"]["decision"] == (
@@ -2083,9 +2011,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert next_flow_payload["optional_lineage_metadata"]["source_run_id"] == result.run_id
     assert "start-follow-up-flow" in {
         action["action"]
-        for action in next_flow_payload["next_flow_actions"][
-            "recommended_next_flow_actions"
-        ]
+        for action in next_flow_payload["next_flow_actions"]["recommended_next_flow_actions"]
     }
     next_flow_markdown = (result.bundle_root / "next-flow-checkpoint.md").read_text(
         encoding="utf-8"
@@ -2119,9 +2045,7 @@ def test_live_facade_characterization_preserves_artifacts_and_event_order(
 
     def normalized_contract(result: BlackBoxLiveE2EResult) -> tuple[object, ...]:
         bundle_root = result.bundle_root
-        steps = json.loads(
-            (bundle_root / "flow-steps.json").read_text(encoding="utf-8")
-        )
+        steps = json.loads((bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
         step_order = tuple(
             (
                 step["action"],
@@ -2140,9 +2064,7 @@ def test_live_facade_characterization_preserves_artifacts_and_event_order(
             .splitlines()
         )
         stable_events = (
-            event
-            for event in raw_events
-            if event["action"] != "frontend-running-stage-checkpoint"
+            event for event in raw_events if event["action"] != "frontend-running-stage-checkpoint"
         )
         operator_events = tuple(
             (
@@ -2161,13 +2083,9 @@ def test_live_facade_characterization_preserves_artifacts_and_event_order(
             )
         )
         command_evidence_count = sum(
-            1
-            for path in (bundle_root / "command-evidence").glob("*.json")
-            if path.is_file()
+            1 for path in (bundle_root / "command-evidence").glob("*.json") if path.is_file()
         )
-        state = json.loads(
-            (bundle_root / "flow-state.json").read_text(encoding="utf-8")
-        )
+        state = json.loads((bundle_root / "flow-state.json").read_text(encoding="utf-8"))
         return (
             result.status,
             (stable_artifact_paths, command_evidence_count > 0),
@@ -2227,34 +2145,30 @@ def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
     ]
     imported_root = result.bundle_root / "manual-frontend-evidence"
     assert manual_payload["bundle_path"] == imported_root.as_posix()
-    assert (imported_root / "browser-notes.md").read_text(encoding="utf-8").startswith(
-        "# Browser Notes"
+    assert (
+        (imported_root / "browser-notes.md")
+        .read_text(encoding="utf-8")
+        .startswith("# Browser Notes")
     )
     assert (imported_root / "screenshots" / "mobile-flow-complete.png").read_bytes() == (
         b"fake screenshot"
     )
 
-    frontend_markdown = (
-        result.bundle_root / "frontend-checkpoints.md"
-    ).read_text(encoding="utf-8")
+    frontend_markdown = (result.bundle_root / "frontend-checkpoints.md").read_text(encoding="utf-8")
     assert "## Manual Browser Evidence" in frontend_markdown
     assert "- Status: `imported`" in frontend_markdown
     assert "- Non-gating: `True`" in frontend_markdown
     assert "`screenshots/mobile-flow-complete.png`" in frontend_markdown
     assert "they do not change runner classifications" in frontend_markdown
 
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["manual_frontend_evidence_source"] == (
         manual_evidence.resolve().as_posix()
     )
     metadata_payload = json.loads(
         (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
     )
-    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (
-        imported_root.as_posix()
-    )
+    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (imported_root.as_posix())
 
 
 def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
@@ -2282,9 +2196,7 @@ def test_black_box_live_product_evaluation_stops_after_stage_for_quality_review(
     assert not (result.bundle_root / "stage-audits" / "idea.json").exists()
     assert not (result.bundle_root / "stage-audits" / "stage-0002-research.json").exists()
     assert not (result.bundle_root / "verdict.md").exists()
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["status"] == "awaiting-quality-review"
     assert state_payload["next_action"] == "quality-review"
     assert state_payload["quality_review_required_stage"] == "idea"
@@ -2455,9 +2367,7 @@ def test_black_box_live_product_evaluation_stop_not_counted_is_manual_quality_st
 
     assert stopped.status == "manual-quality-stop"
     assert not (stopped.bundle_root / "verdict.md").exists()
-    assert stopped.manual_quality_stop_path == (
-        stopped.bundle_root / "manual-quality-stop.md"
-    )
+    assert stopped.manual_quality_stop_path == (stopped.bundle_root / "manual-quality-stop.md")
     assert stopped.manual_quality_stop_path.exists()
     assert (stopped.bundle_root / "target-workspace-evidence.json").exists()
     assert (stopped.bundle_root / "target-workspace-evidence.md").exists()
@@ -2712,9 +2622,7 @@ def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
             },
         }
         evidence_path = (
-            bundle_root
-            / "remediation-actions"
-            / f"fake-{stage_run_id}-{action}-failed.json"
+            bundle_root / "remediation-actions" / f"fake-{stage_run_id}-{action}-failed.json"
         )
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(
@@ -2771,9 +2679,7 @@ def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
             "action": "launch",
         }
     ]
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["status"] == "fail"
     assert state_payload["error"] == "Remediation job ended with status `failed`."
     assert (
@@ -2938,9 +2844,7 @@ def test_black_box_live_product_evaluation_invalid_remediation_audit_keeps_quali
         run_id=review_checkpoint.run_id,
     )
 
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert result.status == "awaiting-quality-review"
     assert state_payload["quality_review_required_stage"] == "review"
     assert "missing Source stage" in state_payload["quality_review_reason"]
@@ -2978,12 +2882,11 @@ def test_black_box_live_e2e_implement_audit_surfaces_untracked_product_files(
     assert audit_payload["implementation_policy"]["status"] == "pass"
     assert audit_payload["implementation_policy"]["findings"] == []
     assert audit_payload["implementation_policy"]["warnings"] == [
-        "New untracked product files require manual code-quality review: "
-        "src/utils/error.ts"
+        "New untracked product files require manual code-quality review: src/utils/error.ts"
     ]
-    audit_markdown = (
-        result.bundle_root / "stage-audits" / "stage-0006-implement.md"
-    ).read_text(encoding="utf-8")
+    audit_markdown = (result.bundle_root / "stage-audits" / "stage-0006-implement.md").read_text(
+        encoding="utf-8"
+    )
     assert "### New Untracked Product Files" in audit_markdown
     assert "`src/utils/error.ts`" in audit_markdown
     assert "### Harness Or Config Untracked Files" in audit_markdown
@@ -3011,9 +2914,7 @@ def test_black_box_live_e2e_cli_prints_manual_quality_stop_artifact(
         summary_path=manual_stop_path.parent / "summary.md",
         first_failure_note="Manual stage quality audit chose `stop-not-counted`.",
         operator_action_request_path=None,
-        quality_review_request_path=manual_stop_path.parent
-        / "stage-quality-audits"
-        / "idea.md",
+        quality_review_request_path=manual_stop_path.parent / "stage-quality-audits" / "idea.md",
         manual_quality_stop_path=manual_stop_path,
     )
     monkeypatch.setattr(
@@ -3054,23 +2955,18 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     )
 
     assert result.status == "pass"
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["status"] == "pass"
     assert state_payload["completed_stages"] == list(STAGES)
     process_segments = state_payload["process_segments"]
     assert len(process_segments) >= 3
     assert [segment["segment_id"] for segment in process_segments] == [
-        f"segment-{index:04d}"
-        for index in range(1, len(process_segments) + 1)
+        f"segment-{index:04d}" for index in range(1, len(process_segments) + 1)
     ]
     assert all(segment["finished_at_utc"] for segment in process_segments)
     assert all(segment["owner_pid"] > 0 for segment in process_segments)
     assert all(segment["termination_reason"] for segment in process_segments)
-    process_duration = sum(
-        segment["duration_seconds"] for segment in process_segments
-    )
+    process_duration = sum(segment["duration_seconds"] for segment in process_segments)
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
     )
@@ -3079,13 +2975,9 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     )
     assert run_transcript["process_segments"] == process_segments
     assert run_transcript["duration_seconds"] == pytest.approx(process_duration)
-    assert run_transcript["process_segment_duration_seconds"] == pytest.approx(
-        process_duration
-    )
+    assert run_transcript["process_segment_duration_seconds"] == pytest.approx(process_duration)
     assert stage_timing["process_segments"] == process_segments
-    assert stage_timing["summary"]["total_duration_seconds"] == pytest.approx(
-        process_duration
-    )
+    assert stage_timing["summary"]["total_duration_seconds"] == pytest.approx(process_duration)
     assert stage_timing["summary"]["process_segment_duration_seconds"] == pytest.approx(
         process_duration
     )
@@ -3095,17 +2987,12 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     assert "quality_review_required_path" not in state_payload
     assert "quality_review_decision" not in state_payload
     assert "quality_review_reason" not in state_payload
-    grader_payload = json.loads(
-        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
-    )
+    grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     manual_artifacts = grader_payload["manual_quality_artifacts"]
     assert manual_artifacts["required_for_counted_clean"] is True
-    assert [item["stage"] for item in manual_artifacts["stage_quality_audits"]] == list(
-        STAGES
-    )
+    assert [item["stage"] for item in manual_artifacts["stage_quality_audits"]] == list(STAGES)
     assert [item["stage_run_id"] for item in manual_artifacts["stage_quality_audits"]] == [
-        f"stage-{index:04d}-{stage}"
-        for index, stage in enumerate(STAGES, start=1)
+        f"stage-{index:04d}-{stage}" for index, stage in enumerate(STAGES, start=1)
     ]
     assert all(item["exists"] for item in manual_artifacts["stage_quality_audits"])
     assert [item["kind"] for item in manual_artifacts["final_reports"]] == [
@@ -3150,9 +3037,9 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
         "manual_quality_stop": False,
         "not_clean_reasons": ["manual quality evidence is incomplete"],
     }
-    assert [
-        item["flow_decision"] for item in payload["stage_quality_audits"]
-    ] == ["continue"] * len(STAGES)
+    assert [item["flow_decision"] for item in payload["stage_quality_audits"]] == [
+        "continue"
+    ] * len(STAGES)
     assert all(item["exists"] for item in payload["stage_quality_audits"])
     assert payload["repair_counts"]["runner_stage_repair_attempts"] == 0
     assert payload["remediation"]["request_count"] == 0
@@ -3163,9 +3050,7 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     ]
     assert all(not item["exists"] for item in payload["final_reports"])
     assert payload["target_workspace"]["tracked_product_files"] == ["feature.txt"]
-    assert payload["target_workspace"]["untracked_product_files"] == [
-        "src/untracked-helper.ts"
-    ]
+    assert payload["target_workspace"]["untracked_product_files"] == ["src/untracked-helper.ts"]
     assert payload["target_workspace"]["known_harness_files"] == ["aidd.example.toml"]
     assert payload["terminal_flow_state_verdict_consistency"]["consistent"] is True
     assert payload["terminal_flow_state_verdict_consistency"]["flow_state_status"] == "pass"
@@ -3174,9 +3059,7 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     verdict_text = (result.bundle_root / "verdict.md").read_text(encoding="utf-8")
     assert "- Status: `pass`" in verdict_text
     assert "counted-clean" not in verdict_text
-    grader_payload = json.loads(
-        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
-    )
+    grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     serialized_grader = json.dumps(grader_payload)
     assert "counted-clean" not in serialized_grader
@@ -3187,12 +3070,8 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     assert "manual `quality-report.md` only" in markdown
     assert "`src/untracked-helper.ts`" in markdown
 
-    (result.bundle_root / "flow-quality-report.md").write_text(
-        "# Flow quality\n", encoding="utf-8"
-    )
-    (result.bundle_root / "code-quality-report.md").write_text(
-        "# Code quality\n", encoding="utf-8"
-    )
+    (result.bundle_root / "flow-quality-report.md").write_text("# Flow quality\n", encoding="utf-8")
+    (result.bundle_root / "code-quality-report.md").write_text("# Code quality\n", encoding="utf-8")
     (result.bundle_root / "quality-report.md").write_text(
         "# Quality\n\n- Final decision: counted-clean\n",
         encoding="utf-8",
@@ -3208,9 +3087,9 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
         run_id=result.run_id,
     )
     refreshed_payload = json.loads(
-        (
-            refreshed.bundle_root / "product-evaluation-bundle-summary.json"
-        ).read_text(encoding="utf-8")
+        (refreshed.bundle_root / "product-evaluation-bundle-summary.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert refreshed_payload["acceptance"] == {
         "execution_pass": True,
@@ -3250,9 +3129,7 @@ def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_conte
     )
 
     assert result.status == "pass"
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     target_repo_root = Path(state_payload["target_repo_root"])
     workspace_baseline_context = (
         target_repo_root
@@ -3272,13 +3149,9 @@ def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_conte
     assert len(workspace_baseline_context) < 20_000
 
     evidence_payload = json.loads(
-        (result.bundle_root / "target-workspace-evidence.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "target-workspace-evidence.json").read_text(encoding="utf-8")
     )
-    ignored_inventory = evidence_payload["classification"][
-        "baseline_ignored_inventory"
-    ]
+    ignored_inventory = evidence_payload["classification"]["baseline_ignored_inventory"]
     assert ignored_inventory["total_count"] == 80
     assert ignored_inventory["truncated"] is True
     assert len(ignored_inventory["sample"]) == 50
@@ -3306,9 +3179,7 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
 
     assert result.status == "pass"
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(encoding="utf-8")
     )
     assert audit_payload["validator_verdict"] == "pass"
     assert audit_payload["consistency_findings"] == [
@@ -3324,9 +3195,9 @@ def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
             ),
         }
     ]
-    audit_markdown = (
-        result.bundle_root / "stage-audits" / "stage-0001-idea.md"
-    ).read_text(encoding="utf-8")
+    audit_markdown = (result.bundle_root / "stage-audits" / "stage-0001-idea.md").read_text(
+        encoding="utf-8"
+    )
     assert "## Consistency Findings" in audit_markdown
     assert "non-gating=True" in audit_markdown
 
@@ -3368,17 +3239,15 @@ def test_black_box_live_e2e_records_non_gating_stage_result_next_action_skip(
     )
     assert audit_payload["stage_state"] == "passed"
     assert audit_payload["consistency_findings"] == [expected_finding]
-    audit_markdown = (
-        result.bundle_root / "stage-audits" / "stage-0006-implement.md"
-    ).read_text(encoding="utf-8")
+    audit_markdown = (result.bundle_root / "stage-audits" / "stage-0006-implement.md").read_text(
+        encoding="utf-8"
+    )
     assert "## Consistency Findings" in audit_markdown
     assert "`stage-result-next-action-skips-canonical-stage`" in audit_markdown
     assert "expected-next-stage=review" in audit_markdown
     assert "mentioned-later-stages=qa" in audit_markdown
 
-    grader_payload = json.loads(
-        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
-    )
+    grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     implement_audit = next(
         item
         for item in grader_payload["stage_audits"]
@@ -3411,10 +3280,7 @@ def test_black_box_live_e2e_records_non_gating_stage_result_next_action_missing_
         "non_gating": True,
         "stage": "research",
         "expected_next_stage": "plan",
-        "message": (
-            "stage-result.md next actions do not name the immediate canonical "
-            "next stage."
-        ),
+        "message": ("stage-result.md next actions do not name the immediate canonical next stage."),
     }
     audit_payload = json.loads(
         (result.bundle_root / "stage-audits" / "stage-0002-research.json").read_text(
@@ -3423,9 +3289,9 @@ def test_black_box_live_e2e_records_non_gating_stage_result_next_action_missing_
     )
     assert audit_payload["stage_state"] == "passed"
     assert audit_payload["consistency_findings"] == [expected_finding]
-    audit_markdown = (
-        result.bundle_root / "stage-audits" / "stage-0002-research.md"
-    ).read_text(encoding="utf-8")
+    audit_markdown = (result.bundle_root / "stage-audits" / "stage-0002-research.md").read_text(
+        encoding="utf-8"
+    )
     assert "`stage-result-next-action-missing-immediate-stage`" in audit_markdown
     assert "expected-next-stage=plan" in audit_markdown
 
@@ -3450,17 +3316,13 @@ def test_black_box_live_e2e_records_non_gating_target_workspace_pollution(
     assert result.status == "pass"
     assert not (result.bundle_root / "quality-report.md").exists()
     evidence_payload = json.loads(
-        (result.bundle_root / "target-workspace-evidence.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "target-workspace-evidence.json").read_text(encoding="utf-8")
     )
     stray_path = "workitems/WI-LIVE-BLACKBOX/stages/qa/stage-result.md"
-    assert evidence_payload["classification"][
-        "unexpected_top_level_workitems_files"
-    ] == [stray_path]
-    assert evidence_payload["classification"][
-        "unexpected_non_aidd_untracked_files"
-    ] == [stray_path]
+    assert evidence_payload["classification"]["unexpected_top_level_workitems_files"] == [
+        stray_path
+    ]
+    assert evidence_payload["classification"]["unexpected_non_aidd_untracked_files"] == [stray_path]
     assert evidence_payload["non_gating_findings"] == [
         {
             "kind": "unexpected-top-level-workitems-artifact",
@@ -3477,14 +3339,12 @@ def test_black_box_live_e2e_records_non_gating_target_workspace_pollution(
             "severity": "high",
         }
     ]
-    evidence_markdown = (
-        result.bundle_root / "target-workspace-evidence.md"
-    ).read_text(encoding="utf-8")
+    evidence_markdown = (result.bundle_root / "target-workspace-evidence.md").read_text(
+        encoding="utf-8"
+    )
     assert "Execution verdict impact: `none`" in evidence_markdown
     assert stray_path in evidence_markdown
-    grader_payload = json.loads(
-        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
-    )
+    grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
     serialized_grader = json.dumps(grader_payload)
     assert "quality_gate" not in serialized_grader
@@ -3514,14 +3374,10 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
 
     assert result.status == "pass"
     evidence_payload = json.loads(
-        (result.bundle_root / "target-workspace-evidence.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "target-workspace-evidence.json").read_text(encoding="utf-8")
     )
     assert set(
-        evidence_payload["classification"]["unexpected_ignored_workspace_inventory"][
-            "sample"
-        ]
+        evidence_payload["classification"]["unexpected_ignored_workspace_inventory"]["sample"]
     ) == {
         ".venv/pyvenv.cfg",
         "coverage/index.html",
@@ -3529,23 +3385,19 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
         ".pytest_cache/CACHEDIR.TAG",
         "package/__pycache__/module.pyc",
     }
-    assert [
-        finding["kind"] for finding in evidence_payload["non_gating_findings"]
-    ] == [
+    assert [finding["kind"] for finding in evidence_payload["non_gating_findings"]] == [
         "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
         "unexpected-ignored-workspace-artifact",
     ]
-    evidence_markdown = (
-        result.bundle_root / "target-workspace-evidence.md"
-    ).read_text(encoding="utf-8")
+    evidence_markdown = (result.bundle_root / "target-workspace-evidence.md").read_text(
+        encoding="utf-8"
+    )
     assert "- New ignored files:" in evidence_markdown
     assert ".venv/pyvenv.cfg" in evidence_markdown
-    grader_payload = json.loads(
-        (result.bundle_root / "grader.json").read_text(encoding="utf-8")
-    )
+    grader_payload = json.loads((result.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert grader_payload["execution"]["status"] == "pass"
 
 
@@ -3593,13 +3445,12 @@ def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
     }
 
     evidence_payload = json.loads(
-        (result.bundle_root / "target-workspace-evidence.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "target-workspace-evidence.json").read_text(encoding="utf-8")
     )
-    assert evidence_payload["classification"]["unexpected_ignored_workspace_inventory"][
-        "total_count"
-    ] == 0
+    assert (
+        evidence_payload["classification"]["unexpected_ignored_workspace_inventory"]["total_count"]
+        == 0
+    )
     assert evidence_payload["non_gating_findings"] == []
     target_root = Path(evidence_payload["target_repo_root"])
     assert not (target_root / ".pytest_cache").exists()
@@ -3693,9 +3544,7 @@ def test_black_box_live_e2e_follow_up_proof_is_explicit_manual_only_lineage(
     ]
     follow_up_request = Path(lineage["follow_up_request_path"])
     assert follow_up_request.exists()
-    assert f"Source run: `{result.run_id}`" in follow_up_request.read_text(
-        encoding="utf-8"
-    )
+    assert f"Source run: `{result.run_id}`" in follow_up_request.read_text(encoding="utf-8")
     checkpoint = json.loads(
         (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
     )
@@ -3748,9 +3597,9 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
         encoding="utf-8",
     )
     manifest_payload = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
-    manifest_payload["feature_source"]["tasks"][0][
-        "title"
-    ] = "mutated title that must not replace the selected task snapshot"
+    manifest_payload["feature_source"]["tasks"][0]["title"] = (
+        "mutated title that must not replace the selected task snapshot"
+    )
     scenario_path.write_text(yaml.safe_dump(manifest_payload, sort_keys=False), encoding="utf-8")
 
     resumed = run_black_box_live_e2e(
@@ -3774,8 +3623,7 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     assert metadata_payload["aidd_install"]["artifact_identity"] == "ai_driven_dev_v2-test.whl"
     steps = json.loads((resumed.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     assert any(
-        step["action"] == "answer-questions" and step["classification"] == "pass"
-        for step in steps
+        step["action"] == "answer-questions" and step["classification"] == "pass" for step in steps
     )
     resumed_grader = json.loads((resumed.bundle_root / "grader.json").read_text(encoding="utf-8"))
     assert resumed_grader["steps"][-1]["action"] == "finish"
@@ -3786,12 +3634,10 @@ def test_black_box_live_e2e_blocks_for_questions_and_continues_after_answers(
     assert resumed_next_flow["terminal_status"] == "pass"
     assert resumed_next_flow["source_run_summary"]["questions"]["answered_count"] == 1
     assert resumed_grader["selected_task"]["title"] == "exercise live black-box evaluator"
-    assert "First Failure Boundary: `none`" in (
-        resumed.bundle_root / "log-analysis.md"
-    ).read_text(encoding="utf-8")
-    assert "- none" in (resumed.bundle_root / "validator-report.md").read_text(
+    assert "First Failure Boundary: `none`" in (resumed.bundle_root / "log-analysis.md").read_text(
         encoding="utf-8"
     )
+    assert "- none" in (resumed.bundle_root / "validator-report.md").read_text(encoding="utf-8")
 
 
 def test_black_box_live_e2e_does_not_resume_blocked_run_without_run_id(
@@ -4433,8 +4279,7 @@ def test_black_box_live_e2e_blocks_for_questions_found_by_public_inspection(
         for step in steps
     )
     assert any(
-        step["action"] == "answer-questions" and step["classification"] == "pass"
-        for step in steps
+        step["action"] == "answer-questions" and step["classification"] == "pass" for step in steps
     )
 
 
@@ -4475,9 +4320,9 @@ def test_black_box_live_e2e_reports_first_unresolved_signal_after_resolved_block
     assert resumed.first_failure_note is not None
     assert "plan" in resumed.first_failure_note
     assert "idea" not in resumed.first_failure_note
-    assert "run-stage stage `plan`" in (
-        resumed.bundle_root / "log-analysis.md"
-    ).read_text(encoding="utf-8")
+    assert "run-stage stage `plan`" in (resumed.bundle_root / "log-analysis.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_black_box_live_e2e_does_not_reblock_on_historical_log_text(
@@ -4527,9 +4372,7 @@ def test_black_box_live_e2e_reports_stage_failure_from_step_evidence(
     assert "plan" in result.first_failure_note
     assert "run-stage" in (result.bundle_root / "log-analysis.md").read_text(encoding="utf-8")
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "stage-0003-plan.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "stage-audits" / "stage-0003-plan.json").read_text(encoding="utf-8")
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["validator_verdict"] == "fail"
@@ -4559,9 +4402,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     )
 
     assert result.status == "fail"
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     target_workspace_root = Path(state_payload["target_workspace_root"])
     metadata_path = (
         target_workspace_root
@@ -4581,9 +4422,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     ]
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     timeout_step = next(
-        step
-        for step in steps
-        if step["action"] == "run-stage" and step["stage"] == "idea"
+        step for step in steps if step["action"] == "run-stage" and step["stage"] == "idea"
     )
     assert timeout_step["commands"][0]["timed_out"] is True
     assert timeout_step["commands"][0]["timeout_seconds"] == 2.0
@@ -4595,9 +4434,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     reconciliation = json.loads(reconciliation_path.read_text(encoding="utf-8"))
     assert reconciliation["reconciled"] is True
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(encoding="utf-8")
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["stage_metadata_status"] == "failed"
@@ -4606,10 +4443,7 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     assert frontend_payload["reconciliations"][0]["running_status"] == "provisional-pass"
-    assert (
-        frontend_payload["reconciliations"][0]["post_stage_status"]
-        == "superseded-transition"
-    )
+    assert frontend_payload["reconciliations"][0]["post_stage_status"] == "superseded-transition"
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
     )
@@ -4666,9 +4500,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
 
     assert result.status == "infra-fail"
     assert not (result.bundle_root / "stage-quality-audits").exists()
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["status"] == "infra-fail"
     assert state_payload["error"] == "provider-no-progress before completed stage artifact"
     target_workspace_root = Path(state_payload["target_workspace_root"])
@@ -4700,9 +4532,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
 
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     no_progress_step = next(
-        step
-        for step in steps
-        if step["action"] == "run-stage" and step["stage"] == "idea"
+        step for step in steps if step["action"] == "run-stage" and step["stage"] == "idea"
     )
     assert no_progress_step["classification"] == "infra-fail"
     assert no_progress_step["commands"][0]["timed_out"] is False
@@ -4719,9 +4549,9 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert no_progress_step["details"]["no_progress_reconciliation"]["previous_status"] == (
         "executing"
     )
-    assert no_progress_step["details"]["no_progress_reconciliation"][
-        "reconciled_status"
-    ] == "failed"
+    assert (
+        no_progress_step["details"]["no_progress_reconciliation"]["reconciled_status"] == "failed"
+    )
     assert no_progress_step["evidence_paths"]
     reconciliation_path = Path(no_progress_step["evidence_paths"][0])
     assert reconciliation_path.exists()
@@ -4730,9 +4560,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert reconciliation["reconciled"] is True
 
     audit_payload = json.loads(
-        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
-            encoding="utf-8"
-        )
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(encoding="utf-8")
     )
     assert audit_payload["classifications"]["stage_run"] == "infra-fail"
     assert audit_payload["classifications"]["frontend_checkpoint"] == "pass"
@@ -4747,9 +4575,7 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     ]
     assert no_progress_post_stage
     assert no_progress_post_stage[-1]["classification"] == "pass"
-    frontend_markdown = (result.bundle_root / "frontend-checkpoints.md").read_text(
-        encoding="utf-8"
-    )
+    frontend_markdown = (result.bundle_root / "frontend-checkpoints.md").read_text(encoding="utf-8")
     assert "## idea / post-stage" in frontend_markdown
     assert "- Phase: `post-stage`" in frontend_markdown
     manual_payload = frontend_payload["manual_visual_evidence"]
@@ -4758,9 +4584,11 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert manual_payload["non_gating"] is True
     assert manual_payload["files"] == ["browser-notes.md"]
     assert manual_payload["bundle_path"] == imported_root.as_posix()
-    assert (imported_root / "browser-notes.md").read_text(
-        encoding="utf-8"
-    ).startswith("# Browser Notes")
+    assert (
+        (imported_root / "browser-notes.md")
+        .read_text(encoding="utf-8")
+        .startswith("# Browser Notes")
+    )
     assert "## Manual Browser Evidence" in frontend_markdown
     assert "`browser-notes.md`" in frontend_markdown
 
@@ -4787,18 +4615,14 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert "provider-no-progress before completed stage artifact" in log_analysis
     assert "- No-Progress Timeout: `1.000s`" in log_analysis
 
-    state_payload = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state_payload["manual_frontend_evidence_source"] == (
         manual_evidence.resolve().as_posix()
     )
     metadata_payload = json.loads(
         (result.bundle_root / "harness-metadata.json").read_text(encoding="utf-8")
     )
-    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (
-        imported_root.as_posix()
-    )
+    assert metadata_payload["black_box"]["manual_frontend_evidence"] == (imported_root.as_posix())
 
 
 def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
@@ -4821,9 +4645,7 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
     assert result.status == "fail"
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     timeout_step = next(
-        step
-        for step in steps
-        if step["action"] == "run-stage" and step["stage"] == "review"
+        step for step in steps if step["action"] == "run-stage" and step["stage"] == "review"
     )
     assert timeout_step["classification"] == "fail"
     assert timeout_step["commands"][0]["timed_out"] is False
@@ -4851,9 +4673,7 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
     )
-    review_stage = next(
-        stage for stage in stage_timing["stages"] if stage["stage"] == "review"
-    )
+    review_stage = next(stage for stage in stage_timing["stages"] if stage["stage"] == "review")
     assert review_stage["attempts"][0]["timed_out"] is True
     assert review_stage["attempts"][0]["runtime_exit_classification"] == "timeout"
 
@@ -4899,9 +4719,9 @@ def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     inspect_steps = [step for step in steps if step["action"] == "inspect-stage"]
     assert inspect_steps[0]["classification"] == "fail"
-    assert "public inspection failed" in (
-        result.bundle_root / "flow-state.json"
-    ).read_text(encoding="utf-8")
+    assert "public inspection failed" in (result.bundle_root / "flow-state.json").read_text(
+        encoding="utf-8"
+    )
     next_flow_payload = json.loads(
         (result.bundle_root / "next-flow-checkpoint.json").read_text(encoding="utf-8")
     )
@@ -4947,9 +4767,7 @@ def test_black_box_live_e2e_detects_target_dependency_before_provider_allocation
     scenario_path, work_root, report_root = _prepare_live_test(
         tmp_path,
         monkeypatch,
-        task_verification_commands=(
-            "python -c 'import definitely_missing_optional_dependency'",
-        ),
+        task_verification_commands=("python -c 'import definitely_missing_optional_dependency'",),
     )
 
     result = run_black_box_live_e2e(
@@ -4965,16 +4783,11 @@ def test_black_box_live_e2e_detects_target_dependency_before_provider_allocation
     )
     assert readiness["classification"] == "target-setup"
     assert readiness["command_transcripts"][0]["exit_code"] != 0
-    state = json.loads(
-        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
-    )
+    state = json.loads((result.bundle_root / "flow-state.json").read_text(encoding="utf-8"))
     assert state["error_classification"] == "target-setup"
-    steps = json.loads(
-        (result.bundle_root / "flow-steps.json").read_text(encoding="utf-8")
-    )
+    steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     assert any(
-        step["action"] == "target-setup"
-        and step["classification"] == "infra-fail"
+        step["action"] == "target-setup" and step["classification"] == "infra-fail"
         for step in steps
     )
     assert all(step["action"] != "run-stage" for step in steps)

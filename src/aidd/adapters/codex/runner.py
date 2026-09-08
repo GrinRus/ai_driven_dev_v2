@@ -92,9 +92,7 @@ def _command_owned_selectors(tokens: tuple[str, ...]) -> set[str]:
             continue
         if token in {"--config", "-c"}:
             owned.add(
-                _config_selector_name(tokens[index + 1])
-                if index + 1 < len(tokens)
-                else "config"
+                _config_selector_name(tokens[index + 1]) if index + 1 < len(tokens) else "config"
             )
             index += 2
             continue
@@ -248,10 +246,10 @@ def assemble_native_command(
         runtime_label="codex",
     )
     return _command_with_selector_tokens(
-            base_tokens=base_tokens,
-            model=model,
-            reasoning_effort=reasoning_effort,
-        )
+        base_tokens=base_tokens,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
 
 
 def build_execution_environment(

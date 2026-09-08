@@ -44,9 +44,7 @@ def test_disk_backed_sink_preserves_full_order_with_bounded_utf8_tails(
     assert len(snapshot.runtime_log_text.encode("utf-8")) <= COMBINED_TAIL_BYTES
     assert snapshot.stdout_byte_count == len(stdout_chunk.encode("utf-8"))
     assert snapshot.stderr_byte_count == len(stderr_chunk.encode("utf-8"))
-    assert snapshot.runtime_log_byte_count == len(
-        (stdout_chunk + stderr_chunk).encode("utf-8")
-    )
+    assert snapshot.runtime_log_byte_count == len((stdout_chunk + stderr_chunk).encode("utf-8"))
     assert snapshot.stdout_char_count == len(stdout_chunk)
     assert snapshot.stderr_char_count == len(stderr_chunk)
     assert snapshot.runtime_log_char_count == len(stdout_chunk + stderr_chunk)
@@ -73,9 +71,7 @@ def test_disk_backed_sink_persists_raw_bytes_before_incremental_display_decode(
     assert snapshot.runtime_log_text == "before\nerr\n�éafter\n�"
     assert snapshot.stdout_byte_count == len(b"before\n\xc3\xa9after\n\xff")
     assert snapshot.stderr_byte_count == len(b"err\n\xff")
-    assert snapshot.runtime_log_byte_count == len(
-        b"before\n\xc3err\n\xff\xa9after\n\xff"
-    )
+    assert snapshot.runtime_log_byte_count == len(b"before\n\xc3err\n\xff\xa9after\n\xff")
     assert snapshot.stdout_char_count == len("before\néafter\n�")
     assert snapshot.stderr_char_count == len("err\n�")
     assert snapshot.runtime_log_char_count == len("before\nerr\n�éafter\n�")
@@ -128,9 +124,7 @@ def test_high_volume_subprocess_commits_full_log_and_bounded_tail_metadata(
     assert len(result.stdout_text.encode("utf-8")) <= STDIO_TAIL_BYTES
     assert len(result.stderr_text.encode("utf-8")) <= STDIO_TAIL_BYTES
     assert len(result.runtime_log_text.encode("utf-8")) <= COMBINED_TAIL_BYTES
-    metadata = json.loads(
-        paths.runtime_exit_metadata_path.read_text(encoding="utf-8")
-    )
+    metadata = json.loads(paths.runtime_exit_metadata_path.read_text(encoding="utf-8"))
     assert metadata["stdout_byte_count"] == expected_stream_bytes
     assert metadata["stderr_byte_count"] == expected_stream_bytes
     assert metadata["runtime_log_byte_count"] == expected_stream_bytes * 2

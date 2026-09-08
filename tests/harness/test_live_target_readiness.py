@@ -105,7 +105,7 @@ def test_target_readiness_detects_missing_optional_dependency_before_provider(
 ) -> None:
     command = (
         "python -c 'import importlib.util; "
-        "raise SystemExit(0 if importlib.util.find_spec(\"missing_optional_dep\") else 7)'"
+        'raise SystemExit(0 if importlib.util.find_spec("missing_optional_dep") else 7)\''
     )
 
     with pytest.raises(LiveTargetReadinessError) as raised:

@@ -200,9 +200,7 @@ def stage_questions(
     ] = Path(".aidd"),
 ) -> None:
     """Show pending stage questions and answer guidance."""
-    show_stage_questions(
-        StageQuestionsOptions(stage=stage, work_item=work_item, root=root)
-    )
+    show_stage_questions(StageQuestionsOptions(stage=stage, work_item=work_item, root=root))
 
 
 def stage_summary(

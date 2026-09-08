@@ -208,9 +208,7 @@ def create_follow_up_work_item_draft(request: FollowUpDraftRequest) -> FollowUpD
         request_path=request_path,
         context_seed=context_seed,
         source_artifact_paths=tuple(
-            selection.source_path
-            for selection in normalized_selections
-            if selection.source_path
+            selection.source_path for selection in normalized_selections if selection.source_path
         ),
     )
 
@@ -376,9 +374,7 @@ def _normalized_follow_up_lines(
         if not text:
             continue
         if "\x00" in text:
-            raise ValueError(
-                f"Follow-up draft {field_name}[{index}] contains an invalid NUL byte."
-            )
+            raise ValueError(f"Follow-up draft {field_name}[{index}] contains an invalid NUL byte.")
         normalized.append(text)
     return tuple(normalized)
 

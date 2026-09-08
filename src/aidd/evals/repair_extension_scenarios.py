@@ -33,10 +33,7 @@ from aidd.validators.reports import render_validator_report
 
 REPAIR_EXTENSION_SCENARIO_SCHEMA_VERSION = 1
 DEFAULT_REPAIR_EXTENSION_FIXTURE_ROOT = (
-    Path(__file__).resolve().parents[3]
-    / "tests"
-    / "fixtures"
-    / "w43-e5-s1-t2-repair-extension"
+    Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "w43-e5-s1-t2-repair-extension"
 )
 _SCENARIO_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]+$")
 
@@ -116,9 +113,7 @@ def load_repair_extension_scenarios(
         not isinstance(raw, dict)
         or raw.get("schema_version") != REPAIR_EXTENSION_SCENARIO_SCHEMA_VERSION
     ):
-        raise RepairExtensionScenarioError(
-            "Unsupported repair-extension scenario schema version."
-        )
+        raise RepairExtensionScenarioError("Unsupported repair-extension scenario schema version.")
     source = raw.get("source")
     if not isinstance(source, dict) or source.get("credentials_removed") is not True:
         raise RepairExtensionScenarioError("Repair-extension scenarios must be provider-free.")
@@ -482,9 +477,7 @@ def _run_one(
             downstream.read_text(encoding="utf-8") == "fresh downstream artifact\n"
         )
         grant_content = (
-            metadata.repair_extension_grant.to_dict()
-            if metadata.repair_extension_grant
-            else None
+            metadata.repair_extension_grant.to_dict() if metadata.repair_extension_grant else None
         )
         grant_count = int(metadata.repair_extension_grant is not None)
         report_lineage = _report_lineage(workspace_root, grant)

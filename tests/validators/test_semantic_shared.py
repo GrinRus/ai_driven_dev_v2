@@ -59,8 +59,7 @@ def test_stage_result_attempt_history_rejects_duplicate_leading_attempts(
 ) -> None:
     context = _stage_result_context(
         tmp_path,
-        "- Attempt `1` (`initial`) -> failed.\n"
-        "- Attempt `1` (`repair`) -> failed.",
+        "- Attempt `1` (`initial`) -> failed.\n- Attempt `1` (`repair`) -> failed.",
     )
 
     findings = validate_stage_result(context)
@@ -81,8 +80,7 @@ def test_stage_result_stage_placeholder_does_not_include_child_sections(
         workspace_root=tmp_path / ".aidd",
         required_sections=("Stage", "Terminal state notes"),
         markdown_text=(
-            "# Stage\n\nplan\n\n"
-            "## Terminal state notes\n\n- TODO: explain the terminal state.\n"
+            "# Stage\n\nplan\n\n## Terminal state notes\n\n- TODO: explain the terminal state.\n"
         ),
     )
 
@@ -137,8 +135,7 @@ def test_structured_task_evidence_rejects_duplicate_and_non_pass_approved_entry(
         workspace_root / "workitems" / work_item / "stages" / "review" / "review-report.md"
     )
     entry = (
-        "- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `fail`; "
-        "Evidence: EV-1; Notes: failed.\n"
+        "- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `fail`; Evidence: EV-1; Notes: failed.\n"
     )
     markdown = (
         "# Review Report\n\n"

@@ -854,7 +854,9 @@ def _render_correction_item(
     suffix = f" {hint}" if hint else ""
     repeat_note = f" (repeated {occurrence_count} times)" if occurrence_count > 1 else ""
     if finding.source_path is not None and Path(finding.source_path).name in {
-        "stage-result.md", "validator-report.md", "repair-brief.md"
+        "stage-result.md",
+        "validator-report.md",
+        "repair-brief.md",
     }:
         owned_hint = f" AIDD-only correction: {hint}" if hint else ""
         return (
