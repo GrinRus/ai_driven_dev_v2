@@ -126,6 +126,13 @@ passes before a runtime-based manual stop; CI executed the full default suite. N
 frontend-test, browser-test, or neighboring-checkout files changed. The queue now promotes the
 direct successor `W49-E4-S1-T2`, adding the clean-tree formatter check to CI.
 
+`W49-E4-S1-T2` is complete in PR #622 (`765f051a`). The lint/type/test matrix now executes
+`ruff format --check .` as a required deterministic step, while the reviewed `browser_tests`
+exclusion remains the explicit boundary for the neighboring UI refactor. The workflow contract
+test, clean formatter/lint checks, focused planning/docs/CI suite, and full required
+CI/security/browser/build lanes passed without runtime or UI-owned changes. The queue promotes
+`W49-E4-S2-T1` to establish a reproducible critical-module coverage baseline next.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
