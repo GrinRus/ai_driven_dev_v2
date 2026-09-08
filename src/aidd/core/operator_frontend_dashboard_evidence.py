@@ -37,6 +37,12 @@ from aidd.core.operator_frontend_models import (
     OperatorTerminalRunHandoff,
     OperatorValidationFindingView,
 )
+from aidd.core.operator_frontend_next_action import (
+    OperatorNextActionContext,
+    resolve_next_action,
+    running_stage_item,
+    running_stage_next_action,
+)
 from aidd.core.operator_frontend_questions import (
     resolve_operator_questions_view,
     resolve_operator_stage_view,
@@ -1178,201 +1184,26 @@ def _next_action(
     report_blockers: tuple[OperatorBlocker, ...] = (),
     stages_with_operator_requests: frozenset[str] = frozenset(),
 ) -> OperatorNextAction:
-    if metadata is None:
-        return OperatorNextAction(
-            action="choose-runtime",
-            label="Select runtime",
-            detail="Choose a runtime before starting the workflow.",
-            stage=None,
-            enabled=False,
+    return resolve_next_action(
+        OperatorNextActionContext(
+            metadata=metadata,
+            active_stage=active_stage,
+            active_stage_view=active_stage_view,
+            rail_by_stage=rail_by_stage,
+            report_blockers=report_blockers,
+            stages_with_operator_requests=stages_with_operator_requests,
         )
-    stale_stage = next((item for item in rail_by_stage.values() if item.stale), None)
-    if stale_stage is not None:
-        return OperatorNextAction(
-            action="rerun-stale-downstream",
-            label="Rerun stale downstream",
-            detail=stale_stage.stale_reason
-            or "A remediation attempt invalidated downstream stage evidence.",
-            stage=stale_stage.stage,
-            enabled=True,
-        )
-    blocked_question_stage = next(
-        (item for item in rail_by_stage.values() if item.unresolved_blocking_count),
-        None,
     )
-    if blocked_question_stage is not None:
-        return OperatorNextAction(
-            action="answer-questions",
-            label=f"Answer {blocked_question_stage.title} questions",
-            detail="Resolve blocking questions before resuming execution.",
-            stage=blocked_question_stage.stage,
-            enabled=True,
-        )
-    if active_stage_view is not None and (
-        active_stage_view.questions.unresolved_blocking_question_ids
-    ):
-        return OperatorNextAction(
-            action="answer-questions",
-            label="Answer blocking questions",
-            detail="Resolve stage questions before resuming execution.",
-            stage=active_stage_view.result.stage,
-            enabled=True,
-        )
-    running_stage = _running_stage_item(rail_by_stage)
-    if running_stage is not None:
-        return _running_stage_next_action(running_stage)
-    failed_validation_stage = next(
-        (
-            item
-            for item in rail_by_stage.values()
-            if item.validator_fail_count and item.status != StageState.SUCCEEDED.value
-        ),
-        None,
-    )
-    if failed_validation_stage is not None:
-        if failed_validation_stage.stage in stages_with_operator_requests:
-            return OperatorNextAction(
-                action="review-intervention",
-                label="Review requested change result",
-                detail=(
-                    "Open validation recovery for the requested change result. "
-                    "Request another change if repair is exhausted."
-                ),
-                stage=failed_validation_stage.stage,
-                enabled=True,
-            )
-        return OperatorNextAction(
-            action="inspect-validation",
-            label=f"Inspect {failed_validation_stage.title} validation",
-            detail=(
-                "Open validation recovery. Run Repair if available, or Request Change "
-                "if the repair budget is exhausted."
-            ),
-            stage=failed_validation_stage.stage,
-            enabled=True,
-        )
-    if active_stage_view is not None:
-        result = active_stage_view.result
-        if result.final_state == StageState.BLOCKED.value:
-            return OperatorNextAction(
-                action="resume-stage",
-                label="Resume stage",
-                detail="Answers are present; rerun the selected stage in the same run.",
-                stage=result.stage,
-                enabled=True,
-            )
-    blocked_stage = next(
-        (item for item in rail_by_stage.values() if item.status == StageState.BLOCKED.value),
-        None,
-    )
-    if blocked_stage is not None:
-        return OperatorNextAction(
-            action="resume-stage",
-            label=f"Resume {blocked_stage.title}",
-            detail="Answers are present; rerun the blocked stage in the same run.",
-            stage=blocked_stage.stage,
-            enabled=True,
-        )
-    review_blocker = next(
-        (
-            blocker
-            for blocker in report_blockers
-            if blocker.kind in {"review-rejected", "review-conditions"}
-        ),
-        None,
-    )
-    if review_blocker is not None:
-        return OperatorNextAction(
-            action="review-findings",
-            label="Resolve review findings",
-            detail=review_blocker.detail,
-            stage="review",
-            enabled=True,
-        )
-    qa_blocker = next(
-        (
-            blocker
-            for blocker in report_blockers
-            if blocker.kind in {"qa-not-ready", "qa-ready-with-risks"}
-        ),
-        None,
-    )
-    if qa_blocker is not None:
-        return OperatorNextAction(
-            action="qa-verdict",
-            label="Resolve QA verdict",
-            detail=qa_blocker.detail,
-            stage="qa",
-            enabled=True,
-        )
-    terminal_evidence_blocker = next(
-        (
-            blocker
-            for blocker in report_blockers
-            if blocker.kind == "terminal-missing-evidence"
-        ),
-        None,
-    )
-    if terminal_evidence_blocker is not None:
-        return OperatorNextAction(
-            action="review-complete",
-            label="Restore terminal evidence",
-            detail=terminal_evidence_blocker.detail,
-            stage="qa",
-            enabled=True,
-        )
 
-    incomplete = [
-        item for item in rail_by_stage.values() if item.status != StageState.SUCCEEDED.value
-    ]
-    if not incomplete:
-        return OperatorNextAction(
-            action="review-complete",
-            label="Review final artifacts",
-            detail=(
-                "All canonical stages have succeeded. Inspect the QA handoff and final "
-                "evidence before starting the next flow."
-            ),
-            stage=None,
-            enabled=True,
-        )
 
-    runnable = next((item for item in rail_by_stage.values() if item.can_run), None)
-    if runnable is None:
-        return OperatorNextAction(
-            action="run-stage",
-            label="No runnable stage",
-            detail="Inspect blockers before continuing.",
-            stage=active_stage,
-            enabled=False,
-        )
-    target_stage = runnable.stage
-    return OperatorNextAction(
-        action="run-stage",
-        label=f"Run {target_stage}",
-        detail=runnable.reason,
-        stage=target_stage,
-        enabled=True,
-    )
+def _running_stage_next_action(running_stage: OperatorStageRailItem) -> OperatorNextAction:
+    return running_stage_next_action(running_stage)
 
 
 def _running_stage_item(
     rail_by_stage: dict[str, OperatorStageRailItem],
 ) -> OperatorStageRailItem | None:
-    return next(
-        (item for item in rail_by_stage.values() if item.status in _RUNNING_STAGE_STATES),
-        None,
-    )
-
-
-def _running_stage_next_action(running_stage: OperatorStageRailItem) -> OperatorNextAction:
-    return OperatorNextAction(
-        action="wait-for-stage",
-        label=f"{running_stage.title} running",
-        detail="Refresh after the active stage leaves preparing, executing, or validating.",
-        stage=running_stage.stage,
-        enabled=False,
-    )
+    return running_stage_item(rail_by_stage)
 
 
 def _stage_activity(
