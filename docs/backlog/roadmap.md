@@ -1085,7 +1085,7 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 
 #### Slice W49-E4-S2 — critical-module coverage (`planned`)
 
-- `W49-E4-S2-T1` (next) Record line/branch coverage for lifecycle, evidence, adapters, and
+- `W49-E4-S2-T1` (done) Record line/branch coverage for lifecycle, evidence, adapters, and
   scenario gates.
   - Output: a reviewed coverage baseline is tied to the exact SHA and command for critical
     modules without imposing a vanity global percentage.
@@ -1093,8 +1093,13 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
   - Verification: the baseline records module identity, command, and revision and is reproducible
     from a clean checkout.
   - Dependencies: `W49-E4-S1` and a fresh `origin/main`.
+  - Completion evidence: PR #624 merged to `origin/main` at `a144fbae`; the baseline records
+    23 critical modules across the four categories, line/branch counts, source revision
+    `951e3f8c`, Python/Coverage versions, and the exact 369-test pytest command. The checker and
+    focused regression tests pass, as do all Python, adapter, deterministic, browser, build, and
+    security lanes. No UI-owned paths changed.
 
-- `W49-E4-S2-T2` (planned) Add non-decreasing per-module thresholds in one CI job.
+- `W49-E4-S2-T2` (next) Add non-decreasing per-module thresholds in one CI job.
   - Output: critical-module coverage cannot regress below its reviewed baseline in CI.
   - Scope: CI coverage gate and regression fixtures; no runtime or UI-owned paths.
   - Verification: a synthetic critical-module regression fails while unrelated global coverage

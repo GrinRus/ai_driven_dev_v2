@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E4-S2-T1` — Record line/branch coverage for lifecycle, evidence, adapters, and scenario gates.
+- `W49-E4-S2-T2` — Add non-decreasing per-module thresholds in one CI job.
 
 ## Soon
 
@@ -52,6 +52,9 @@ slice, and local task.
   `browser_tests` remained excluded for the neighboring UI boundary, AST equivalence and focused
   checks passed, and required CI/security/browser/build lanes were green. T2 completed in PR #622
   at `765f051a`: CI now enforces `ruff format --check .` in the lint/type/test matrix, with 74
-  focused planning/docs/CI tests and all required CI/security/browser/build lanes green. All remain
-  outside runtime/UI-owned paths; the neighboring UI checkout is read-only. Queue promotion now
-  selects the direct successor `W49-E4-S2-T1`.
+  focused planning/docs/CI tests and all required CI/security/browser/build lanes green. W49-E4-S2-T1
+  completed in PR #624 at `a144fbae`: the reviewed baseline covers 23 lifecycle/evidence/adapter/
+  scenario-gate modules with exact line/branch counts, source SHA `951e3f8c`, tool versions, and
+  a reproducible 369-test command; checker tests and all required CI/security/browser/build lanes
+  passed. All remain outside runtime/UI-owned paths; the neighboring UI checkout is read-only.
+  Queue promotion now selects the direct successor `W49-E4-S2-T2`.

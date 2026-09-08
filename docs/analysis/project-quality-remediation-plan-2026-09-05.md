@@ -133,6 +133,15 @@ test, clean formatter/lint checks, focused planning/docs/CI suite, and full requ
 CI/security/browser/build lanes passed without runtime or UI-owned changes. The queue promotes
 `W49-E4-S2-T1` to establish a reproducible critical-module coverage baseline next.
 
+`W49-E4-S2-T1` is complete in PR #624 (`a144fbae`). A focused 369-test pytest run recorded line
+and branch coverage for 23 explicitly categorized lifecycle, evidence, adapter, and scenario-gate
+modules in `docs/quality/critical-coverage-baseline.json`, tied to source revision `951e3f8c`,
+Python/Coverage versions, and the exact command. `scripts/check_critical_coverage.py` rejects
+missing modules or regressions with rounding-safe comparisons and has focused schema/regression
+tests. The baseline and checker exclude packaged UI/static/frontend/browser paths and the
+neighboring UI checkout remains read-only. Full Python, adapter, deterministic, browser, build,
+and security lanes passed; the queue now promotes `W49-E4-S2-T2` for CI threshold enforcement.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
