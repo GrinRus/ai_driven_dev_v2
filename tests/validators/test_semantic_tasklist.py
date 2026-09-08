@@ -319,9 +319,7 @@ def test_validate_semantic_outputs_preserves_mixed_id_and_missing_coverage_findi
                 "# Tasklist\n\n"
                 "## Task summary\n\n"
                 "Split the regression into two bounded implementation tasks.\n\n"
-                "## Ordered tasks\n\n"
-                + "\n".join(ordered_cards)
-                + "\n"
+                "## Ordered tasks\n\n" + "\n".join(ordered_cards) + "\n"
                 "## Dependencies\n\n"
                 "- TL-1: none\n\n"
                 "## Verification notes\n\n"
@@ -351,8 +349,7 @@ def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> No
 
     messages = {finding.message for finding in findings}
     assert (
-        "Section `Task summary` is too brief to explain decomposition scope and "
-        "sequencing intent."
+        "Section `Task summary` is too brief to explain decomposition scope and sequencing intent."
     ) in messages
     assert "`Ordered tasks` must contain H3 task cards with stable task ids." in messages
 
@@ -390,12 +387,16 @@ def test_tasklist_validator_keeps_independent_dependency_findings_separate(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     malformed = (
-        _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
-        / "fixtures"
-        / "w43-e5-s1-t1-resilience"
-        / "tasklist"
-        / "eleven-malformed.md"
-    ).read_text(encoding="utf-8").replace("- TL-2: TL-1", "- TL-2: TL-99")
+        (
+            _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
+            / "fixtures"
+            / "w43-e5-s1-t1-resilience"
+            / "tasklist"
+            / "eleven-malformed.md"
+        )
+        .read_text(encoding="utf-8")
+        .replace("- TL-2: TL-1", "- TL-2: TL-99")
+    )
     _write_tasklist_document(workspace_root, "WI-SEM-TASKLIST-INDEPENDENT", malformed)
 
     findings = validate_semantic_outputs(
@@ -441,12 +442,16 @@ def test_tasklist_validator_uses_high_for_execution_critical_root_and_medium_for
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     malformed = (
-        _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
-        / "fixtures"
-        / "w43-e5-s1-t1-resilience"
-        / "tasklist"
-        / "eleven-malformed.md"
-    ).read_text(encoding="utf-8").replace("- TL-2: TL-1", "- TL-2: TL-99")
+        (
+            _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
+            / "fixtures"
+            / "w43-e5-s1-t1-resilience"
+            / "tasklist"
+            / "eleven-malformed.md"
+        )
+        .read_text(encoding="utf-8")
+        .replace("- TL-2: TL-1", "- TL-2: TL-99")
+    )
     _write_tasklist_document(workspace_root, "WI-SEM-TASKLIST-SEVERITY", malformed)
 
     findings = validate_semantic_outputs(
@@ -455,9 +460,7 @@ def test_tasklist_validator_uses_high_for_execution_critical_root_and_medium_for
         workspace_root=workspace_root,
     )
 
-    grammar = next(
-        finding for finding in findings if "shared root issue" in finding.message
-    )
+    grammar = next(finding for finding in findings if "shared root issue" in finding.message)
     dependency = next(
         finding for finding in findings if "unknown dependencies: TL-99" in finding.message
     )

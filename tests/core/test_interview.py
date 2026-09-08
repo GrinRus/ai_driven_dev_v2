@@ -289,9 +289,7 @@ def test_persist_questions_document_updates_explicit_adapter_event_ids(
         work_item="WI-001",
         stage="plan",
         stage_output_questions_markdown=(
-            "# Questions\n\n"
-            "## Questions\n\n"
-            "- Q1 [blocking] Confirm the release owner.\n"
+            "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm the release owner.\n"
         ),
     )
 

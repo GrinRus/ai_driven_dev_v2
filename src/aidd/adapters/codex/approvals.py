@@ -58,7 +58,8 @@ def codex_approval_request_to_operator_request(
     if command is not None:
         normalized_payload["command"] = command
     return RuntimeOperatorRequest(
-        id=request_id or RuntimeOperatorRequest.create(
+        id=request_id
+        or RuntimeOperatorRequest.create(
             runtime_id=runtime_id,
             stage=stage,
             kind=kind,
@@ -70,9 +71,9 @@ def codex_approval_request_to_operator_request(
         payload=normalized_payload,
         cwd=cwd,
         paths=paths,
-        risk=RuntimeOperatorRisk.HIGH if kind is RuntimeOperatorRequestKind.SHELL else (
-            RuntimeOperatorRisk.MEDIUM
-        ),
+        risk=RuntimeOperatorRisk.HIGH
+        if kind is RuntimeOperatorRequestKind.SHELL
+        else (RuntimeOperatorRisk.MEDIUM),
         suggestions=(
             RuntimeOperatorDecisionAction.ALLOW_ONCE,
             RuntimeOperatorDecisionAction.ALLOW_FOR_SESSION,
@@ -106,11 +107,7 @@ def _kind_for_method(method: str) -> RuntimeOperatorRequestKind:
         or "execcommand" in normalized
     ):
         return RuntimeOperatorRequestKind.SHELL
-    if (
-        "filechange" in normalized
-        or "file_change" in normalized
-        or "applypatch" in normalized
-    ):
+    if "filechange" in normalized or "file_change" in normalized or "applypatch" in normalized:
         return RuntimeOperatorRequestKind.FILE_EDIT
     if "permissions" in normalized or "permission" in normalized:
         return RuntimeOperatorRequestKind.RUNTIME_PERMISSION

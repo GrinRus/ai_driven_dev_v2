@@ -142,9 +142,7 @@ def resolve_runtime_readiness(
         execution_command_available = (
             False if probe_report is None else probe_report.execution_command_available
         )
-        probe_observed_at_utc = (
-            None if probe_report is None else probe_report.observed_at_utc
-        )
+        probe_observed_at_utc = None if probe_report is None else probe_report.observed_at_utc
         item = RuntimeReadinessItem(
             runtime_id=definition.runtime_id,
             support_tier=definition.support_tier,
@@ -184,9 +182,7 @@ def resolve_runtime_readiness(
             ),
             authentication=RuntimeAuthenticationReadiness(
                 status=(
-                    "unverified"
-                    if probe_report is None
-                    else probe_report.authentication_status
+                    "unverified" if probe_report is None else probe_report.authentication_status
                 ),
                 detail=None if probe_report is None else probe_report.authentication_detail,
             ),
@@ -200,9 +196,7 @@ def resolve_runtime_readiness(
                 ),
             ),
             latest_launch=(
-                None
-                if launch_history is None
-                else launch_history.get(definition.runtime_id)
+                None if launch_history is None else launch_history.get(definition.runtime_id)
             ),
             configured_model=runtime_config.model,
             configured_reasoning_effort=runtime_config.reasoning_effort,
@@ -210,9 +204,7 @@ def resolve_runtime_readiness(
                 runtime_id=definition.runtime_id,
                 runtime_config=runtime_config,
             ),
-            probe_config_identity=(
-                None if probe_report is None else probe_report.config_identity
-            ),
+            probe_config_identity=(None if probe_report is None else probe_report.config_identity),
             probe_observed_at_utc=probe_observed_at_utc,
             eligible=False,
             disabled_reason=None,

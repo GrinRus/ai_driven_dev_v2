@@ -48,8 +48,7 @@ def test_parse_reports_tolerates_malformed_markdown_with_warnings() -> None:
     assert implementation.touched_files == ()
     assert any("No touched files" in warning for warning in implementation.warnings)
     assert any(
-        "No executable verification commands" in warning
-        for warning in implementation.warnings
+        "No executable verification commands" in warning for warning in implementation.warnings
     )
     assert review.findings == ()
     assert "No structured review findings" in review.warnings[-1]

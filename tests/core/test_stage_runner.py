@@ -173,13 +173,7 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
     assert bundle.stage == "implement"
     assert bundle.work_item == "WI-001"
     expected_required_inputs = (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md",
         workspace_root
         / "workitems"
         / "WI-001"
@@ -199,9 +193,7 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
     assert bundle.required_input_documents == expected_required_inputs
     assert bundle.optional_input_documents == ()
     assert bundle.expected_input_bundle == expected_required_inputs
-    optional_constraints = (
-        workspace_root / "workitems" / "WI-001" / "context" / "constraints.md"
-    )
+    optional_constraints = workspace_root / "workitems" / "WI-001" / "context" / "constraints.md"
     optional_constraints.parent.mkdir(parents=True, exist_ok=True)
     optional_constraints.write_text("# Constraints\n\n- Keep scope narrow.\n", encoding="utf-8")
 
@@ -215,9 +207,7 @@ def test_prepare_stage_bundle_resolves_expected_inputs_and_outputs(tmp_path: Pat
         *expected_required_inputs,
         optional_constraints,
     )
-    assert bundle.expected_input_bundle == (
-        *expected_required_inputs,
-    )
+    assert bundle.expected_input_bundle == (*expected_required_inputs,)
     assert bundle.expected_output_documents == (
         workspace_root
         / "workitems"
@@ -320,18 +310,12 @@ def test_prepare_stage_bundle_persists_project_set_context_when_declared(
         project_set=project_set,
     )
 
-    context_path = (
-        workspace_root / "workitems" / "WI-PROJECT-SET" / "context" / "project-set.md"
-    )
+    context_path = workspace_root / "workitems" / "WI-PROJECT-SET" / "context" / "project-set.md"
     assert bundle.project_set_context_path == context_path
     assert context_path in bundle.expected_input_bundle
-    assert "`workitems/WI-PROJECT-SET/context/project-set.md`" in (
-        bundle.stage_brief_markdown
-    )
+    assert "`workitems/WI-PROJECT-SET/context/project-set.md`" in (bundle.stage_brief_markdown)
     assert "- Project ids: `api`, `web`" in bundle.stage_brief_markdown
-    assert "| `api` | `services/api` | `primary` |" in context_path.read_text(
-        encoding="utf-8"
-    )
+    assert "| `api` | `services/api` | `primary` |" in context_path.read_text(encoding="utf-8")
 
 
 def test_persist_execution_state_creates_attempt_and_sets_executing_status(tmp_path: Path) -> None:
@@ -602,9 +586,7 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
     assert invocation.input_bundle_path.exists()
     repair_context_path = second_attempt.attempt_path / ATTEMPT_REPAIR_CONTEXT_FILENAME
     assert repair_context_path.exists()
-    assert "STRUCT-MISSING-REQUIRED-SECTION" in repair_context_path.read_text(
-        encoding="utf-8"
-    )
+    assert "STRUCT-MISSING-REQUIRED-SECTION" in repair_context_path.read_text(encoding="utf-8")
     artifact_index = json.loads(
         (second_attempt.attempt_path / "artifact-index.json").read_text(encoding="utf-8")
     )
@@ -957,12 +939,8 @@ def test_run_single_stage_orchestration_restores_repair_brief_when_adapter_raise
         "stage": "plan",
         "attempt_number": int(attempt_path.name.removeprefix("attempt-")),
     }
-    artifact_index = json.loads(
-        (attempt_path / "artifact-index.json").read_text(encoding="utf-8")
-    )
-    assert artifact_index["logs"]["adapter_exception"].endswith(
-        "/adapter-exception.json"
-    )
+    artifact_index = json.loads((attempt_path / "artifact-index.json").read_text(encoding="utf-8"))
+    assert artifact_index["logs"]["adapter_exception"].endswith("/adapter-exception.json")
     assert not (attempt_path / "runtime-exit.json").exists()
 
 
@@ -1075,9 +1053,7 @@ def test_run_single_stage_preflight_blocks_invalid_optional_inputs_before_attemp
         stage="implement",
     )
     _materialize_expected_inputs(preparation_bundle.required_input_documents)
-    optional_constraints = (
-        workspace_root / "workitems" / "WI-001" / "context" / "constraints.md"
-    )
+    optional_constraints = workspace_root / "workitems" / "WI-001" / "context" / "constraints.md"
     optional_constraints.parent.mkdir(parents=True, exist_ok=True)
     optional_constraints.write_bytes(b"\xff")
 
@@ -1160,12 +1136,15 @@ def test_run_single_stage_preflight_blocks_non_file_required_inputs_before_attem
             adapter_executor=_unused_adapter_executor,
         )
 
-    assert load_stage_metadata(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    ) is None
+    assert (
+        load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        )
+        is None
+    )
     assert not run_attempts_root(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -1353,9 +1332,12 @@ def test_canonical_validator_report_ignores_runtime_validator_draft(
         discovery=discovery,
     )
 
-    assert validation.validator_report_path.read_text(encoding="utf-8").find(
-        f"- Verdict: `{expected_verdict}`"
-    ) >= 0
+    assert (
+        validation.validator_report_path.read_text(encoding="utf-8").find(
+            f"- Verdict: `{expected_verdict}`"
+        )
+        >= 0
+    )
     assert bool(validation.findings) is expect_findings
     assert discovery.discovered_markdown_documents == invocation.expected_output_documents
     assert discovery.missing_markdown_documents == ()
@@ -1553,17 +1535,16 @@ def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
 
     assert discovery.discovered_markdown_documents == invocation.expected_output_documents
     assert discovery.missing_markdown_documents == ()
-    assert tuple(
-        promotion.destination_path for promotion in discovery.promoted_misplaced_documents
-    ) == invocation.expected_output_documents
+    assert (
+        tuple(promotion.destination_path for promotion in discovery.promoted_misplaced_documents)
+        == invocation.expected_output_documents
+    )
     assert (stage_root / "plan.md").read_text(encoding="utf-8") == valid_documents["plan.md"]
     assert (stage_root / "stage-result.md").read_text(encoding="utf-8") == (
         "# Stage result\n\nStage not run yet.\n"
     )
     assert structural_validation.findings == ()
-    validator_report_text = structural_validation.validator_report_path.read_text(
-        encoding="utf-8"
-    )
+    validator_report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
     assert "- Verdict: `pass`" in validator_report_text
     assert "`STRUCT-OUTPUT-PROMOTED` (`low`)" in validator_report_text
     assert "workitems/WI-001/stages/plan/output/plan.md" in validator_report_text
@@ -1816,7 +1797,9 @@ def test_publish_stage_outputs_still_requires_missing_substantive_documents(
 
 @pytest.mark.parametrize("corrupt_candidate", (False, True))
 def test_content_only_workflow_validates_aidd_results_before_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corrupt_candidate: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    corrupt_candidate: bool,
 ) -> None:
     from aidd.core import stage_runner
 
@@ -2026,15 +2009,15 @@ def test_deferred_success_preserves_first_attempt_before_later_task_runs(
     assert metadata is not None
     assert metadata.status == StageState.PENDING.value
     assert [
-        (entry.attempt_number, entry.trigger, entry.outcome)
-        for entry in metadata.repair_history
+        (entry.attempt_number, entry.trigger, entry.outcome) for entry in metadata.repair_history
     ] == [(1, "initial", "succeeded")]
     stage_result = (stage_root / "stage-result.md").read_text(encoding="utf-8")
     assert "- Attempt `1` (`initial`) -> succeeded." in stage_result
 
 
 def test_post_normalization_stage_result_finding_requests_repair(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from aidd.core import stage_runner
 
@@ -2205,9 +2188,7 @@ def test_run_single_stage_orchestration_blocks_when_runtime_answers_own_question
         "- Q1 [blocking] Which rollout owner should approve this scope?\n"
     )
     runtime_documents["answers.md"] = (
-        "# Answers\n\n"
-        "## Answers\n\n"
-        "- Q1 [resolved] The runtime picked the engineering lead.\n"
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] The runtime picked the engineering lead.\n"
     )
 
     def _adapter_executor(
@@ -2317,9 +2298,7 @@ def test_run_single_stage_orchestration_preserves_operator_answers_after_runtime
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     operator_answers = (
-        "# Answers\n\n"
-        "## Answers\n\n"
-        "- Q1 [resolved] Release owner approval is recorded.\n"
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n"
     )
     (stage_root / "answers.md").write_text(operator_answers, encoding="utf-8")
 
@@ -2336,9 +2315,7 @@ def test_run_single_stage_orchestration_preserves_operator_answers_after_runtime
         "- Q1 [blocking] Which rollout owner should approve this scope?\n"
     )
     runtime_documents["answers.md"] = (
-        "# Answers\n\n"
-        "## Answers\n\n"
-        "- Q1 [resolved] The runtime rewrote the operator answer.\n"
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] The runtime rewrote the operator answer.\n"
     )
 
     def _adapter_executor(
@@ -2384,13 +2361,11 @@ def test_run_single_stage_orchestration_preserves_omitted_questions_with_answers
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "questions.md").write_text(
-        "# Questions\n\n## Questions\n\n"
-        "- Q1 [blocking] Confirm the release owner.\n",
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm the release owner.\n",
         encoding="utf-8",
     )
     (stage_root / "answers.md").write_text(
-        "# Answers\n\n## Answers\n\n"
-        "- Q1 [resolved] The release owner is recorded.\n",
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] The release owner is recorded.\n",
         encoding="utf-8",
     )
 
@@ -2429,12 +2404,10 @@ def test_run_single_stage_orchestration_preserves_omitted_questions_with_answers
     assert "- `Q1` `[blocking]` Confirm the release owner." in (
         stage_root / "questions.md"
     ).read_text(encoding="utf-8")
-    assert "CROSS-ANSWER-WITHOUT-QUESTION" not in (
-        stage_root / "validator-report.md"
-    ).read_text(encoding="utf-8")
-    assert "## Blockers\n\n- none\n" in (
-        stage_root / "stage-result.md"
-    ).read_text(encoding="utf-8")
+    assert "CROSS-ANSWER-WITHOUT-QUESTION" not in (stage_root / "validator-report.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Blockers\n\n- none\n" in (stage_root / "stage-result.md").read_text(encoding="utf-8")
 
 
 def test_run_single_stage_orchestration_merges_runtime_question_candidates_by_qid(
@@ -2452,13 +2425,11 @@ def test_run_single_stage_orchestration_merges_runtime_question_candidates_by_qi
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "questions.md").write_text(
-        "# Questions\n\n## Questions\n\n"
-        "- Q1 [blocking] Confirm the release owner.\n",
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm the release owner.\n",
         encoding="utf-8",
     )
     (stage_root / "answers.md").write_text(
-        "# Answers\n\n## Answers\n\n"
-        "- Q1 [resolved] The release owner is recorded.\n",
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] The release owner is recorded.\n",
         encoding="utf-8",
     )
 
@@ -2501,8 +2472,7 @@ def test_run_single_stage_orchestration_merges_runtime_question_candidates_by_qi
         "- `Q2` `[non-blocking]` Record the rollout evidence location.\n"
     )
     assert (stage_root / "answers.md").read_text(encoding="utf-8") == (
-        "# Answers\n\n## Answers\n\n"
-        "- Q1 [resolved] The release owner is recorded.\n"
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] The release owner is recorded.\n"
     )
 
 
@@ -2528,9 +2498,7 @@ def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_r
     stage_root.mkdir(parents=True, exist_ok=True)
     validator_report_path = stage_root / "validator-report.md"
     validator_report_path.write_text(
-        "# Validator Report\n\n"
-        "## Result\n\n"
-        "- Verdict: `repair`\n",
+        "# Validator Report\n\n## Result\n\n- Verdict: `repair`\n",
         encoding="utf-8",
     )
     repair_brief_path = stage_root / "repair-brief.md"
@@ -2886,11 +2854,7 @@ def test_run_single_stage_orchestration_retains_rejected_questions_for_attention
         execution_state: StageExecutionState,
     ) -> AdapterExecutionOutcome:
         stage_root = (
-            workspace_root
-            / "workitems"
-            / invocation.work_item
-            / "stages"
-            / invocation.stage
+            workspace_root / "workitems" / invocation.work_item / "stages" / invocation.stage
         )
         stage_root.mkdir(parents=True, exist_ok=True)
         for name, content in runtime_documents.items():
@@ -2962,11 +2926,7 @@ def test_run_single_stage_orchestration_routes_task_diff_findings_into_repair(
     ) -> AdapterExecutionOutcome:
         del execution_state
         stage_root = (
-            workspace_root
-            / "workitems"
-            / invocation.work_item
-            / "stages"
-            / invocation.stage
+            workspace_root / "workitems" / invocation.work_item / "stages" / invocation.stage
         )
         stage_root.mkdir(parents=True, exist_ok=True)
         for name, content in runtime_documents.items():
@@ -3018,9 +2978,7 @@ def test_run_single_stage_orchestration_normalizes_runtime_answer_candidate(
     _materialize_expected_inputs(preview_bundle.expected_input_bundle)
     runtime_documents = _valid_plan_output_documents()
     runtime_documents["questions.md"] = (
-        "# Questions\n\n"
-        "## Questions\n\n"
-        "- Q1 [non-blocking] Confirm compatibility-note placement.\n"
+        "# Questions\n\n## Questions\n\n- Q1 [non-blocking] Confirm compatibility-note placement.\n"
     )
     runtime_documents["answers.md"] = (
         "# Answers\n\n"
@@ -3033,11 +2991,7 @@ def test_run_single_stage_orchestration_normalizes_runtime_answer_candidate(
         execution_state: StageExecutionState,
     ) -> AdapterExecutionOutcome:
         stage_root = (
-            workspace_root
-            / "workitems"
-            / invocation.work_item
-            / "stages"
-            / invocation.stage
+            workspace_root / "workitems" / invocation.work_item / "stages" / invocation.stage
         )
         stage_root.mkdir(parents=True, exist_ok=True)
         for name, content in runtime_documents.items():
@@ -3105,11 +3059,7 @@ def test_run_single_stage_orchestration_retains_rejected_questions_with_operator
         execution_state: StageExecutionState,
     ) -> AdapterExecutionOutcome:
         stage_root = (
-            workspace_root
-            / "workitems"
-            / invocation.work_item
-            / "stages"
-            / invocation.stage
+            workspace_root / "workitems" / invocation.work_item / "stages" / invocation.stage
         )
         stage_root.mkdir(parents=True, exist_ok=True)
         for name, content in runtime_documents.items():
@@ -3286,11 +3236,7 @@ def test_run_single_stage_orchestration_normalizes_missing_repair_brief_trace(
         execution_state: StageExecutionState,
     ) -> AdapterExecutionOutcome:
         stage_documents_root = (
-            workspace_root
-            / "workitems"
-            / invocation.work_item
-            / "stages"
-            / invocation.stage
+            workspace_root / "workitems" / invocation.work_item / "stages" / invocation.stage
         )
         stage_documents_root.mkdir(parents=True, exist_ok=True)
         for name, content in runtime_documents.items():
@@ -3697,9 +3643,7 @@ def test_run_single_stage_orchestration_blocks_before_validation_for_operator_re
         return AdapterExecutionOutcome(
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details="blocked_for_operator: runtime permission decision required",
-            operator_requests_path=(
-                execution_state.attempt_path / "operator-requests.jsonl"
-            ),
+            operator_requests_path=(execution_state.attempt_path / "operator-requests.jsonl"),
             pending_operator_request_ids=("opr-test",),
         )
 
@@ -3952,11 +3896,7 @@ def test_route_stage_questions_to_interview_detects_unresolved_blocking_question
         encoding="utf-8",
     )
     (stage_root / "answers.md").write_text(
-        (
-            "# Answers\n\n"
-            "## Answers\n\n"
-            "- `Q2` `[resolved]` Added optional context.\n"
-        ),
+        ("# Answers\n\n## Answers\n\n- `Q2` `[resolved]` Added optional context.\n"),
         encoding="utf-8",
     )
 
@@ -4009,19 +3949,11 @@ def test_route_stage_questions_to_interview_skips_when_blocking_questions_resolv
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "questions.md").write_text(
-        (
-            "# Questions\n\n"
-            "## Questions\n\n"
-            "- `Q1` `[blocking]` Confirm scope.\n"
-        ),
+        ("# Questions\n\n## Questions\n\n- `Q1` `[blocking]` Confirm scope.\n"),
         encoding="utf-8",
     )
     (stage_root / "answers.md").write_text(
-        (
-            "# Answers\n\n"
-            "## Answers\n\n"
-            "- `Q1` `[resolved]` Scope confirmed.\n"
-        ),
+        ("# Answers\n\n## Answers\n\n- `Q1` `[resolved]` Scope confirmed.\n"),
         encoding="utf-8",
     )
 
@@ -4083,34 +4015,43 @@ def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
 
 def test_derive_validation_verdict_maps_combined_validation_outcomes() -> None:
     assert derive_validation_verdict(findings=()) is ValidationVerdict.PASS
-    assert derive_validation_verdict(
-        findings=(
-            ValidationFinding(
-                code="SEM-INCOMPLETE-SECTION",
-                message="Semantic section is incomplete.",
-            ),
+    assert (
+        derive_validation_verdict(
+            findings=(
+                ValidationFinding(
+                    code="SEM-INCOMPLETE-SECTION",
+                    message="Semantic section is incomplete.",
+                ),
+            )
         )
-    ) is ValidationVerdict.REPAIR
-    assert derive_validation_verdict(
-        findings=(
-            ValidationFinding(
-                code="CROSS-BLOCKING-UNANSWERED",
-                message="Blocking question is unresolved.",
-            ),
+        is ValidationVerdict.REPAIR
+    )
+    assert (
+        derive_validation_verdict(
+            findings=(
+                ValidationFinding(
+                    code="CROSS-BLOCKING-UNANSWERED",
+                    message="Blocking question is unresolved.",
+                ),
+            )
         )
-    ) is ValidationVerdict.BLOCKED
-    assert derive_validation_verdict(
-        findings=(
-            ValidationFinding(
-                code="CROSS-BLOCKING-UNANSWERED",
-                message="Blocking question is unresolved.",
-            ),
-            ValidationFinding(
-                code="INTERVIEW-MALFORMED-DOCUMENT",
-                message="Question document contains invalid bullet continuation.",
-            ),
+        is ValidationVerdict.BLOCKED
+    )
+    assert (
+        derive_validation_verdict(
+            findings=(
+                ValidationFinding(
+                    code="CROSS-BLOCKING-UNANSWERED",
+                    message="Blocking question is unresolved.",
+                ),
+                ValidationFinding(
+                    code="INTERVIEW-MALFORMED-DOCUMENT",
+                    message="Question document contains invalid bullet continuation.",
+                ),
+            )
         )
-    ) is ValidationVerdict.REPAIR
+        is ValidationVerdict.REPAIR
+    )
 
     interview_routing = StageInterviewRouting(
         stage="plan",
@@ -4122,10 +4063,13 @@ def test_derive_validation_verdict_maps_combined_validation_outcomes() -> None:
         unresolved_blocking_question_ids=("Q1",),
         requires_interview=True,
     )
-    assert derive_validation_verdict(
-        findings=(),
-        interview_routing=interview_routing,
-    ) is ValidationVerdict.BLOCKED
+    assert (
+        derive_validation_verdict(
+            findings=(),
+            interview_routing=interview_routing,
+        )
+        is ValidationVerdict.BLOCKED
+    )
 
 
 @pytest.mark.parametrize(
@@ -4700,12 +4644,7 @@ def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass
     )
     _materialize_expected_outputs(preparation_bundle.expected_output_documents)
     stage_result_path = (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "stages"
-        / "plan"
-        / "stage-result.md"
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "stage-result.md"
     )
     stage_result_path.write_text(
         "# Stage result\n\n"
@@ -4787,9 +4726,7 @@ def test_successful_stage_result_reconciliation_is_idempotent_and_deduplicates_v
 
     reconciled_text = stage_result_path.read_text(encoding="utf-8")
     assert stage_result_path.read_bytes() == first_reconciliation
-    status_body = reconciled_text.split("## Status\n\n", 1)[1].split(
-        "\n## Produced outputs", 1
-    )[0]
+    status_body = reconciled_text.split("## Status\n\n", 1)[1].split("\n## Produced outputs", 1)[0]
     assert status_body == "- Status: `succeeded`\n"
     assert reconciled_text.count("Validator verdict: `pass`") == 1
     assert reconciled_text.count("Validator verdict:") == 1
@@ -5126,8 +5063,6 @@ def test_update_stage_unblock_state_keeps_stage_blocked_with_partial_answer(
     assert unblock_state.unblocked is False
 
 
-
-
 def test_post_execution_cleanup_preserves_invalid_metadata_and_primary_failure(
     tmp_path: Path,
 ) -> None:
@@ -5135,8 +5070,11 @@ def test_post_execution_cleanup_preserves_invalid_metadata_and_primary_failure(
 
     workspace_root = tmp_path / ".aidd"
     state = persist_execution_state(
-        workspace_root=workspace_root, work_item="WI-001", run_id="run-001",
-        stage="plan", attempt_mode="initial",
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_mode="initial",
     )
     payload = json.loads(state.stage_metadata_path.read_text())
     payload.pop("status_history")
@@ -5144,8 +5082,13 @@ def test_post_execution_cleanup_preserves_invalid_metadata_and_primary_failure(
     before = {path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()}
     failure = RuntimeError("original runtime failure")
     _terminalize_unhandled_post_execution_exception(
-        workspace_root=workspace_root, work_item="WI-001", run_id="run-001", stage="plan",
-        contracts_root=Path("contracts"), changed_at_utc=None, exception=failure,
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        contracts_root=Path("contracts"),
+        changed_at_utc=None,
+        exception=failure,
     )
     assert str(failure) == "original runtime failure"
     assert any("status_history" in note for note in failure.__notes__)

@@ -144,8 +144,7 @@ def split_command(configured_command: str, *, runtime_label: str) -> tuple[str, 
         tokens = tuple(shlex.split(stripped))
     except ValueError as exc:
         raise ValueError(
-            f"Configured {runtime_label} command is not valid shell syntax: "
-            f"{configured_command!r}"
+            f"Configured {runtime_label} command is not valid shell syntax: {configured_command!r}"
         ) from exc
     if not tokens:
         raise ValueError(f"Configured {runtime_label} command must produce at least one token.")

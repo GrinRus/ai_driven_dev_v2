@@ -63,7 +63,7 @@ def _write_dry_run_fixture_script(tmp_path: Path) -> Path:
         "print(f'fixture-start stage={args.stage}', flush=True)\n"
         "print(f'fixture-prompt-packs={len(args.prompt_pack)}', flush=True)\n"
         "if args.emit_json_events:\n"
-        "    print('{\"event\":\"fixture_tick\",\"ok\":true}', flush=True)\n"
+        '    print(\'{"event":"fixture_tick","ok":true}\', flush=True)\n'
         "if args.sleep_seconds > 0:\n"
         "    time.sleep(args.sleep_seconds)\n"
         "print('fixture-end', flush=True)\n"
@@ -123,12 +123,14 @@ def test_assemble_command_includes_stage_brief_workspace_and_prompt_packs(tmp_pa
     assert command[command.index("--stage") + 1] == "plan"
     assert command[command.index("--work-item") + 1] == "WI-001"
     assert command[command.index("--run-id") + 1] == "run-001"
-    assert command[command.index("--workspace-root") + 1] == workspace_root.resolve(
-        strict=False
-    ).as_posix()
-    assert command[command.index("--stage-brief") + 1] == (
-        workspace_root / "stages/plan/stage-brief.md"
-    ).resolve(strict=False).as_posix()
+    assert (
+        command[command.index("--workspace-root") + 1]
+        == workspace_root.resolve(strict=False).as_posix()
+    )
+    assert (
+        command[command.index("--stage-brief") + 1]
+        == (workspace_root / "stages/plan/stage-brief.md").resolve(strict=False).as_posix()
+    )
     prompt_pack_values = tuple(
         command[idx + 1] for idx, token in enumerate(command) if token == "--prompt-pack"
     )
@@ -212,9 +214,10 @@ def test_build_execution_environment_sets_stage_workspace_and_prompt_pack_values
     assert env["AIDD_STAGE"] == "plan"
     assert env["AIDD_WORK_ITEM"] == "WI-001"
     assert env["AIDD_RUN_ID"] == "run-001"
-    assert env["AIDD_STAGE_BRIEF_PATH"] == (
-        workspace_root / "stages/plan/stage-brief.md"
-    ).resolve(strict=False).as_posix()
+    assert (
+        env["AIDD_STAGE_BRIEF_PATH"]
+        == (workspace_root / "stages/plan/stage-brief.md").resolve(strict=False).as_posix()
+    )
     assert env["AIDD_PROMPT_PACK_PATHS"] == (
         (repository_root / "prompt-packs/stages/plan/system.md").resolve(strict=False).as_posix()
         + os.pathsep
@@ -333,10 +336,7 @@ def test_run_subprocess_with_streaming_classifies_adapter_failures(tmp_path: Pat
 
 def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:
     script = (
-        "import time\n"
-        "print('started', flush=True)\n"
-        "time.sleep(5)\n"
-        "print('finished', flush=True)\n"
+        "import time\nprint('started', flush=True)\ntime.sleep(5)\nprint('finished', flush=True)\n"
     )
     spec = ClaudeCodeSubprocessSpec(
         command=(sys.executable, "-c", script),
@@ -608,8 +608,7 @@ def test_persist_attempt_runtime_log_writes_runtime_log_file(tmp_path: Path) -> 
         artifacts.runtime_exit_metadata_path.read_text(encoding="utf-8")
     )
     assert (
-        runtime_exit_metadata["exit_classification"]
-        == ClaudeCodeExitClassification.SUCCESS.value
+        runtime_exit_metadata["exit_classification"] == ClaudeCodeExitClassification.SUCCESS.value
     )
 
 
@@ -657,8 +656,7 @@ def test_persist_runtime_event_artifacts_writes_events_when_available(tmp_path: 
     assert all(len(event["payload_sha256"]) == 64 for event in events)
     assert all("msg" not in event and "id" not in event for event in events)
     runtime_events = [
-        json.loads(line)
-        for line in (attempt_path / "runtime.jsonl").read_text().splitlines()
+        json.loads(line) for line in (attempt_path / "runtime.jsonl").read_text().splitlines()
     ]
     assert runtime_events[0]["payload"]["id"] == "abc"
     assert runtime_events[1]["payload"]["msg"] == "slow"
@@ -699,8 +697,7 @@ def test_artifact_persistence_and_classification_regression(tmp_path: Path) -> N
     )
     spec = build_subprocess_spec(
         configured_command=(
-            f"{sys.executable} {fixture_script.as_posix()} "
-            "--emit-json-events --exit-code 3"
+            f"{sys.executable} {fixture_script.as_posix()} --emit-json-events --exit-code 3"
         ),
         context=context,
         repository_root=repository_root,
@@ -728,8 +725,7 @@ def test_artifact_persistence_and_classification_regression(tmp_path: Path) -> N
     assert any(event["event_kind"] == "runtime-event" for event in events)
     assert all("ok" not in event for event in events)
     runtime_events = [
-        json.loads(line)
-        for line in (attempt_path / "runtime.jsonl").read_text().splitlines()
+        json.loads(line) for line in (attempt_path / "runtime.jsonl").read_text().splitlines()
     ]
     assert any(event.get("payload", {}).get("ok") is True for event in runtime_events)
 

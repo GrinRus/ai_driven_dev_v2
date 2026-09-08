@@ -25,9 +25,7 @@ def test_init_without_request_reports_not_runnable_until_intake_exists(tmp_path:
 
     assert result.exit_code == 0, result.output
     assert "No intake context was seeded" in result.stdout
-    assert not (
-        workspace_root / "workitems" / "WI-001" / "context" / "intake.md"
-    ).exists()
+    assert not (workspace_root / "workitems" / "WI-001" / "context" / "intake.md").exists()
 
 
 def test_init_request_seeds_context_documents(tmp_path: Path) -> None:
@@ -49,15 +47,13 @@ def test_init_request_seeds_context_documents(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     context_root = workspace_root / "workitems" / "WI-001" / "context"
     assert "Seeded request context" in result.stdout
-    assert "Implement a small operator workflow." in (
-        context_root / "intake.md"
-    ).read_text(encoding="utf-8")
-    assert "Implement a small operator workflow." in (
-        context_root / "user-request.md"
-    ).read_text(encoding="utf-8")
-    assert "Project root:" in (context_root / "repository-state.md").read_text(
+    assert "Implement a small operator workflow." in (context_root / "intake.md").read_text(
         encoding="utf-8"
     )
+    assert "Implement a small operator workflow." in (context_root / "user-request.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Project root:" in (context_root / "repository-state.md").read_text(encoding="utf-8")
 
 
 def test_init_request_file_seeds_context_documents(tmp_path: Path) -> None:

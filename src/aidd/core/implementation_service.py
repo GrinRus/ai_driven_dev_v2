@@ -315,9 +315,7 @@ def _complete_task_execution(
             _best_effort_enrichment(
                 errors=enrichment_errors,
                 label="task diff evidence write",
-                operation=lambda: (
-                    context.task_attempt_path / "task-diff.json"
-                ).write_text(
+                operation=lambda: (context.task_attempt_path / "task-diff.json").write_text(
                     json.dumps(diff, indent=2, sort_keys=True) + "\n",
                     encoding="utf-8",
                 ),
@@ -478,11 +476,14 @@ class ImplementationExecutionService:
             except Exception:
                 # Optional evidence collection must not hide the executor cause.  The
                 # primary ledger transition has already been attempted before enrichment.
-                failed = load_task_ledger(
-                    workspace_root=request.workspace_root,
-                    work_item=request.work_item,
-                    run_id=request.run_id,
-                ) or context.ledger
+                failed = (
+                    load_task_ledger(
+                        workspace_root=request.workspace_root,
+                        work_item=request.work_item,
+                        run_id=request.run_id,
+                    )
+                    or context.ledger
+                )
             raise ImplementationPortError("Task attempt executor failed.", ledger=failed) from exc
         ledger = _complete_task_execution(
             context=context,

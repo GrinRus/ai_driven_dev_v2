@@ -211,11 +211,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         ):
             supervisor.request_stop()
             parent_exit_drain_deadline = None
-        if (
-            stdin_writer is not None
-            and stdin_writer.error is not None
-            and stop_reason is None
-        ):
+        if stdin_writer is not None and stdin_writer.error is not None and stop_reason is None:
             writer_error = stdin_writer.error
             supervisor.request_stop()
             supervisor.drain_streams(reader_threads)
@@ -292,8 +288,6 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         stderr_truncated=snapshot.stderr_truncated,
         runtime_log_truncated=snapshot.runtime_log_truncated,
         capture_error=(
-            safe_capture_failure_message(reader_error)
-            if reader_error is not None
-            else None
+            safe_capture_failure_message(reader_error) if reader_error is not None else None
         ),
     )

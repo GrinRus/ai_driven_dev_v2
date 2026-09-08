@@ -198,9 +198,7 @@ def test_run_comparison_detects_prompt_stage_artifact_and_validator_drift(
     assert artifact_statuses[("plan", "document", "input_bundle")] == "changed"
     assert artifact_statuses[("plan", "document", "baseline_only")] == "removed"
     assert artifact_statuses[("plan", "document", "target_only")] == "added"
-    validator_delta = next(
-        item for item in view.validator_outcome_deltas if item.stage == "plan"
-    )
+    validator_delta = next(item for item in view.validator_outcome_deltas if item.stage == "plan")
     assert validator_delta.status == "changed"
     assert validator_delta.baseline_verdict == "fail"
     assert validator_delta.target_verdict == "pass"
@@ -237,9 +235,7 @@ def test_run_comparison_rejects_retired_and_unknown_verdict_labels(
         baseline_run_id="run-a",
         target_run_id="run-b",
     )
-    delta = next(
-        item for item in malformed_view.validator_outcome_deltas if item.stage == "plan"
-    )
+    delta = next(item for item in malformed_view.validator_outcome_deltas if item.stage == "plan")
     assert delta.baseline_verdict == "fail"
     assert delta.target_verdict is None
 
@@ -360,12 +356,7 @@ def test_run_comparison_warns_for_missing_repair_brief_when_repairs_exist(
         validator_verdict="fail",
     )
     repair_brief_path = (
-        workspace_root
-        / "workitems"
-        / "WI-CMP"
-        / "stages"
-        / "plan"
-        / "repair-brief.md"
+        workspace_root / "workitems" / "WI-CMP" / "stages" / "plan" / "repair-brief.md"
     )
     persist_repair_history_entry(
         workspace_root=workspace_root,

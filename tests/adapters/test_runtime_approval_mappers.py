@@ -103,9 +103,7 @@ def test_codex_approval_mapper_extracts_real_file_change_path_shapes() -> None:
                 {"filePath": ".aidd/workitems/WI-001/stages/idea/idea-brief.md"},
                 ".aidd/workitems/WI-001/stages/idea/stage-result.md",
             ],
-            "patches": [
-                {"targetPath": ".aidd/workitems/WI-001/stages/idea/validator-report.md"}
-            ],
+            "patches": [{"targetPath": ".aidd/workitems/WI-001/stages/idea/validator-report.md"}],
             "modifiedFiles": [
                 {"absolutePath": "/repo/.aidd/workitems/WI-001/stages/idea/questions.md"}
             ],

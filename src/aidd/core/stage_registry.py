@@ -104,9 +104,7 @@ def load_stage_manifest(
     markdown_text = contract_path.read_text(encoding="utf-8")
     declared_stage = _extract_declared_stage_id(markdown_text)
     if declared_stage is None:
-        raise StageManifestLoadError(
-            f"Missing stage contract heading in file: {contract_path}"
-        )
+        raise StageManifestLoadError(f"Missing stage contract heading in file: {contract_path}")
     if declared_stage != stage:
         raise StageManifestLoadError(
             f"Stage contract heading mismatch in {contract_path}: "
@@ -166,8 +164,7 @@ def load_all_stage_manifests(
         raise StageManifestLoadError(f"Duplicate stage ids detected: {duplicate_text}")
 
     return {
-        stage: load_stage_manifest(stage=stage, contracts_root=contracts_root)
-        for stage in STAGES
+        stage: load_stage_manifest(stage=stage, contracts_root=contracts_root) for stage in STAGES
     }
 
 

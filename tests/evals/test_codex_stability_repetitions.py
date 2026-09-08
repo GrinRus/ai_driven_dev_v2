@@ -22,8 +22,7 @@ def test_three_fresh_repetitions_are_pinned_and_fail_closed() -> None:
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
     repetitions = tuple(
-        validate_repetition_evidence(profile, repetition)
-        for repetition in payload["repetitions"]
+        validate_repetition_evidence(profile, repetition) for repetition in payload["repetitions"]
     )
 
     assert len(repetitions) == profile.minimum_repetitions

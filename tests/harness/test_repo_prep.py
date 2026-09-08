@@ -416,9 +416,7 @@ def test_prepare_live_target_repository_resets_existing_run_target(
     assert second.action == "reused"
     assert second.working_copy_path == first.working_copy_path
     assert second.resolved_revision == source_head
-    assert (second.working_copy_path / "README.md").read_text(encoding="utf-8") == (
-        "init\n"
-    )
+    assert (second.working_copy_path / "README.md").read_text(encoding="utf-8") == ("init\n")
     assert not (second.working_copy_path / "TEMP.txt").exists()
 
 

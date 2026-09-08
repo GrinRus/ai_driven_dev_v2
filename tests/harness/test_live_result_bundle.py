@@ -48,23 +48,11 @@ def _prepare_target(root: Path) -> Path:
     (target / "product.txt").write_text("after\n", encoding="utf-8")
     (target / "new-product.txt").write_text("new\n", encoding="utf-8")
 
-    stage_root = (
-        target
-        / ".aidd"
-        / "workitems"
-        / "WI-007"
-        / "stages"
-        / "implement"
-        / "output"
-    )
+    stage_root = target / ".aidd" / "workitems" / "WI-007" / "stages" / "implement" / "output"
     stage_root.mkdir(parents=True)
-    (stage_root / "implementation-report.md").write_text(
-        "# Implementation\n", encoding="utf-8"
-    )
+    (stage_root / "implementation-report.md").write_text("# Implementation\n", encoding="utf-8")
     (stage_root / "stage-result.md").write_text("# Result\n", encoding="utf-8")
-    (stage_root / "validator-report.md").write_text(
-        "# Validator\n", encoding="utf-8"
-    )
+    (stage_root / "validator-report.md").write_text("# Validator\n", encoding="utf-8")
 
     attempt_root = (
         target
@@ -79,9 +67,7 @@ def _prepare_target(root: Path) -> Path:
         / "attempt-0001"
     )
     attempt_root.mkdir(parents=True)
-    (attempt_root / "task-evidence.json").write_text(
-        '{"status":"succeeded"}\n', encoding="utf-8"
-    )
+    (attempt_root / "task-evidence.json").write_text('{"status":"succeeded"}\n', encoding="utf-8")
     (attempt_root.parent.parent / "stage-metadata.json").write_text(
         '{"status":"succeeded"}\n', encoding="utf-8"
     )
@@ -93,9 +79,7 @@ def _prepare_bundle(root: Path) -> Path:
     bundle.mkdir(parents=True)
     (bundle / "verdict.md").write_text("# Verdict\n", encoding="utf-8")
     (bundle / "grader.json").write_text('{"status":"pass"}\n', encoding="utf-8")
-    (bundle / "verification.json").write_text(
-        '{"exit_code":0}\n', encoding="utf-8"
-    )
+    (bundle / "verification.json").write_text('{"exit_code":0}\n', encoding="utf-8")
     (bundle / "stage-audits").mkdir()
     (bundle / "stage-audits" / "implement.json").write_text(
         '{"stage":"implement"}\n', encoding="utf-8"
@@ -132,23 +116,14 @@ def test_materialized_bundle_survives_mutable_root_deletion(tmp_path: Path) -> N
     )
     paths = {artifact.path for artifact in verified.artifacts}
     assert result == verified
+    assert "canonical-evidence/work-item/stages/implement/output/stage-result.md" in paths
+    assert "canonical-evidence/work-item/stages/implement/output/validator-report.md" in paths
     assert (
-        "canonical-evidence/work-item/stages/implement/output/stage-result.md"
-        in paths
-    )
-    assert (
-        "canonical-evidence/work-item/stages/implement/output/validator-report.md"
-        in paths
-    )
-    assert (
-        "canonical-evidence/task-run/stages/implement/attempts/"
-        "attempt-0001/task-evidence.json"
+        "canonical-evidence/task-run/stages/implement/attempts/attempt-0001/task-evidence.json"
     ) in paths
     assert "canonical-evidence/target/target.patch" in paths
     assert "canonical-evidence/final/verdict.md" in paths
-    assert (
-        "canonical-evidence/final/manual-frontend-evidence/desktop.png" in paths
-    )
+    assert "canonical-evidence/final/manual-frontend-evidence/desktop.png" in paths
     patch_path = resolve_live_result_reference(
         bundle_root=bundle,
         reference="canonical-evidence/target/target.patch",

@@ -36,9 +36,7 @@ def _fake_codex_bin_env(tmp_path: Path) -> dict[str, str]:
     bin_dir.mkdir()
     codex = bin_dir / "codex"
     codex.write_text(
-        "#!/bin/sh\n"
-        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
-        "exit 0\n",
+        '#!/bin/sh\nif [ "$1" = "login" ] && [ "$2" = "status" ]; then exit 0; fi\nexit 0\n',
         encoding="utf-8",
     )
     codex.chmod(0o755)
@@ -201,9 +199,8 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "[runtime.codex]" in config_text
     assert (
         'command = "codex exec --ignore-user-config --disable plugins '
-        '--disable remote_plugin --dangerously-bypass-approvals-and-sandbox '
-        '--skip-git-repo-check --json -"'
-        in config_text
+        "--disable remote_plugin --dangerously-bypass-approvals-and-sandbox "
+        '--skip-git-repo-check --json -"' in config_text
     )
     assert 'model = "gpt-5.6-luna"' in config_text
     assert 'reasoning_effort = "high"' in config_text
@@ -299,9 +296,7 @@ def test_validate_live_runtime_command_checks_native_executable(
     bin_dir.mkdir()
     codex = bin_dir / "codex"
     codex.write_text(
-        "#!/bin/sh\n"
-        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
-        "exit 0\n",
+        '#!/bin/sh\nif [ "$1" = "login" ] && [ "$2" = "status" ]; then exit 0; fi\nexit 0\n',
         encoding="utf-8",
     )
     codex.chmod(0o755)
@@ -328,7 +323,7 @@ def test_validate_live_runtime_command_rejects_codex_native_auth_failure(
     codex = bin_dir / "codex"
     codex.write_text(
         "#!/bin/sh\n"
-        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then\n"
+        'if [ "$1" = "login" ] && [ "$2" = "status" ]; then\n'
         "  echo 'not logged in' >&2\n"
         "  exit 7\n"
         "fi\n"

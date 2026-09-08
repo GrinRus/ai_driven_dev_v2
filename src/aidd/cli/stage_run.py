@@ -827,9 +827,7 @@ def _expected_stage_document_path(
     return None
 
 
-def _repair_extension_workspace_relative_path(
-    *, workspace_root: Path, path: Path
-) -> str:
+def _repair_extension_workspace_relative_path(*, workspace_root: Path, path: Path) -> str:
     resolved_workspace = workspace_root.resolve(strict=False)
     resolved_path = path.resolve(strict=False)
     if not resolved_path.is_relative_to(resolved_workspace):
@@ -972,8 +970,7 @@ def _print_repair_extension_outcome(result: RepairExtensionPreflightResult) -> N
     console.print(f"Repair-extension preflight: action={result.action}")
     if result.grant is not None:
         console.print(
-            "Grant: "
-            f"author={result.grant.author} authorized_at={result.grant.authorized_at_utc}"
+            f"Grant: author={result.grant.author} authorized_at={result.grant.authorized_at_utc}"
         )
     if result.next_attempt_number is not None:
         console.print(f"Attempt: {result.next_attempt_number}")

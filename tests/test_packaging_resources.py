@@ -93,9 +93,7 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     extracted_root = tmp_path / "wheel-root"
     with zipfile.ZipFile(wheel_paths[0]) as archive:
         archive_names = set(archive.namelist())
-        metadata_name = next(
-            name for name in archive_names if name.endswith(".dist-info/METADATA")
-        )
+        metadata_name = next(name for name in archive_names if name.endswith(".dist-info/METADATA"))
         metadata_text = archive.read(metadata_name).decode("utf-8")
         packaged_prompt_hashes = {
             name.removeprefix("aidd/_resources/"): hashlib.sha256(archive.read(name)).hexdigest()
@@ -206,8 +204,7 @@ def test_built_sdist_excludes_repo_only_architecture_pngs(tmp_path: Path) -> Non
 
     visual_reference_marker = "/docs/architecture/assets/operator-ui-target-v2/"
     assert not any(
-        visual_reference_marker in name and name.endswith(".png")
-        for name in archive_names
+        visual_reference_marker in name and name.endswith(".png") for name in archive_names
     )
     for required_suffix in (
         "/LICENSE",

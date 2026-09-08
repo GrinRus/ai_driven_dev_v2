@@ -42,14 +42,10 @@ def check_javascript_assets(
                 timeout=timeout_seconds,
             )
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(
-                f"JavaScript syntax check timed out for {filename}."
-            ) from exc
+            raise RuntimeError(f"JavaScript syntax check timed out for {filename}.") from exc
         if completed.returncode != 0:
             detail = completed.stderr.strip() or completed.stdout.strip()
-            raise RuntimeError(
-                f"JavaScript syntax check failed for {filename}: {detail}"
-            )
+            raise RuntimeError(f"JavaScript syntax check failed for {filename}: {detail}")
     return discovered
 
 

@@ -137,9 +137,7 @@ def probe_basic_runtime(
     discovered = discover_command(command)
     available = discovered is not None
     version_text = (
-        discover_version(discovered, timeout_seconds=timeout_seconds)
-        if discovered
-        else None
+        discover_version(discovered, timeout_seconds=timeout_seconds) if discovered else None
     )
     return CapabilityReport(
         runtime_id=runtime_id,

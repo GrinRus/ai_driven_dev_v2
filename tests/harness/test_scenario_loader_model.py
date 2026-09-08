@@ -72,8 +72,7 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
     assert task.task_id == "TASK-LIVE-HONO-NON-ERROR-THROW"
     assert "without widening the public error handler" in task.target_change
     assert any(
-        "Public error handler and context error types remain source-compatible"
-        in criterion
+        "Public error handler and context error types remain source-compatible" in criterion
         for criterion in task.acceptance_criteria
     )
     assert "preserves the existing public error type contracts" in task.quality_bar
@@ -85,9 +84,7 @@ def test_hono_non_error_live_scenario_preserves_public_type_contracts() -> None:
     assert "`plan` must point to `review-spec`" in normalized_rubric
     assert "`review-spec` must point to `tasklist`" in normalized_rubric
     assert "`tasklist` must point to `implement`" in normalized_rubric
-    assert "`implement` must point to `review`, not directly to `qa`" in (
-        normalized_rubric
-    )
+    assert "`implement` must point to `review`, not directly to `qa`" in (normalized_rubric)
     assert task.complexity_axes == (
         "cross-module",
         "api-policy",
@@ -191,7 +188,7 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert "httpx https://httpbin.org/json" in task.target_change
     assert "httpx https://httpbin.org/json" in task.acceptance_criteria[0]
     verification_text = "\n".join(scenario.verify.commands)
-    assert "git\", \"diff\", \"--name-only" in verification_text
+    assert 'git", "diff", "--name-only' in verification_text
     assert ".venv/bin/python" in verification_text
     assert "README.md" in verification_text
     assert "docs/index.md" in verification_text
@@ -201,11 +198,9 @@ def test_httpx_docs_sync_live_scenario_uses_docs_only_verification_gate() -> Non
     assert "pytest -q" not in verification_text
     assert scenario.verify.commands[-2:] == (
         "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md",
-        (
-            "test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/"
-            "validator-report.md"
-        ),
+        ("test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md"),
     )
+
 
 def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contract() -> None:
     scenario = load_scenario(
@@ -349,8 +344,7 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
     assert openapi.repo.revision == "0cc7ee77d28359c7901d9cd3b5733b70a050ea49"
     assert (
         "pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts "
-        "test/node-api.test.ts"
-        in openapi.verify.commands
+        "test/node-api.test.ts" in openapi.verify.commands
     )
     assert (
         "aidd stage questions idea --work-item WI-LIVE-OPENAPI-DISCRIMINATOR"
@@ -371,8 +365,7 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
     )
     assert (
         ".venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py "
-        "testing/test_main.py"
-        in pytest_scenario.verify.commands
+        "testing/test_main.py" in pytest_scenario.verify.commands
     )
     assert (
         "aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION"
@@ -388,13 +381,11 @@ def test_complex_live_candidate_manifests_are_bounded_and_pinned() -> None:
     assert starlette.repo.revision == "e636c77b15d903ab3ff3968cd43aee1887dd1e48"
     assert (
         "uv run --frozen pytest -q tests/middleware/test_base.py tests/middleware/test_errors.py "
-        "tests/test_responses.py"
-        in starlette.verify.commands
+        "tests/test_responses.py" in starlette.verify.commands
     )
     assert (
         "uv run --frozen ruff check starlette tests/middleware/test_base.py "
-        "tests/middleware/test_errors.py tests/test_responses.py"
-        in starlette.verify.commands
+        "tests/middleware/test_errors.py tests/test_responses.py" in starlette.verify.commands
     )
 
 
@@ -405,7 +396,7 @@ def test_live_interview_manifests_use_installed_aidd_for_aidd_self_checks() -> N
     for manifest_path in manifest_paths:
         scenario = load_scenario(manifest_path)
         commands = list(scenario.verify.commands)
-        for task in (scenario.feature_source.tasks if scenario.feature_source else ()):
+        for task in scenario.feature_source.tasks if scenario.feature_source else ():
             commands.extend(task.verification)
         answer_flow = scenario.raw.get("interview", {}).get("answer_flow", {})
         commands.extend(
@@ -466,9 +457,7 @@ def test_minimal_fixture_smoke_scenario_declares_small_ci_fixture_seed() -> None
 
 
 def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fixture() -> None:
-    scenario = load_scenario(
-        Path("harness/scenarios/smoke/installed-local-project-fixture.yaml")
-    )
+    scenario = load_scenario(Path("harness/scenarios/smoke/installed-local-project-fixture.yaml"))
 
     assert scenario.scenario_id == "AIDD-INSTALLED-LOCAL-001"
     assert scenario.is_live is False
@@ -506,18 +495,12 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
     assert "aidd init --work-item WI-INSTALLED-LOCAL-SMOKE" in setup_commands
     assert "--request" in setup_commands
     assert "--root .aidd" in setup_commands
-    assert "aidd run show --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd" in (
-        verify_commands
-    )
-    assert "aidd run logs --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan" in (
-        verify_commands
-    )
+    assert "aidd run show --work-item WI-INSTALLED-LOCAL-SMOKE --root .aidd" in (verify_commands)
+    assert "aidd run logs --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan" in (verify_commands)
     assert "aidd run artifacts --work-item WI-INSTALLED-LOCAL-SMOKE --stage plan" in (
         verify_commands
     )
-    assert "aidd stage questions plan --work-item WI-INSTALLED-LOCAL-SMOKE" in (
-        verify_commands
-    )
+    assert "aidd stage questions plan --work-item WI-INSTALLED-LOCAL-SMOKE" in (verify_commands)
     assert "answers.md" in verify_commands
 
 
@@ -592,16 +575,14 @@ def test_task_execution_scenario_declares_incremental_full_flow_evidence() -> No
     assert "finalization/attempts/attempt-0001" in verification
     assert "tasks/TL-2/attempts/attempt-0001/task-diff.json" in verification
     assert "tasks/TL-3/attempts/attempt-0001/attempt-state.json" in verification
-    manifest = Path(
-        "harness/scenarios/deterministic/minimal-python-task-execution.yaml"
-    ).read_text(encoding="utf-8")
+    manifest = Path("harness/scenarios/deterministic/minimal-python-task-execution.yaml").read_text(
+        encoding="utf-8"
+    )
     assert "aggregate finalization succeed" in manifest
 
 
 def test_project_set_deterministic_scenario_declares_two_root_context_checks() -> None:
-    scenario = load_scenario(
-        Path("harness/scenarios/deterministic/project-set-plan-context.yaml")
-    )
+    scenario = load_scenario(Path("harness/scenarios/deterministic/project-set-plan-context.yaml"))
 
     assert scenario.scenario_id == "AIDD-DETERMINISTIC-003"
     assert scenario.is_live is False

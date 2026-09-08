@@ -29,9 +29,7 @@ def _profile() -> CodexStabilityProfile:
     return profile
 
 
-def _repetition_evidence(
-    profile: CodexStabilityProfile, repetition_id: str
-) -> dict[str, object]:
+def _repetition_evidence(profile: CodexStabilityProfile, repetition_id: str) -> dict[str, object]:
     metrics: dict[str, dict[str, float]] = {}
     for metric_id in CODEX_STABILITY_METRIC_IDS:
         denominator = 2.0
@@ -90,8 +88,8 @@ def test_profile_scenario_passes_existing_eval_doctor_contract(
     codex = bin_dir / "codex"
     codex.write_text(
         "#!/bin/sh\n"
-        "if [ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ]; then exit 0; fi\n"
-        "if [ \"$1\" = \"--version\" ]; then echo 'codex 0.144.1'; fi\n"
+        'if [ "$1" = "login" ] && [ "$2" = "status" ]; then exit 0; fi\n'
+        'if [ "$1" = "--version" ]; then echo \'codex 0.144.1\'; fi\n'
         "exit 0\n",
         encoding="utf-8",
     )
@@ -126,8 +124,7 @@ def test_one_evidence_schema_applies_to_three_codex_repetitions() -> None:
     assert {repetition.runtime_id for repetition in repetitions} == {"codex"}
     assert all(repetition.stage_scope == ("idea", "qa") for repetition in repetitions)
     assert all(
-        set(repetition.metrics) == set(CODEX_STABILITY_METRIC_IDS)
-        for repetition in repetitions
+        set(repetition.metrics) == set(CODEX_STABILITY_METRIC_IDS) for repetition in repetitions
     )
 
 

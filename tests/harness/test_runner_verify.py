@@ -100,9 +100,7 @@ def test_run_verification_steps_preserves_environment_path_order(tmp_path: Path)
     working_copy_path.mkdir(parents=True, exist_ok=True)
     tool_bin = tmp_path / "tool-bin"
     tool_bin.mkdir()
-    scenario = _build_scenario(
-        verify_commands=("printf '%s\\n' \"$PATH\" > observed-path.txt",)
-    )
+    scenario = _build_scenario(verify_commands=("printf '%s\\n' \"$PATH\" > observed-path.txt",))
 
     run_verification_steps(
         scenario=scenario,
@@ -111,9 +109,7 @@ def test_run_verification_steps_preserves_environment_path_order(tmp_path: Path)
         environment={"PATH": f"{tool_bin}{os.pathsep}{os.environ.get('PATH', '')}"},
     )
 
-    observed_path = (working_copy_path / "observed-path.txt").read_text(
-        encoding="utf-8"
-    )
+    observed_path = (working_copy_path / "observed-path.txt").read_text(encoding="utf-8")
     assert observed_path.split(os.pathsep, 1)[0] == tool_bin.as_posix()
 
 
@@ -125,9 +121,7 @@ def test_run_verification_steps_uses_explicit_environment_without_parent_virtual
     working_copy_path.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("VIRTUAL_ENV", "/source-checkout/.venv")
     scenario = _build_scenario(
-        verify_commands=(
-            "printf '%s\\n' \"${VIRTUAL_ENV-unset}\" > observed-virtual-env.txt",
-        )
+        verify_commands=("printf '%s\\n' \"${VIRTUAL_ENV-unset}\" > observed-virtual-env.txt",)
     )
 
     run_verification_steps(
@@ -137,9 +131,9 @@ def test_run_verification_steps_uses_explicit_environment_without_parent_virtual
         environment={"PATH": os.environ.get("PATH", "")},
     )
 
-    observed_virtual_env = (
-        working_copy_path / "observed-virtual-env.txt"
-    ).read_text(encoding="utf-8")
+    observed_virtual_env = (working_copy_path / "observed-virtual-env.txt").read_text(
+        encoding="utf-8"
+    )
     assert observed_virtual_env == "unset\n"
 
 

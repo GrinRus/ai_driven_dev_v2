@@ -112,7 +112,8 @@ def retain_unexpected_runtime_documents(
     )
     attempt_started_at = (
         execution_state.attempt_path.stat().st_mtime_ns
-        if attempt_started_at_ns is None else attempt_started_at_ns
+        if attempt_started_at_ns is None
+        else attempt_started_at_ns
     )
     retained: list[Path] = []
     for filename, (evidence_name, placeholder) in _UNEXPECTED_RUNTIME_DOCUMENTS.items():
@@ -247,15 +248,15 @@ def discover_stage_markdown_outputs(
         contracts_root=contracts_root,
     )
     unexpected_targets = tuple(
-        path for path in expected_markdown_documents if path.resolve(strict=False) not in {
-            candidate.resolve(strict=False) for candidate in runtime_output_documents
-        }
+        path
+        for path in expected_markdown_documents
+        if path.resolve(strict=False)
+        not in {candidate.resolve(strict=False) for candidate in runtime_output_documents}
     )
     if unexpected_targets:
         targets = ", ".join(path.name for path in unexpected_targets)
         raise ValueError(
-            "Adapter invocation includes AIDD-owned or non-runtime output documents: "
-            f"{targets}"
+            f"Adapter invocation includes AIDD-owned or non-runtime output documents: {targets}"
         )
     unexpected_runtime_documents = retain_unexpected_runtime_documents(
         workspace_root=workspace_root,

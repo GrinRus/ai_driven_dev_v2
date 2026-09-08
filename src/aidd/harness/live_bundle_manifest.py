@@ -75,9 +75,7 @@ def _file_record(*, bundle_root: Path, path: Path) -> LiveBundleFile:
     resolved_root = bundle_root.resolve(strict=True)
     resolved = path.resolve(strict=True)
     if not resolved.is_relative_to(resolved_root) or not resolved.is_file():
-        raise LiveBundleManifestError(
-            f"Manifest artifact escapes the bundle: {path.as_posix()}."
-        )
+        raise LiveBundleManifestError(f"Manifest artifact escapes the bundle: {path.as_posix()}.")
     return LiveBundleFile(
         path=resolved.relative_to(resolved_root).as_posix(),
         sha256=_sha256(resolved),
@@ -126,9 +124,7 @@ def _bundle_files(bundle_root: Path) -> tuple[Path, ...]:
         if stat.S_ISREG(mode):
             files.append(path)
         elif not stat.S_ISDIR(mode):
-            raise LiveBundleManifestError(
-                f"Unsupported live bundle node: {relative.as_posix()}."
-            )
+            raise LiveBundleManifestError(f"Unsupported live bundle node: {relative.as_posix()}.")
     return tuple(files)
 
 
@@ -248,9 +244,7 @@ def seal_live_bundle(
         ),
         label="source_tree",
     )
-    target_revision = _validate_revision(
-        inputs.target_revision, label="target_revision"
-    )
+    target_revision = _validate_revision(inputs.target_revision, label="target_revision")
     wheel_source = inputs.wheel_path.resolve(strict=True)
     if not wheel_source.is_file():
         raise LiveBundleManifestError("Wheel provenance input is not a file.")
@@ -345,12 +339,8 @@ def validate_live_bundle_manifest(
         target_revision = _validate_revision(
             str(raw_identity["target_revision"]), label="target_revision"
         )
-        source_commit = _validate_revision(
-            str(raw_aidd["source_commit"]), label="source_commit"
-        )
-        source_tree = _validate_revision(
-            str(raw_aidd["source_tree"]), label="source_tree"
-        )
+        source_commit = _validate_revision(str(raw_aidd["source_commit"]), label="source_commit")
+        source_tree = _validate_revision(str(raw_aidd["source_tree"]), label="source_tree")
         source_archive = _parse_file(raw_aidd["source_archive"])
         wheel = _parse_file(raw_aidd["wheel"])
     except (KeyError, ValueError) as exc:
@@ -367,8 +357,7 @@ def validate_live_bundle_manifest(
         raise LiveBundleManifestError("Live bundle file inventory is missing.")
     files = tuple(_parse_file(raw) for raw in raw_files)
     actual_paths = {
-        path.relative_to(resolved_bundle).as_posix()
-        for path in _bundle_files(resolved_bundle)
+        path.relative_to(resolved_bundle).as_posix() for path in _bundle_files(resolved_bundle)
     }
     recorded_paths = {item.path for item in files}
     if len(recorded_paths) != len(files) or recorded_paths != actual_paths:
@@ -380,9 +369,7 @@ def validate_live_bundle_manifest(
         try:
             resolved = path.resolve(strict=True)
         except OSError as exc:
-            raise LiveBundleManifestError(
-                f"Manifest artifact is dangling: {item.path!r}."
-            ) from exc
+            raise LiveBundleManifestError(f"Manifest artifact is dangling: {item.path!r}.") from exc
         if (
             not resolved.is_relative_to(resolved_bundle)
             or not resolved.is_file()
@@ -415,9 +402,7 @@ def validate_live_bundle_manifest(
         )
         browser.append(record)
     if tuple(browser) != expected_browser:
-        raise LiveBundleManifestError(
-            "Browser artifact run or viewport identity does not match."
-        )
+        raise LiveBundleManifestError("Browser artifact run or viewport identity does not match.")
     return LiveBundleManifest(
         bundle_root=resolved_bundle,
         identity=identity,

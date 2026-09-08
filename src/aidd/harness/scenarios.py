@@ -193,9 +193,7 @@ def _require_non_empty_string(*, payload: dict[str, Any], key: str) -> str:
         raise ScenarioManifestError(f"Scenario manifest missing required key: {key}.")
     value = str(raw_value).strip()
     if not value:
-        raise ScenarioManifestError(
-            f"Scenario manifest key '{key}' must be a non-empty string."
-        )
+        raise ScenarioManifestError(f"Scenario manifest key '{key}' must be a non-empty string.")
     return value
 
 
@@ -420,15 +418,11 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
         timeout_minutes = None
         no_progress_timeout_minutes = None
         max_remediation_cycles = 3
-    if (
-        no_progress_timeout_minutes is None
-        and raw.get("scenario_class") in _LIVE_SCENARIO_CLASSES
-    ):
+    if no_progress_timeout_minutes is None and raw.get("scenario_class") in _LIVE_SCENARIO_CLASSES:
         no_progress_timeout_minutes = DEFAULT_LIVE_NO_PROGRESS_TIMEOUT_MINUTES
     if no_progress_timeout_minutes is not None and no_progress_timeout_minutes < 1:
         raise ScenarioManifestError(
-            "Scenario manifest key 'limits.no_progress_timeout_minutes' must be a "
-            "positive integer."
+            "Scenario manifest key 'limits.no_progress_timeout_minutes' must be a positive integer."
         )
     if max_remediation_cycles < 1:
         raise ScenarioManifestError(
@@ -531,16 +525,14 @@ def _validate_scenario_basics(
         )
     if canonical_runtime not in run.runtime_targets:
         raise ScenarioManifestError(
-            "Scenario manifest key 'canonical_runtime' must also appear in "
-            "'runtime_targets'."
+            "Scenario manifest key 'canonical_runtime' must also appear in 'runtime_targets'."
         )
 
     is_live = scenario_class in _LIVE_SCENARIO_CLASSES
     if _is_live_scenario_path(path) != is_live:
         expected = "live" if is_live else "non-live"
         raise ScenarioManifestError(
-            f"Scenario path '{path.as_posix()}' does not match declared {expected} "
-            "scenario class."
+            f"Scenario path '{path.as_posix()}' does not match declared {expected} scenario class."
         )
 
     if feature_size in {"large", "xlarge"} and automation_lane == "ci":

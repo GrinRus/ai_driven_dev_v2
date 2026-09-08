@@ -175,4 +175,3 @@ def test_validate_semantic_outputs_flags_research_unresolved_fixture_bundle() ->
             ),
         ),
     )
-

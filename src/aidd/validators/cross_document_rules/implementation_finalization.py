@@ -36,8 +36,6 @@ def validate_implementation_finalization(
             IMPLEMENTATION_FINALIZATION_CODE,
             blocker,
             "critical",
-            ValidationIssueLocation(
-                workspace_relative(context.stage_root, context.workspace_root)
-            ),
+            ValidationIssueLocation(workspace_relative(context.stage_root, context.workspace_root)),
         ),
     )

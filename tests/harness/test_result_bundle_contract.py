@@ -149,9 +149,7 @@ def test_missing_required_artifact_and_duplicate_paths_are_rejected(tmp_path: Pa
 
 def test_legacy_inventory_payload_is_rejected() -> None:
     with pytest.raises(ResultBundleContractError, match="legacy"):
-        ResultBundleInventory.from_dict(
-            {"run_id": "run-001", "status": "pass", "artifacts": []}
-        )
+        ResultBundleInventory.from_dict({"run_id": "run-001", "status": "pass", "artifacts": []})
 
 
 def test_orphaned_bundle_file_is_rejected(tmp_path: Path) -> None:

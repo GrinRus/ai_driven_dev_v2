@@ -167,12 +167,16 @@ def test_aggregate_report_preserves_wrapped_verification_evidence(tmp_path: Path
         "## Follow-up notes\n\n- none\n",
         encoding="utf-8",
     )
-    ledger = TaskLedger.create(plan).transition(
-        "TL-1",
-        TaskExecutionStatus.EXECUTING,
-        attempt_number=1,
-        latest_attempt_path="task-attempt",
-    ).transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    ledger = (
+        TaskLedger.create(plan)
+        .transition(
+            "TL-1",
+            TaskExecutionStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path="task-attempt",
+        )
+        .transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    )
 
     report = render_aggregate_implementation_report(
         plan=plan,
@@ -180,9 +184,7 @@ def test_aggregate_report_preserves_wrapped_verification_evidence(tmp_path: Path
         workspace_root=tmp_path,
     )
 
-    verification = report.split("## Verification notes", 1)[1].split(
-        "## Follow-up notes", 1
-    )[0]
+    verification = report.split("## Verification notes", 1)[1].split("## Follow-up notes", 1)[0]
     assert "`uv run --frozen pytest -q tests/test_example.py` -> pass (12 passed)." in report
     assert "nested detail remains part of the same item" in report
     assert has_implementation_command_evidence(
@@ -248,9 +250,7 @@ One task changes the repository and one verifies the aggregate result.
     for attempt_number, task_id in enumerate(("T1", "T2"), start=1):
         attempt = tmp_path / task_id
         attempt.mkdir()
-        (attempt / "implementation-report.md").write_text(
-            reports[task_id], encoding="utf-8"
-        )
+        (attempt / "implementation-report.md").write_text(reports[task_id], encoding="utf-8")
         ledger = ledger.transition(
             task_id,
             TaskExecutionStatus.EXECUTING,
@@ -264,9 +264,7 @@ One task changes the repository and one verifies the aggregate result.
         workspace_root=tmp_path,
     )
 
-    touched_section = report.split("## Touched files", 1)[1].split(
-        "## Verification notes", 1
-    )[0]
+    touched_section = report.split("## Touched files", 1)[1].split("## Verification notes", 1)[0]
     assert "`src/example.py`" in touched_section
     assert "- none" not in touched_section
     assert "- `T1` `pytest -q` -> pass." in report

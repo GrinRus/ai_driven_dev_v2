@@ -134,12 +134,12 @@ def test_operator_handbook_lists_all_consumed_runtime_config_fields() -> None:
 
 def test_runtime_support_docs_name_registered_runtimes_and_tiers() -> None:
     repo_root = _repo_root()
-    adapter_protocol = (
-        repo_root / "docs" / "architecture" / "adapter-protocol.md"
-    ).read_text(encoding="utf-8")
-    runtime_matrix = (
-        repo_root / "docs" / "architecture" / "runtime-matrix.md"
-    ).read_text(encoding="utf-8")
+    adapter_protocol = (repo_root / "docs" / "architecture" / "adapter-protocol.md").read_text(
+        encoding="utf-8"
+    )
+    runtime_matrix = (repo_root / "docs" / "architecture" / "runtime-matrix.md").read_text(
+        encoding="utf-8"
+    )
     readme = (repo_root / "README.md").read_text(encoding="utf-8")
 
     for runtime_id in runtime_ids():
@@ -154,9 +154,9 @@ def test_runtime_support_docs_name_registered_runtimes_and_tiers() -> None:
 
 def test_adapter_protocol_documents_current_execution_result_surface() -> None:
     repo_root = _repo_root()
-    adapter_protocol = (
-        repo_root / "docs" / "architecture" / "adapter-protocol.md"
-    ).read_text(encoding="utf-8")
+    adapter_protocol = (repo_root / "docs" / "architecture" / "adapter-protocol.md").read_text(
+        encoding="utf-8"
+    )
     result_fields = {field.name for field in fields(RuntimeAdapterExecutionResult)}
 
     assert result_fields == {
@@ -188,9 +188,9 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
 
 
 def test_adapter_protocol_documents_static_descriptor_contract() -> None:
-    adapter_protocol = (
-        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
-    ).read_text(encoding="utf-8")
+    adapter_protocol = (_repo_root() / "docs" / "architecture" / "adapter-protocol.md").read_text(
+        encoding="utf-8"
+    )
     for expected_text in (
         "RuntimeAdapterDescriptor",
         "protected_paths",
@@ -264,12 +264,12 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
 
 def test_validator_report_contract_matches_protocol_registry() -> None:
     repo_root = _repo_root()
-    contract = (
-        repo_root / "contracts" / "documents" / "validator-report.md"
-    ).read_text(encoding="utf-8")
-    canonical_vocabulary = contract.split(
-        "## Canonical issue-code vocabulary", maxsplit=1
-    )[1].split("## Retired vocabulary", maxsplit=1)[0]
+    contract = (repo_root / "contracts" / "documents" / "validator-report.md").read_text(
+        encoding="utf-8"
+    )
+    canonical_vocabulary = contract.split("## Canonical issue-code vocabulary", maxsplit=1)[
+        1
+    ].split("## Retired vocabulary", maxsplit=1)[0]
 
     for field in VALIDATOR_REPORT_FIELDS:
         assert f"{field.label}:" in contract
@@ -291,18 +291,14 @@ def test_document_read_failure_contract_matches_protocol_registry() -> None:
     taxonomy = contract.split("### Document-read failure taxonomy", maxsplit=1)[1].split(
         "### Semantic checks", maxsplit=1
     )[0]
-    documented = dict(
-        re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", taxonomy)
-    )
+    documented = dict(re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", taxonomy))
     expected = {spec.kind.value: spec.code for spec in DOCUMENT_READ_FAILURES}
     assert documented == expected
 
 
 def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:
     repo_root = _repo_root()
-    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
-        encoding="utf-8"
-    )
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(encoding="utf-8")
     live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
         encoding="utf-8"
     )
@@ -343,8 +339,7 @@ def test_roadmap_references_only_existing_user_story_ids() -> None:
     unknown_story_ids = sorted(referenced_story_ids - declared_story_ids)
 
     assert not unknown_story_ids, (
-        "Roadmap references unknown user story ids: "
-        f"{', '.join(unknown_story_ids)}"
+        f"Roadmap references unknown user story ids: {', '.join(unknown_story_ids)}"
     )
 
 
@@ -514,9 +509,7 @@ def test_current_operator_visual_references_are_present_and_documented() -> None
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
     repo_root = _repo_root()
-    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
-        encoding="utf-8"
-    )
+    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(encoding="utf-8")
     distribution = (
         repo_root / "docs" / "architecture" / "distribution-and-development.md"
     ).read_text(encoding="utf-8")
@@ -550,12 +543,10 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
 
 def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
-    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    adapter_protocol = (_repo_root() / "docs" / "architecture" / "adapter-protocol.md").read_text(
         encoding="utf-8"
     )
-    adapter_protocol = (
-        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
-    ).read_text(encoding="utf-8")
     runtime_matrix = (_repo_root() / "docs" / "architecture" / "runtime-matrix.md").read_text(
         encoding="utf-8"
     )
@@ -566,14 +557,13 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     assert (
         "python -m aidd.harness.live_e2e_black_box "
         "harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml "
-        "--runtime codex"
-        in live_catalog
+        "--runtime codex" in live_catalog
     )
     assert "typer-styled-help-alignment.yaml --runtime generic-cli" not in readme
     assert "AIDD-compatible wrapper command" in readme
     assert "Published-package install proof belongs to a separate" in live_catalog
-    assert "mode = \"native\"" in operator_handbook
-    assert "mode = \"adapter-flags\"" in operator_handbook
+    assert 'mode = "native"' in operator_handbook
+    assert 'mode = "adapter-flags"' in operator_handbook
     assert (
         "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
         in operator_handbook
@@ -589,9 +579,9 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
 
 
 def test_adapter_protocol_separates_raw_bytes_from_display_text() -> None:
-    adapter_protocol = (
-        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
-    ).read_text(encoding="utf-8")
+    adapter_protocol = (_repo_root() / "docs" / "architecture" / "adapter-protocol.md").read_text(
+        encoding="utf-8"
+    )
     policy = adapter_protocol.split(
         "#### 5.1.1 Byte authority and text presentation policy", maxsplit=1
     )[1].split("### 5.2 Structured runtime log", maxsplit=1)[0]
@@ -614,12 +604,10 @@ def test_adapter_protocol_separates_raw_bytes_from_display_text() -> None:
 
 def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
-    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    operator_ui_lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
         encoding="utf-8"
     )
-    operator_ui_lane = (
-        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
-    ).read_text(encoding="utf-8")
     live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
         encoding="utf-8"
     )
@@ -645,15 +633,13 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
 
 def test_operator_docs_describe_ui_onboarding_without_cli_regression() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
-    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    operator_troubleshooting = (_repo_root() / "docs" / "operator-troubleshooting.md").read_text(
         encoding="utf-8"
     )
-    operator_troubleshooting = (
-        _repo_root() / "docs" / "operator-troubleshooting.md"
-    ).read_text(encoding="utf-8")
-    operator_frontend = (
-        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
-    ).read_text(encoding="utf-8")
+    operator_frontend = (_repo_root() / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "aidd ui" in readme
     assert "A new project opens Guided Setup" in readme
@@ -672,13 +658,9 @@ def test_operator_docs_describe_ui_onboarding_without_cli_regression() -> None:
     assert "Bare `aidd` and `aidd --help` keep" in operator_frontend
     assert "current help behavior" in operator_frontend
     assert "`aidd ui` can start without `--work-item`" in operator_frontend
-    assert "`aidd ui --work-item <id> --root <path>` bypasses setup mode" in (
-        operator_frontend
-    )
+    assert "`aidd ui --work-item <id> --root <path>` bypasses setup mode" in (operator_frontend)
     assert "hidden `generic-cli` fallback" in operator_frontend
-    assert "One UI process may maintain a noncanonical recent-project list" in (
-        operator_frontend
-    )
+    assert "One UI process may maintain a noncanonical recent-project list" in (operator_frontend)
     assert "## 3. UI Onboarding Failures" in operator_troubleshooting
     assert "Project root is rejected" in operator_troubleshooting
     assert "Runner cards show unavailable runtimes" in operator_troubleshooting
@@ -687,12 +669,10 @@ def test_operator_docs_describe_ui_onboarding_without_cli_regression() -> None:
 
 def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
-    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(
+    operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    operator_troubleshooting = (_repo_root() / "docs" / "operator-troubleshooting.md").read_text(
         encoding="utf-8"
     )
-    operator_troubleshooting = (
-        _repo_root() / "docs" / "operator-troubleshooting.md"
-    ).read_text(encoding="utf-8")
 
     assert "Operator Handbook" in readme
 
@@ -739,9 +719,9 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
 
 
 def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> None:
-    operator_ui_lane = (
-        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
-    ).read_text(encoding="utf-8")
+    operator_ui_lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "## Canonical Operator State and Route Matrix",
@@ -799,9 +779,9 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
 
 
 def test_operator_frontend_actions_name_real_service_semantics() -> None:
-    contract = (
-        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
-    ).read_text(encoding="utf-8")
+    contract = (_repo_root() / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "#### 8.8.1 Action-to-service semantics",
@@ -820,9 +800,9 @@ def test_operator_frontend_actions_name_real_service_semantics() -> None:
 
 
 def test_operator_frontend_uses_truthful_state_vocabulary() -> None:
-    contract = (
-        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
-    ).read_text(encoding="utf-8")
+    contract = (_repo_root() / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "#### 8.8.2 Truthful state vocabulary",
@@ -846,9 +826,9 @@ def test_operator_frontend_uses_truthful_state_vocabulary() -> None:
 
 
 def test_browser_testing_policy_is_dev_only_and_provider_free() -> None:
-    policy = (
-        _repo_root() / "docs" / "architecture" / "browser-testing.md"
-    ).read_text(encoding="utf-8")
+    policy = (_repo_root() / "docs" / "architecture" / "browser-testing.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "Python Playwright sync API",
@@ -866,10 +846,11 @@ def test_browser_testing_policy_is_dev_only_and_provider_free() -> None:
     ):
         assert expected in policy
 
+
 def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> None:
-    operator_ui_lane = (
-        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
-    ).read_text(encoding="utf-8")
+    operator_ui_lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "## Completed-Run Required Checks",
@@ -949,9 +930,9 @@ def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:
 
 
 def test_operator_ui_local_project_manual_smoke_template_records_required_evidence() -> None:
-    operator_ui_lane = (
-        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
-    ).read_text(encoding="utf-8")
+    operator_ui_lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "## Completed-Run Manual Smoke Evidence Template",
@@ -977,9 +958,9 @@ def test_operator_ui_local_project_manual_smoke_template_records_required_eviden
 
 
 def test_operator_ui_provider_free_browser_pass_template_is_complete() -> None:
-    operator_ui_lane = (
-        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
-    ).read_text(encoding="utf-8")
+    operator_ui_lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
 
     for expected in (
         "## Provider-Free Full Browser Pass Evidence Template",
@@ -1006,12 +987,10 @@ def test_operator_ui_provider_free_browser_pass_template_is_complete() -> None:
         assert expected in operator_ui_lane
 
 
-
-
 def test_observed_operator_acceptance_script_and_template_are_complete() -> None:
-    contract = (
-        _repo_root() / "docs" / "e2e" / "operator-ui-observed-acceptance.md"
-    ).read_text(encoding="utf-8")
+    contract = (_repo_root() / "docs" / "e2e" / "operator-ui-observed-acceptance.md").read_text(
+        encoding="utf-8"
+    )
 
     for task_id, title in (
         ("O1", "Guided Setup and first launch"),
@@ -1050,12 +1029,10 @@ def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
 
     assert (
-        'aidd init --work-item WI-001 --request "Implement a small, specific task" '
-        "--root .aidd"
+        'aidd init --work-item WI-001 --request "Implement a small, specific task" --root .aidd'
     ) in readme
     assert (
-        "aidd run --work-item WI-001 --runtime codex --from-stage idea "
-        "--to-stage plan --root .aidd"
+        "aidd run --work-item WI-001 --runtime codex --from-stage idea --to-stage plan --root .aidd"
     ) in readme
     assert (
         "aidd run --work-item WI-001 --runtime generic-cli --from-stage idea "
@@ -1173,8 +1150,7 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     assert "target-workspace-evidence.json" in aidd_eval_skill
     assert (
         "top-level `workitems/...` duplicates normally make manual "
-        "deliverable quality `not-counted`"
-        in (aidd_eval_skill)
+        "deliverable quality `not-counted`" in (aidd_eval_skill)
     )
     assert (
         "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit."
@@ -1466,13 +1442,13 @@ def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> No
     real_provider = (repo_root / "docs" / "e2e" / "real-provider-ui-e2e.md").read_text(
         encoding="utf-8"
     )
-    operator_ui = (
-        repo_root / "docs" / "e2e" / "operator-ui-local-project.md"
-    ).read_text(encoding="utf-8")
+    operator_ui = (repo_root / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
     handbook = (repo_root / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
-    scenario_matrix = (
-        repo_root / "docs" / "e2e" / "scenario-matrix.md"
-    ).read_text(encoding="utf-8")
+    scenario_matrix = (repo_root / "docs" / "e2e" / "scenario-matrix.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "| `codex` | first |" in real_provider
     assert "| `claude-code` | second |" in real_provider
@@ -1499,21 +1475,17 @@ def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> No
 
 def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
     repo_root = _repo_root()
-    operator_frontend = (
-        repo_root / "docs" / "architecture" / "operator-frontend.md"
-    ).read_text(encoding="utf-8")
-    project_set = (
-        repo_root / "docs" / "architecture" / "project-set-workspace.md"
-    ).read_text(encoding="utf-8")
+    operator_frontend = (repo_root / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
+    project_set = (repo_root / "docs" / "architecture" / "project-set-workspace.md").read_text(
+        encoding="utf-8"
+    )
     target_architecture = (
         repo_root / "docs" / "architecture" / "target-architecture.md"
     ).read_text(encoding="utf-8")
-    user_stories = (
-        repo_root / "docs" / "product" / "user-stories.md"
-    ).read_text(encoding="utf-8")
-    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
-        encoding="utf-8"
-    )
+    user_stories = (repo_root / "docs" / "product" / "user-stories.md").read_text(encoding="utf-8")
+    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(encoding="utf-8")
     readme = (repo_root / "README.md").read_text(encoding="utf-8")
 
     for needle in (
@@ -1565,9 +1537,9 @@ def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
 
 def test_frontmatter_and_beta_audit_scope_match_current_product_contract() -> None:
     repo_root = _repo_root()
-    document_contracts = (
-        repo_root / "docs" / "architecture" / "document-contracts.md"
-    ).read_text(encoding="utf-8")
+    document_contracts = (repo_root / "docs" / "architecture" / "document-contracts.md").read_text(
+        encoding="utf-8"
+    )
     target_architecture = (
         repo_root / "docs" / "architecture" / "target-architecture.md"
     ).read_text(encoding="utf-8")
@@ -1601,19 +1573,15 @@ def test_runtime_log_docs_match_the_supported_cli_contract() -> None:
 
 def test_project_set_docs_make_permission_mode_boundary_explicit() -> None:
     repo_root = _repo_root()
-    project_set = (
-        repo_root / "docs" / "architecture" / "project-set-workspace.md"
-    ).read_text(encoding="utf-8")
+    project_set = (repo_root / "docs" / "architecture" / "project-set-workspace.md").read_text(
+        encoding="utf-8"
+    )
     target_architecture = (
         repo_root / "docs" / "architecture" / "target-architecture.md"
     ).read_text(encoding="utf-8")
-    user_stories = (
-        repo_root / "docs" / "product" / "user-stories.md"
-    ).read_text(encoding="utf-8")
+    user_stories = (repo_root / "docs" / "product" / "user-stories.md").read_text(encoding="utf-8")
 
-    us12 = user_stories.split("### US-12 — project-set workflow", 1)[1].split(
-        "### US-13 —", 1
-    )[0]
+    us12 = user_stories.split("### US-12 — project-set workflow", 1)[1].split("### US-13 —", 1)[0]
     assert "configured permission mode" in us12
     assert "`full-access`" in us12
     assert "brokered or isolated modes" in us12
@@ -1633,9 +1601,9 @@ def test_project_set_docs_make_permission_mode_boundary_explicit() -> None:
 
 
 def test_operator_frontend_defines_scoped_browser_draft_contract() -> None:
-    operator_frontend = (
-        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
-    ).read_text(encoding="utf-8")
+    operator_frontend = (_repo_root() / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
 
     for needle in (
         "`aidd.operator.drafts.v1`",
@@ -1668,8 +1636,10 @@ def test_release_publish_skill_describes_release_flow_guardrails() -> None:
         "If the PyPI version already exists, stop and ask for a new version decision.",
         "Docker/GHCR is not a supported alpha release channel.",
         "If the release tag SHA does not match `origin/release/<tag>`, stop",
-        ("If the release exists, or the preflight reports\n"
-         "an existing remote tag, stop and inspect."),
+        (
+            "If the release exists, or the preflight reports\n"
+            "an existing remote tag, stop and inspect."
+        ),
         "git rev-parse refs/tags/v<project.version>^{commit}",
         "--backend pip",
         "The acceptance checks must execute the binaries installed into `PIPX_BIN_DIR`",
@@ -1684,12 +1654,12 @@ def test_community_entrypoints_are_actionable_and_not_version_stale() -> None:
     security = (repo_root / "SECURITY.md").read_text(encoding="utf-8")
     conduct = (repo_root / "CODE_OF_CONDUCT.md").read_text(encoding="utf-8")
     contributing = (repo_root / "CONTRIBUTING.md").read_text(encoding="utf-8")
-    pull_request_template = (
-        repo_root / ".github" / "pull_request_template.md"
-    ).read_text(encoding="utf-8")
-    bug_report = (
-        repo_root / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml"
-    ).read_text(encoding="utf-8")
+    pull_request_template = (repo_root / ".github" / "pull_request_template.md").read_text(
+        encoding="utf-8"
+    )
+    bug_report = (repo_root / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml").read_text(
+        encoding="utf-8"
+    )
 
     assert "security/advisories/new" in security
     assert "within 7 calendar days" in security

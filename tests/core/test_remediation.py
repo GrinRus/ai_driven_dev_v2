@@ -126,13 +126,21 @@ def test_mark_downstream_stale_and_clear_preserves_request_list(tmp_path: Path) 
     assert [item.stage for item in cleared.stale_stages] == ["qa"]
     assert cleared.requests == (request,)
     cleared = clear_stale_stages(
-        workspace_root=workspace_root, work_item="WI-UI", run_id="run-ui", stages=("qa",),
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stages=("qa",),
     )
     assert cleared.stale_stages == ()
     assert cleared.requests == (request,)
-    assert load_remediation_status(
-        workspace_root=workspace_root, work_item="WI-UI", run_id="run-ui",
-    ) == cleared
+    assert (
+        load_remediation_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+        )
+        == cleared
+    )
 
 
 _REMOVE_FIELD = object()
@@ -141,7 +149,7 @@ _REMOVE_FIELD = object()
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        *(('schema_version', value) for value in (_REMOVE_FIELD, None, True, 1.0, "1", 0, 999)),
+        *(("schema_version", value) for value in (_REMOVE_FIELD, None, True, 1.0, "1", 0, 999)),
         ("run_id", _REMOVE_FIELD),
         ("run_id", "other-run"),
         ("stale_stages", _REMOVE_FIELD),
@@ -149,15 +157,26 @@ _REMOVE_FIELD = object()
         ("stale_stages", {}),
         ("stale_stages", [None]),
         ("stale_stages", [{"stage": "review"}]),
-        ("stale_stages", [{
-            "stage": "review", "status": "cleared", "invalidated_by": "request-0001",
-            "invalidated_at_utc": "2026-09-06T00:00:00Z", "reason": "New implementation.",
-        }]),
+        (
+            "stale_stages",
+            [
+                {
+                    "stage": "review",
+                    "status": "cleared",
+                    "invalidated_by": "request-0001",
+                    "invalidated_at_utc": "2026-09-06T00:00:00Z",
+                    "reason": "New implementation.",
+                }
+            ],
+        ),
     ],
 )
 @pytest.mark.parametrize("operation", ("load", "clear", "mark", "request"))
 def test_invalid_remediation_state_is_not_replaced_or_treated_as_clear(
-    tmp_path: Path, field: str, value: object, operation: str,
+    tmp_path: Path,
+    field: str,
+    value: object,
+    operation: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _create_run(workspace_root)
@@ -184,7 +203,10 @@ def test_invalid_remediation_state_is_not_replaced_or_treated_as_clear(
             mark_downstream_stale(**arguments, invalidated_by="request-0002")
         else:
             create_remediation_request(
-                **arguments, source_stage="review", source_ids=("RV-1",), operator_note="Fix it.",
+                **arguments,
+                source_stage="review",
+                source_ids=("RV-1",),
+                operator_note="Fix it.",
             )
 
     assert {
@@ -196,7 +218,9 @@ def test_invalid_remediation_state_is_not_replaced_or_treated_as_clear(
 def test_remediation_status_is_empty_before_its_first_publication(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     status = load_remediation_status(
-        workspace_root=workspace_root, work_item="WI-UI", run_id="run-ui",
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
     )
     assert status.stale_stages == ()
     assert status.requests == ()

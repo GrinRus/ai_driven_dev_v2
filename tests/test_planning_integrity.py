@@ -88,9 +88,7 @@ def test_backlog_reconciliation_rejects_duplicate_current_notes() -> None:
 
 def _rollup_roadmap(*task_statuses: str) -> str:
     parent_status = (
-        "done"
-        if task_statuses and all(status == "done" for status in task_statuses)
-        else "planned"
+        "done" if task_statuses and all(status == "done" for status in task_statuses) else "planned"
     )
     tasks = [
         f"- `W1-E1-S1-T{number}` ({status}) Task {number}."
@@ -209,7 +207,10 @@ def test_soon_accepts_an_explicit_dependency_on_next() -> None:
         "  - Dependencies: `W1-E1-S1-T1`.",
     )
 
-    assert roadmap_backlog_integrity_errors(
-        roadmap,
-        _backlog(next_ids=("W1-E1-S1-T1",), soon_ids=("W1-E1-S1-T3",)),
-    ) == ()
+    assert (
+        roadmap_backlog_integrity_errors(
+            roadmap,
+            _backlog(next_ids=("W1-E1-S1-T1",), soon_ids=("W1-E1-S1-T3",)),
+        )
+        == ()
+    )

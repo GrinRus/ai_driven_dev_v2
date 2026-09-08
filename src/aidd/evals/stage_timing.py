@@ -237,6 +237,8 @@ _STATUS_SECTION_PATTERN = re.compile(
     r"^#{1,6}\s+Status\s*\n+(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
     re.IGNORECASE | re.DOTALL | re.MULTILINE,
 )
+
+
 def _stage_result_status(stage_result_text: str) -> str | None:
     match = _STATUS_SECTION_PATTERN.search(stage_result_text)
     if match is None:
@@ -327,8 +329,7 @@ def _stage_attempt_lineage(stage_root: Path, attempt_number: int) -> AttemptLine
         ) from exc
     if not isinstance(payload, dict):
         raise ValueError(
-            "Stage timing artifact index must be a JSON object: "
-            f"{artifact_index_path.as_posix()}"
+            f"Stage timing artifact index must be a JSON object: {artifact_index_path.as_posix()}"
         )
     try:
         artifact_index = RunArtifactIndex.from_dict(payload)
@@ -474,9 +475,7 @@ def _build_stage_timing_payload_from_evidence(
                 "attempt_count": len(attempts),
                 "attempts": list(attempts),
                 "final_failure_code": (
-                    _first_validator_failure_code(work_item_stage_root)
-                    if stage_reached
-                    else None
+                    _first_validator_failure_code(work_item_stage_root) if stage_reached else None
                 ),
                 "stage": stage,
                 "status": (
@@ -486,9 +485,7 @@ def _build_stage_timing_payload_from_evidence(
                     list(_status_history_entries(metadata)) if stage_reached else []
                 ),
                 "terminal_docs_consistent": (
-                    _terminal_docs_consistent(work_item_stage_root)
-                    if stage_reached
-                    else None
+                    _terminal_docs_consistent(work_item_stage_root) if stage_reached else None
                 ),
             }
         )
@@ -760,13 +757,9 @@ def build_self_repair_matrix_payload(payload: dict[str, object]) -> dict[str, ob
         )
         final_status = str(raw_stage.get("status", "not-reached"))
         repair_attempts = [
-            item
-            for item in attempt_dicts
-            if item.get("attempt_kind") == AttemptKind.REPAIR.value
+            item for item in attempt_dicts if item.get("attempt_kind") == AttemptKind.REPAIR.value
         ]
-        repair_success = (
-            final_status == "succeeded" if repair_attempts else None
-        )
+        repair_success = final_status == "succeeded" if repair_attempts else None
         final_failure_code = (
             None
             if final_status == "succeeded"
@@ -778,9 +771,7 @@ def build_self_repair_matrix_payload(payload: dict[str, object]) -> dict[str, ob
             {
                 "attempts_used": len(attempt_dicts),
                 "description": probe.description,
-                "evaluation_source": (
-                    "run-artifact-observation" if attempt_dicts else "not-run"
-                ),
+                "evaluation_source": ("run-artifact-observation" if attempt_dicts else "not-run"),
                 "final_failure_code": final_failure_code,
                 "initial_verdict": initial_verdict,
                 "probe_id": probe.probe_id,

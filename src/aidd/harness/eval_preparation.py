@@ -62,11 +62,7 @@ def derive_teardown_commands(scenario: Scenario) -> tuple[str, ...]:
     if not isinstance(raw_commands, list):
         return tuple()
 
-    return tuple(
-        str(command).strip()
-        for command in raw_commands
-        if str(command).strip()
-    )
+    return tuple(str(command).strip() for command in raw_commands if str(command).strip())
 
 
 def select_authored_task(scenario: Scenario) -> ScenarioAuthoredTask | None:
@@ -101,9 +97,7 @@ def build_feature_selection_payload(
         "is_live": scenario.is_live,
         "mode": None if scenario.feature_source is None else scenario.feature_source.mode,
         "selection_policy": (
-            None
-            if scenario.feature_source is None
-            else scenario.feature_source.selection_policy
+            None if scenario.feature_source is None else scenario.feature_source.selection_policy
         ),
         "selected_task": None,
     }

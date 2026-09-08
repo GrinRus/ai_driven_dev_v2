@@ -77,7 +77,7 @@ class OperatorRequestContext:
 
     @property
     def markdown(self) -> str:
-        return "# User request\n\n" f"{self.request_text}\n"
+        return f"# User request\n\n{self.request_text}\n"
 
 
 def _request_body(markdown: str) -> str:
@@ -130,10 +130,7 @@ def project_work_item_request(markdown: str) -> WorkItemRequestProjection:
         if current is not None:
             sections[current].append(line)
 
-    values = {
-        key: "\n".join(lines).strip()
-        for key, lines in sections.items()
-    }
+    values = {key: "\n".join(lines).strip() for key, lines in sections.items()}
     structured = bool(values.get("title") and values.get("brief"))
     if structured:
         return WorkItemRequestProjection(

@@ -22,10 +22,7 @@ def main() -> int:
     )
     print("Discovered CI scenarios: " + ", ".join(result.discovered_ids))
     for execution in result.executions:
-        print(
-            f"[{execution.exit_code}] {execution.scenario_id}: "
-            f"{execution.path.as_posix()}"
-        )
+        print(f"[{execution.exit_code}] {execution.scenario_id}: {execution.path.as_posix()}")
         if execution.stdout_text:
             print(execution.stdout_text.rstrip())
         if execution.stderr_text:

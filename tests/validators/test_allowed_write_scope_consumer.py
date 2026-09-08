@@ -67,8 +67,7 @@ def test_semantic_validator_uses_canonical_scope_parity(
     scope_findings = [
         finding
         for finding in findings
-        if finding.code == MISSING_DIFF_EVIDENCE_CODE
-        and "allowed write scope" in finding.message
+        if finding.code == MISSING_DIFF_EVIDENCE_CODE and "allowed write scope" in finding.message
     ]
 
     assert bool(scope_findings) is not allowed
@@ -84,8 +83,7 @@ def test_semantic_validator_treats_missing_scope_as_unrestricted(tmp_path: Path)
     )
 
     assert not any(
-        finding.code == MISSING_DIFF_EVIDENCE_CODE
-        and "allowed write scope" in finding.message
+        finding.code == MISSING_DIFF_EVIDENCE_CODE and "allowed write scope" in finding.message
         for finding in findings
     )
 
@@ -122,8 +120,7 @@ def test_semantic_validator_ignores_backticked_code_in_touched_file_description(
     )
 
     assert not any(
-        finding.code == MISSING_DIFF_EVIDENCE_CODE
-        and "allowed write scope" in finding.message
+        finding.code == MISSING_DIFF_EVIDENCE_CODE and "allowed write scope" in finding.message
         for finding in findings
     )
 
@@ -138,9 +135,7 @@ def test_semantic_validator_ignores_backticked_code_in_touched_file_description(
         "# Allowed Write Scope\n\n- `src/**`\n",
     ),
 )
-def test_semantic_validator_reports_malformed_scope(
-    tmp_path: Path, markdown: str
-) -> None:
+def test_semantic_validator_reports_malformed_scope(tmp_path: Path, markdown: str) -> None:
     workspace_root = tmp_path / ".aidd"
     work_item = "WI-SCOPE-INVALID"
     _write_report(workspace_root, work_item, "src/app.py")

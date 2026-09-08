@@ -16,8 +16,7 @@ from aidd.harness.eval_preparation import prepare_eval_run
 from aidd.harness.scenarios import ScenarioCommandSteps
 
 SMOKE_SCENARIO = (
-    Path(__file__).resolve().parents[2]
-    / "harness/scenarios/smoke/plan-stage-minimal-fixture.yaml"
+    Path(__file__).resolve().parents[2] / "harness/scenarios/smoke/plan-stage-minimal-fixture.yaml"
 )
 
 
@@ -32,8 +31,7 @@ def _execute_lifecycle(
 ) -> tuple[EvalScenarioRunResult, Path]:
     fake_aidd = tmp_path / "fake-aidd"
     fake_aidd.write_text(
-        "#!/bin/sh\nprintf 'run\\n' >> lifecycle.log\n"
-        f"printf 'fake aidd\\n'\nexit {run_exit}\n",
+        f"#!/bin/sh\nprintf 'run\\n' >> lifecycle.log\nprintf 'fake aidd\\n'\nexit {run_exit}\n",
         encoding="utf-8",
     )
     fake_aidd.chmod(0o755)
@@ -65,9 +63,7 @@ def _execute_lifecycle(
             prep,
             scenario=scenario,
             aidd_command=(fake_aidd.as_posix(),),
-            teardown_commands=(
-                f"printf 'teardown\\n' >> lifecycle.log; exit {teardown_exit}",
-            ),
+            teardown_commands=(f"printf 'teardown\\n' >> lifecycle.log; exit {teardown_exit}",),
         )
 
     monkeypatch.setattr("aidd.harness.deterministic_eval.prepare_eval_run", _prepare)

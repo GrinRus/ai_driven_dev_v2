@@ -337,8 +337,7 @@ class TaskLedger:
         current = self.finalization
         if status not in _ALLOWED_FINALIZATION_TRANSITIONS[current.status]:
             raise ValueError(
-                "Illegal task finalization transition: "
-                f"{current.status.value} -> {status.value}."
+                f"Illegal task finalization transition: {current.status.value} -> {status.value}."
             )
         if status is TaskFinalizationStatus.EXECUTING and not self.all_succeeded():
             raise ValueError("Cannot finalize implementation before every task succeeds.")

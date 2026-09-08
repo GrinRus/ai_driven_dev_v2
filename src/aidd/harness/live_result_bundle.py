@@ -47,9 +47,7 @@ class LiveResultBundleIdentity:
 
     def normalized(self) -> LiveResultBundleIdentity:
         return LiveResultBundleIdentity(
-            scenario_id=SafeIdentifier.parse(
-                self.scenario_id, label="scenario_id"
-            ).value,
+            scenario_id=SafeIdentifier.parse(self.scenario_id, label="scenario_id").value,
             runtime_id=SafeIdentifier.parse(self.runtime_id, label="runtime_id").value,
             run_id=SafeIdentifier.parse(self.run_id, label="run_id").value,
             work_item=SafeIdentifier.parse(self.work_item, label="work_item").value,
@@ -84,9 +82,7 @@ def _relative_reference(*, bundle_root: Path, path: Path) -> str:
     resolved_root = bundle_root.resolve(strict=True)
     resolved_path = path.resolve(strict=True)
     if not resolved_path.is_relative_to(resolved_root):
-        raise LiveResultBundleError(
-            f"Artifact escapes the live result bundle: {path.as_posix()}."
-        )
+        raise LiveResultBundleError(f"Artifact escapes the live result bundle: {path.as_posix()}.")
     return resolved_path.relative_to(resolved_root).as_posix()
 
 
@@ -196,8 +192,7 @@ def _target_patch(target_root: Path) -> bytes:
     if untracked.returncode != 0:
         reason = untracked.stderr.decode("utf-8", errors="replace").strip()
         raise LiveResultBundleError(
-            "Failed to enumerate untracked target patch files: "
-            f"{reason or untracked.returncode}."
+            f"Failed to enumerate untracked target patch files: {reason or untracked.returncode}."
         )
     patch = bytearray(completed.stdout)
     for raw_path in sorted(filter(None, untracked.stdout.split(b"\0"))):
@@ -281,9 +276,7 @@ def materialize_live_result_bundle(
     normalized_identity = identity.normalized()
     resolved_bundle_root = bundle_root.resolve(strict=True)
     final_root = resolved_bundle_root / LIVE_RESULT_MATERIALIZED_DIRNAME
-    staging_root = Path(
-        tempfile.mkdtemp(prefix=".canonical-evidence-", dir=resolved_bundle_root)
-    )
+    staging_root = Path(tempfile.mkdtemp(prefix=".canonical-evidence-", dir=resolved_bundle_root))
     artifacts: list[LiveResultArtifact] = []
     try:
         final_files_root = staging_root / "final"
@@ -315,9 +308,7 @@ def materialize_live_result_bundle(
                 )
             elif source.is_dir():
                 category: ArtifactCategory = (
-                    "browser"
-                    if source.name == "manual-frontend-evidence"
-                    else "final-report"
+                    "browser" if source.name == "manual-frontend-evidence" else "final-report"
                 )
                 for copied in _copy_tree(source=source, destination=destination):
                     artifacts.append(
@@ -331,9 +322,7 @@ def materialize_live_result_bundle(
         if target_root is not None:
             resolved_target = target_root.resolve(strict=True)
             workspace_root = resolved_target / ".aidd"
-            work_item_root = (
-                workspace_root / "workitems" / normalized_identity.work_item
-            )
+            work_item_root = workspace_root / "workitems" / normalized_identity.work_item
             run_root = (
                 workspace_root
                 / "reports"

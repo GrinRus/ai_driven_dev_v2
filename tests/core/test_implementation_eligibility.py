@@ -38,15 +38,7 @@ One bounded task.
 
 
 def _write_tasklist(workspace_root: Path) -> TaskLedger:
-    path = (
-        workspace_root
-        / "workitems"
-        / "WI-1"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
-    )
+    path = workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
     path.parent.mkdir(parents=True)
     path.write_text(_TASKLIST, encoding="utf-8")
     return TaskLedger.create(parse_task_plan(_TASKLIST))
@@ -92,20 +84,17 @@ def test_implementation_finalization_blocker_requires_complete_matching_evidence
     published.parent.mkdir(parents=True)
     published.write_text("# Implementation Report\n", encoding="utf-8")
 
-    assert implementation_finalization_blocker(
-        workspace_root=workspace_root,
-        work_item="WI-1",
-        run_id="run-1",
-    ) is None
+    assert (
+        implementation_finalization_blocker(
+            workspace_root=workspace_root,
+            work_item="WI-1",
+            run_id="run-1",
+        )
+        is None
+    )
 
     tasklist = (
-        workspace_root
-        / "workitems"
-        / "WI-1"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     tasklist.write_text(_TASKLIST.replace("One bounded task.", "Changed task."), encoding="utf-8")
     assert "source hash" in implementation_finalization_blocker(

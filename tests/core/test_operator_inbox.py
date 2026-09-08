@@ -63,9 +63,9 @@ def test_inbox_projection_has_stable_sections_and_exact_identity(tmp_path: Path)
         "ready",
         "complete",
     ]
-    assert tuple(
-        item.route.work_item for section in inbox.sections for item in section.items
-    ) == ("WI-READY",)
+    assert tuple(item.route.work_item for section in inbox.sections for item in section.items) == (
+        "WI-READY",
+    )
     item = inbox.sections[2].items[0]
     assert item.route.intent == "inbox-work-item"
     assert item.route.work_item == "WI-READY"
@@ -83,9 +83,7 @@ def test_project_home_intent_excerpt_is_bounded_and_excludes_markdown_heading(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_work_item(workspace_root, "WI-INTENT")
-    request_path = (
-        workspace_root / "workitems" / "WI-INTENT" / "context" / "user-request.md"
-    )
+    request_path = workspace_root / "workitems" / "WI-INTENT" / "context" / "user-request.md"
     request_path.parent.mkdir(parents=True, exist_ok=True)
     request_path.write_text(
         "# Original request\n\nBuild a calmer operator workspace. " + ("Keep it bounded. " * 40),
@@ -129,9 +127,9 @@ def test_inbox_projection_keeps_durable_running_item_visible(
     running = next(section for section in inbox.sections if section.key == "running")
     assert [item.route.work_item for item in running.items] == ["WI-RUNNING"]
     assert running.items[0].primary_action.action == "wait-for-stage"
-    assert tuple(
-        item.route.work_item for section in inbox.sections for item in section.items
-    ) == ("WI-RUNNING",)
+    assert tuple(item.route.work_item for section in inbox.sections for item in section.items) == (
+        "WI-RUNNING",
+    )
 
 
 def test_inbox_projection_orders_items_without_frontend_priority_policy(

@@ -79,6 +79,8 @@ class OpenCodeRunResult(RuntimeRunResult[OpenCodeExitClassification]):
 
 
 _DOCUMENT_COMPLETION_SETTLE_SECONDS = 30.0
+
+
 def _resolve_exit_classification(
     *,
     exit_code: int | None,
@@ -97,9 +99,7 @@ def _resolve_exit_classification(
                 stdout_text=stdout_text,
                 stderr_text=stderr_text,
             )
-            or _structured_event_source_has_provider_error(
-                structured_events_source_path
-            )
+            or _structured_event_source_has_provider_error(structured_events_source_path)
         )
     ):
         return OpenCodeExitClassification.PROVIDER_ERROR
@@ -139,9 +139,7 @@ def _structured_event_source_has_provider_error(path: Path | None) -> bool:
             if not isinstance(event, Mapping):
                 continue
             payload = event.get("payload")
-            if isinstance(payload, Mapping) and _is_structured_provider_error_payload(
-                payload
-            ):
+            if isinstance(payload, Mapping) and _is_structured_provider_error_payload(payload):
                 return True
     return False
 

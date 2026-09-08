@@ -60,9 +60,7 @@ def _write_sealable_bundle(tmp_path: Path):
     for path in required_paths:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(path.name + "\n", encoding="utf-8")
-    (layout.run_root / "canonical-evidence" / "work-item" / "stages").mkdir(
-        parents=True
-    )
+    (layout.run_root / "canonical-evidence" / "work-item" / "stages").mkdir(parents=True)
     (layout.run_root / "canonical-evidence" / "task-run" / "run-manifest.json").parent.mkdir(
         parents=True
     )
@@ -106,9 +104,7 @@ def test_seal_allows_provider_free_pass_without_product_identity(tmp_path: Path)
     )
     metadata = json.loads(layout.harness_metadata_path.read_text(encoding="utf-8"))
     metadata["product_run_id"] = None
-    layout.harness_metadata_path.write_text(
-        json.dumps(metadata) + "\n", encoding="utf-8"
-    )
+    layout.harness_metadata_path.write_text(json.dumps(metadata) + "\n", encoding="utf-8")
 
     inventory = seal_result_bundle(
         layout=layout,

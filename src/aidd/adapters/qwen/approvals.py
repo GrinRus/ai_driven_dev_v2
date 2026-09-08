@@ -34,7 +34,8 @@ def qwen_control_request_to_operator_request(
     if command is not None:
         normalized_payload["command"] = str(command)
     return RuntimeOperatorRequest(
-        id=request_id or RuntimeOperatorRequest.create(
+        id=request_id
+        or RuntimeOperatorRequest.create(
             runtime_id=runtime_id,
             stage=stage,
             kind=kind,
@@ -46,9 +47,9 @@ def qwen_control_request_to_operator_request(
         payload=normalized_payload,
         cwd=cwd,
         paths=paths,
-        risk=RuntimeOperatorRisk.HIGH if kind is RuntimeOperatorRequestKind.SHELL else (
-            RuntimeOperatorRisk.MEDIUM
-        ),
+        risk=RuntimeOperatorRisk.HIGH
+        if kind is RuntimeOperatorRequestKind.SHELL
+        else (RuntimeOperatorRisk.MEDIUM),
         suggestions=(
             RuntimeOperatorDecisionAction.ALLOW_ONCE,
             RuntimeOperatorDecisionAction.ALLOW_FOR_SESSION,

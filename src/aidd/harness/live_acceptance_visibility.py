@@ -18,9 +18,7 @@ from aidd.harness.live_e2e_black_box_steps import (
 )
 
 VISIBILITY_CANARY_SCHEMA_VERSION = 1
-VISIBILITY_CANARY_LAUNCH_BOUNDARY = (
-    "aidd.harness.live_e2e_black_box_steps._run_black_box_command"
-)
+VISIBILITY_CANARY_LAUNCH_BOUNDARY = "aidd.harness.live_e2e_black_box_steps._run_black_box_command"
 _MAX_READ_BYTES = 64 * 1024
 _LABEL_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 _ENVIRONMENT_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -177,9 +175,7 @@ def _validate_environment_keys(keys: Sequence[str]) -> tuple[str, ...]:
         raise LiveAcceptanceVisibilityError("Visibility environment keys must be unique.")
     for key in normalized:
         if _ENVIRONMENT_KEY_PATTERN.fullmatch(key) is None:
-            raise LiveAcceptanceVisibilityError(
-                f"Invalid visibility environment key: {key!r}."
-            )
+            raise LiveAcceptanceVisibilityError(f"Invalid visibility environment key: {key!r}.")
     return normalized
 
 
@@ -229,9 +225,7 @@ def _parse_diagnostics(stdout_text: str) -> dict[str, object]:
             "Visibility canary did not emit one valid JSON diagnostics object."
         ) from exc
     if not isinstance(payload, dict):
-        raise LiveAcceptanceVisibilityError(
-            "Visibility canary diagnostics must be a JSON object."
-        )
+        raise LiveAcceptanceVisibilityError("Visibility canary diagnostics must be a JSON object.")
     if payload.get("schema_version") != VISIBILITY_CANARY_SCHEMA_VERSION:
         raise LiveAcceptanceVisibilityError(
             "Visibility canary diagnostics use an unsupported schema version."

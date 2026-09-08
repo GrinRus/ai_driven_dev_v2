@@ -38,11 +38,7 @@ def runtime_content_document_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
     boundary check so system-owned records never become provider completion signals.
     """
 
-    return tuple(
-        path
-        for path in paths
-        if path.name not in _NON_RUNTIME_COMPLETION_DOCUMENT_NAMES
-    )
+    return tuple(path for path in paths if path.name not in _NON_RUNTIME_COMPLETION_DOCUMENT_NAMES)
 
 
 def _runtime_document_text_is_complete(path: Path) -> bool:
@@ -74,9 +70,7 @@ def build_runtime_document_completion_requested(
     if not expected_markdown_documents:
         return None
 
-    baseline_mtimes = {
-        path: _document_mtime_ns(path) for path in expected_markdown_documents
-    }
+    baseline_mtimes = {path: _document_mtime_ns(path) for path in expected_markdown_documents}
     complete_since: float | None = None
 
     def _document_changed(path: Path) -> bool:
@@ -85,8 +79,7 @@ def build_runtime_document_completion_requested(
     def _completion_requested() -> bool:
         nonlocal complete_since
         if any(
-            not _runtime_document_text_is_complete(path)
-            for path in expected_markdown_documents
+            not _runtime_document_text_is_complete(path) for path in expected_markdown_documents
         ):
             complete_since = None
             return False
@@ -119,8 +112,7 @@ def split_configured_command(*, configured_command: str, runtime_label: str) -> 
         base_tokens = shlex.split(stripped)
     except ValueError as exc:
         raise ValueError(
-            f"Configured {runtime_label} command is not valid shell syntax: "
-            f"{configured_command!r}"
+            f"Configured {runtime_label} command is not valid shell syntax: {configured_command!r}"
         ) from exc
     if not base_tokens:
         raise ValueError(f"Configured {runtime_label} command must produce at least one token.")
@@ -238,9 +230,7 @@ def build_aidd_execution_environment(
     if repair_brief_path is not None:
         env["AIDD_REPAIR_BRIEF_PATH"] = repair_brief_path.resolve(strict=False).as_posix()
     if operator_request_path is not None:
-        env["AIDD_OPERATOR_REQUEST_PATH"] = (
-            operator_request_path.resolve(strict=False).as_posix()
-        )
+        env["AIDD_OPERATOR_REQUEST_PATH"] = operator_request_path.resolve(strict=False).as_posix()
     return env
 
 
@@ -265,9 +255,7 @@ def persist_runtime_log_artifacts(
     runtime_log_truncated: bool = False,
     capture_error: str | None = None,
 ) -> RuntimeEvidencePaths:
-    resolved_outcome = adapter_outcome or adapter_outcome_for_classification(
-        exit_classification
-    )
+    resolved_outcome = adapter_outcome or adapter_outcome_for_classification(exit_classification)
     return commit_runtime_evidence(
         RuntimeEvidenceCommitRequest(
             attempt_path=attempt_path,

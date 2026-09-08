@@ -24,10 +24,7 @@ def discover_help_text(command_path: str) -> str | None:
 
 
 def _supports_live_decisions(help_text: str) -> bool:
-    return all(
-        marker in help_text
-        for marker in ("--approval-mode", "--json-file", "--input-file")
-    )
+    return all(marker in help_text for marker in ("--approval-mode", "--json-file", "--input-file"))
 
 
 def probe(command: str) -> CapabilityReport:

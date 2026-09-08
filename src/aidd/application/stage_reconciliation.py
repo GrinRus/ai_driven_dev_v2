@@ -21,9 +21,7 @@ from aidd.core.state_machine import StageState, is_terminal_state
 
 TERMINAL_RECONCILIATION_FILENAME = "terminal-reconciliation.json"
 TERMINAL_RECONCILIATION_SCHEMA_VERSION = 1
-ABANDONED_STAGE_STATES = frozenset(
-    {StageState.EXECUTING, StageState.VALIDATING}
-)
+ABANDONED_STAGE_STATES = frozenset({StageState.EXECUTING, StageState.VALIDATING})
 
 ReconciliationDisposition = Literal[
     "reconciled",
@@ -64,8 +62,7 @@ class TerminalStageReconciliationRequest:
         expected = StageState(self.expected_state.strip())
         if expected not in ABANDONED_STAGE_STATES:
             raise ValueError(
-                "Expected stage state must be non-terminal and one of `executing` or "
-                "`validating`."
+                "Expected stage state must be non-terminal and one of `executing` or `validating`."
             )
         object.__setattr__(self, "expected_state", expected.value)
         object.__setattr__(
@@ -167,9 +164,7 @@ def _load_existing_result(
                 if payload.get("previous_status") is not None
                 else None
             ),
-            reconciled_status=(
-                str(reconciled_status) if reconciled_status is not None else None
-            ),
+            reconciled_status=(str(reconciled_status) if reconciled_status is not None else None),
             reconciled=payload.get("reconciled") is True,
             status_history_count=int(payload.get("status_history_count", 0)),
             recorded_at_utc=str(payload["recorded_at_utc"]),

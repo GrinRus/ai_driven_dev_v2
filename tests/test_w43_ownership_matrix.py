@@ -24,20 +24,18 @@ def _section_bullets(text: str, heading: str) -> tuple[tuple[str, ...], ...]:
     section = text.split(f"## {heading}", maxsplit=1)[1]
     section = section.split("\n## ", maxsplit=1)[0]
     return tuple(
-        _DOCUMENT_RE.findall(line)
-        for line in section.splitlines()
-        if line.lstrip().startswith("-")
+        _DOCUMENT_RE.findall(line) for line in section.splitlines() if line.lstrip().startswith("-")
     )
 
 
 def _declared_stage_documents(repo_root: Path) -> set[str]:
     documents: set[str] = set()
     for stage in STAGES:
-        text = (repo_root / "contracts" / "stages" / f"{stage}.md").read_text(
-            encoding="utf-8"
-        )
-        for matches in (*_section_bullets(text, "Primary output"),
-                        *_section_bullets(text, "System-owned control artifacts")):
+        text = (repo_root / "contracts" / "stages" / f"{stage}.md").read_text(encoding="utf-8")
+        for matches in (
+            *_section_bullets(text, "Primary output"),
+            *_section_bullets(text, "System-owned control artifacts"),
+        ):
             documents.update(Path(document).name for document in matches)
         # Conditional interview documents are declared together in one bullet.
         documents.update({"questions.md", "answers.md"})

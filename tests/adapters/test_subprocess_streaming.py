@@ -63,9 +63,7 @@ def test_reader_failure_after_partial_output_preserves_evidence_and_fails_closed
         if target == "stdout":
             time.sleep(0.2)
             queue.put(StreamChunkEvent(target="stdout", payload=b"before\n"))
-            queue.put(
-                StreamErrorEvent(target="stdout", error=RuntimeError("reader failed"))
-            )
+            queue.put(StreamErrorEvent(target="stdout", error=RuntimeError("reader failed")))
             return
         queue.put(StreamEofEvent(target="stderr"))
 
@@ -141,9 +139,7 @@ def test_streamed_subprocess_normalizes_launch_oserror(
     assert result.exit_code is None
     assert result.stop_reason is StopReason.LAUNCH_FAILURE
     assert result.stdout_text == ""
-    assert result.stderr_text == (
-        "[launch-failure] OSError: unsafe multiline launch diagnostic\n"
-    )
+    assert result.stderr_text == ("[launch-failure] OSError: unsafe multiline launch diagnostic\n")
     assert result.runtime_log_text == result.stderr_text
 
 
@@ -195,11 +191,7 @@ def test_stream_callback_exception_propagates_and_stops_process(tmp_path: Path) 
     class CallbackError(RuntimeError):
         pass
 
-    script = (
-        "import time\n"
-        "print('before-error', flush=True)\n"
-        "time.sleep(2)\n"
-    )
+    script = "import time\nprint('before-error', flush=True)\ntime.sleep(2)\n"
     spec = RuntimeSubprocessSpec(
         command=(sys.executable, "-c", script),
         cwd=tmp_path,
@@ -220,12 +212,7 @@ def test_stream_callback_exception_propagates_and_stops_process(tmp_path: Path) 
 
 
 def test_timeout_is_enforced_while_process_is_streaming_output(tmp_path: Path) -> None:
-    script = (
-        "import time\n"
-        "while True:\n"
-        "    print('tick', flush=True)\n"
-        "    time.sleep(0.01)\n"
-    )
+    script = "import time\nwhile True:\n    print('tick', flush=True)\n    time.sleep(0.01)\n"
     spec = RuntimeSubprocessSpec(
         command=(sys.executable, "-c", script),
         cwd=tmp_path,
@@ -248,10 +235,7 @@ def test_supervision_starts_before_blocked_stdin_delivery(
     stop_mode: str,
 ) -> None:
     script = (
-        "import sys, time\n"
-        "sys.stdout.write('x' * 200000)\n"
-        "sys.stdout.flush()\n"
-        "time.sleep(10)\n"
+        "import sys, time\nsys.stdout.write('x' * 200000)\nsys.stdout.flush()\ntime.sleep(10)\n"
     )
     spec = RuntimeSubprocessSpec(
         command=(sys.executable, "-c", script),
@@ -267,9 +251,7 @@ def test_supervision_starts_before_blocked_stdin_delivery(
         timeout_stop_reason=StopReason.TIMEOUT,
         cancel_stop_reason=StopReason.CANCELLED,
         cancel_requested=(
-            (lambda: time.monotonic() - started_at >= 0.2)
-            if stop_mode == "cancellation"
-            else None
+            (lambda: time.monotonic() - started_at >= 0.2) if stop_mode == "cancellation" else None
         ),
     )
 
@@ -426,11 +408,11 @@ def test_requested_stop_terminates_descendants(
     script = (
         "import pathlib, signal, subprocess, sys, time\n"
         "signal_path = pathlib.Path(sys.argv[1])\n"
-        "child = \"import pathlib,signal,sys,time; ready=pathlib.Path(sys.argv[2]); "
+        'child = "import pathlib,signal,sys,time; ready=pathlib.Path(sys.argv[2]); '
         "signal.signal(signal.SIGTERM, lambda s,f: "
         "(pathlib.Path(sys.argv[1]).write_text(str(s)), sys.exit(0))); "
         "ready.write_text('ready'); "
-        "time.sleep(30)\"\n"
+        'time.sleep(30)"\n'
         "subprocess.Popen([sys.executable, '-c', child, str(signal_path), sys.argv[2]])\n"
         "print('ready', flush=True)\n"
         "time.sleep(30)\n"
@@ -458,9 +440,7 @@ def test_requested_stop_terminates_descendants(
         cancel_stop_reason=StopReason.CANCELLED,
         cancel_requested=requested if stop_mode == "cancellation" else None,
         completion_requested=requested if stop_mode == "completion" else None,
-        completion_stop_reason=(
-            StopReason.COMPLETE if stop_mode == "completion" else None
-        ),
+        completion_stop_reason=(StopReason.COMPLETE if stop_mode == "completion" else None),
     )
 
     expected = StopReason.CANCELLED if stop_mode == "cancellation" else StopReason.COMPLETE

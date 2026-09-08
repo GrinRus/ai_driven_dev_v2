@@ -241,13 +241,7 @@ def test_resolve_required_input_documents_maps_context_and_upstream_paths(
     )
 
     assert resolved == (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md",
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md",
         workspace_root
         / "workitems"
         / "WI-001"

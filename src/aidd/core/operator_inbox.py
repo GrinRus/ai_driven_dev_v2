@@ -113,9 +113,7 @@ def _entry_recommendation(
                 work_item=candidate.route.work_item,
                 route=candidate.route,
             )
-    has_completed = any(
-        section.key == "complete" and section.items for section in sections
-    )
+    has_completed = any(section.key == "complete" and section.items for section in sections)
     return OperatorInboxEntryRecommendation(
         action="create-new-intent",
         label="Create new Work Item",
@@ -136,9 +134,7 @@ def resolve_operator_inbox_view(
         project_root=project_root,
         workspace_root=workspace_root,
     )
-    grouped: dict[str, list[OperatorInboxItem]] = {
-        key: [] for key in _SECTION_ORDER
-    }
+    grouped: dict[str, list[OperatorInboxItem]] = {key: [] for key in _SECTION_ORDER}
     for summary in home.work_items:
         dashboard = resolve_operator_dashboard_view(
             workspace_root=workspace_root,
@@ -147,9 +143,7 @@ def resolve_operator_inbox_view(
             project_root=project_root,
         )
         section = _section_for(dashboard)
-        grouped[section].append(
-            _inbox_item(summary=summary, dashboard=dashboard, section=section)
-        )
+        grouped[section].append(_inbox_item(summary=summary, dashboard=dashboard, section=section))
     sections = tuple(
         OperatorInboxSection(
             key=key,

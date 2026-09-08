@@ -114,14 +114,12 @@ def test_invoke_aidd_run_executes_with_runtime_and_work_item(tmp_path: Path) -> 
     assert (working_copy_path / "invoked-scenario.txt").read_text(encoding="utf-8").strip() == (
         "AIDD-TEST-RUNNER-INVOKE"
     )
-    assert (
-        (working_copy_path / "invoked-runtime.txt").read_text(encoding="utf-8").strip()
-        == "generic-cli"
-    )
-    assert (
-        (working_copy_path / "invoked-work-item.txt").read_text(encoding="utf-8").strip()
-        == "WI-123"
-    )
+    assert (working_copy_path / "invoked-runtime.txt").read_text(
+        encoding="utf-8"
+    ).strip() == "generic-cli"
+    assert (working_copy_path / "invoked-work-item.txt").read_text(
+        encoding="utf-8"
+    ).strip() == "WI-123"
 
 
 def test_invoke_aidd_run_includes_stage_bounds_when_requested(tmp_path: Path) -> None:
@@ -161,7 +159,7 @@ def test_invoke_aidd_run_normalizes_config_path_to_absolute(tmp_path: Path, monk
     fake_aidd = tmp_path / "fake-aidd"
     config_path = tmp_path / "configs" / "aidd.example.toml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text("[workspace]\nroot = \".aidd\"\n", encoding="utf-8")
+    config_path.write_text('[workspace]\nroot = ".aidd"\n', encoding="utf-8")
     _write_fake_aidd(fake_aidd, exit_code=0)
     scenario = _build_scenario(runtime_targets=("generic-cli",))
     monkeypatch.chdir(tmp_path)
@@ -249,9 +247,7 @@ def test_run_verification_steps_preserves_partial_transcript_on_failure(
     scenario = _build_scenario(runtime_targets=("generic-cli",))
     scenario = replace(
         scenario,
-        verify=ScenarioCommandSteps(
-            commands=("printf 'first\\n'", "printf 'second\\n'; exit 2")
-        ),
+        verify=ScenarioCommandSteps(commands=("printf 'first\\n'", "printf 'second\\n'; exit 2")),
     )
     aidd_run_result = HarnessAiddRunResult(
         command=("aidd", "run"),

@@ -391,9 +391,7 @@ def parse_qa_report_text(text: str, warnings: tuple[str, ...] = ()) -> QaVerdict
             [match.group(0).upper() for match in _ACCEPTANCE_ID_PATTERN.finditer(text)]
         ),
         known_issues=tuple(
-            item
-            for item in _extract_list_items(known_issue_lines)
-            if not _is_none_marker(item)
+            item for item in _extract_list_items(known_issue_lines) if not _is_none_marker(item)
         ),
         warnings=tuple(local_warnings),
     )

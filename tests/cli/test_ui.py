@@ -5513,12 +5513,20 @@ def test_ui_task_run_returns_conflict_before_background_job(tmp_path: Path) -> N
 @pytest.mark.parametrize("route", ("/api/tasks/run", "/api/tasks/finalize"))
 @pytest.mark.parametrize("missing_field", ("schema_version", "adapter_id"))
 def test_ui_task_mutations_reject_incomplete_manifest_before_background_job(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, route: str, missing_field: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    route: str,
+    missing_field: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _seed_rich_tasklist(workspace_root)
     manifest_path = create_run_manifest(
-        workspace_root, "WI-UI", "run-current", "generic-cli", "implement", {},
+        workspace_root,
+        "WI-UI",
+        "run-current",
+        "generic-cli",
+        "implement",
+        {},
     )
     manifest = json.loads(manifest_path.read_text())
     del manifest[missing_field]
@@ -5534,7 +5542,8 @@ def test_ui_task_mutations_reject_incomplete_manifest_before_background_job(
 
     monkeypatch.setattr(service, "_start_job", _unexpected_job)
     response = service.handle_post(
-        route, {"task_id": "TL-1", "runtime": "generic-cli", "run_id": "run-current"},
+        route,
+        {"task_id": "TL-1", "runtime": "generic-cli", "run_id": "run-current"},
     )
 
     assert missing_field in str(_payload_with_status(response, HTTPStatus.BAD_REQUEST)["error"])

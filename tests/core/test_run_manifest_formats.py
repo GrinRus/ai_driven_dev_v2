@@ -30,7 +30,7 @@ def _tree(root: Path) -> dict[str, bytes | None]:
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        *(('schema_version', value) for value in (_REMOVE, None, True, 1.0, "1", 0, 999)),
+        *(("schema_version", value) for value in (_REMOVE, None, True, 1.0, "1", 0, 999)),
         ("run_id", "other-run"),
         ("work_item_id", "other-work-item"),
         ("runtime_id", None),
@@ -60,7 +60,10 @@ def _tree(root: Path) -> dict[str, bytes | None]:
 )
 @pytest.mark.parametrize("operation", ("reuse", "status", "repair-history", "repair-grant"))
 def test_invalid_manifest_stops_mutation_without_rewriting_state(
-    tmp_path: Path, field: str, value: object, operation: str,
+    tmp_path: Path,
+    field: str,
+    value: object,
+    operation: str,
 ) -> None:
     workspace = tmp_path / ".aidd"
     manifest = create_run_manifest(workspace, "WI-1", "run-1", "generic-cli", "plan", {})
@@ -80,19 +83,31 @@ def test_invalid_manifest_stops_mutation_without_rewriting_state(
             persist_stage_status(workspace, "WI-1", "run-1", "review", "executing")
         elif operation == "repair-history":
             persist_repair_history_entry(
-                workspace, "WI-1", "run-1", "plan",
-                attempt_number=1, trigger="repair", outcome="failed",
+                workspace,
+                "WI-1",
+                "run-1",
+                "plan",
+                attempt_number=1,
+                trigger="repair",
+                outcome="failed",
             )
         else:
             persist_repair_extension_grant(
-                workspace, "WI-1", "run-1", "plan",
+                workspace,
+                "WI-1",
+                "run-1",
+                "plan",
                 grant=RepairExtensionGrant(
-                    work_item_id="WI-1", run_id="run-1", stage="plan",
+                    work_item_id="WI-1",
+                    run_id="run-1",
+                    stage="plan",
                     validator_report_path="workitems/WI-1/stages/plan/validator-report.md",
                     validator_report_sha256="a" * 64,
                     repair_brief_path="workitems/WI-1/stages/plan/repair-brief.md",
-                    repair_brief_sha256="b" * 64, configuration_identity="config-1",
-                    author="operator", authorized_at_utc="2026-09-06T00:00:00Z",
+                    repair_brief_sha256="b" * 64,
+                    configuration_identity="config-1",
+                    author="operator",
+                    authorized_at_utc="2026-09-06T00:00:00Z",
                     reason="One bounded correction.",
                 ),
             )
@@ -112,7 +127,13 @@ def test_current_manifest_round_trip_preserves_nullable_provenance_and_default_a
     resource_root.mkdir()
     shutil.copytree(Path(__file__).parents[2] / "prompt-packs", resource_root / "prompt-packs")
     manifest = create_run_manifest(
-        workspace, "WI-1", "run-1", "generic-cli", "plan", {}, repository_root=resource_root,
+        workspace,
+        "WI-1",
+        "run-1",
+        "generic-cli",
+        "plan",
+        {},
+        repository_root=resource_root,
     )
     payload = load_run_manifest(workspace, "WI-1", "run-1")
     assert payload is not None

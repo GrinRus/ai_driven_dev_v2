@@ -109,9 +109,7 @@ def extract_markdown_table_rows(section_content: str) -> tuple[str, ...]:
             if not cell:
                 continue
             header = (
-                headers[index]
-                if index < len(headers) and headers[index]
-                else f"Column {index + 1}"
+                headers[index] if index < len(headers) and headers[index] else f"Column {index + 1}"
             )
             labeled_cells.append(f"{header}: {cell}")
         if labeled_cells:

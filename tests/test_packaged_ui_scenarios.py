@@ -77,9 +77,7 @@ def test_packaged_ui_runner_continues_after_failure_and_preserves_order() -> Non
 def test_ci_enforces_the_shared_packaged_ui_browser_runner() -> None:
     repository_root = Path(__file__).resolve().parents[1]
     workflow = yaml.safe_load(
-        (repository_root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
-        )
+        (repository_root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     )
     jobs = workflow["jobs"]
     browser_job = jobs["packaged-ui-browser"]

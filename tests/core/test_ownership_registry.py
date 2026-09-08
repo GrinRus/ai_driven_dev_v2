@@ -33,9 +33,7 @@ def test_load_ownership_registry_parses_canonical_rows() -> None:
     )
     assert len(registry.for_stage("qa")) == 13
     assert {
-        row
-        for row in registry.rows
-        if row.ownership_class is OwnershipClass.RUNTIME_CONTENT
+        row for row in registry.rows if row.ownership_class is OwnershipClass.RUNTIME_CONTENT
     } == {
         registry.row_for(f"workitems/<id>/stages/<stage>/{filename}")
         for filename in (

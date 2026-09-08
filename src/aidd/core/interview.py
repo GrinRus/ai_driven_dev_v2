@@ -77,9 +77,7 @@ class AdapterQuestionEvent:
         if not normalized_id:
             raise ValueError("Adapter question event id must not be blank when provided.")
         if _QUESTION_ID_PATTERN.match(normalized_id) is None:
-            raise ValueError(
-                "Adapter question event id must use a stable `Q`-prefixed token."
-            )
+            raise ValueError("Adapter question event id must use a stable `Q`-prefixed token.")
         object.__setattr__(self, "question_id", normalized_id)
 
 
@@ -97,8 +95,7 @@ class InterviewAnswer:
             raise ValueError("Answer question id must not be empty.")
         if _QUESTION_ID_PATTERN.match(normalized_id) is None:
             raise ValueError(
-                "Answer question id must use a stable `Q`-prefixed token "
-                "(for example `Q1`, `Q2`)."
+                "Answer question id must use a stable `Q`-prefixed token (for example `Q1`, `Q2`)."
             )
         object.__setattr__(self, "question_id", normalized_id)
 
@@ -107,9 +104,7 @@ class InterviewAnswer:
             raise ValueError("Answer text must not be empty.")
         object.__setattr__(self, "text", normalized_text)
 
-        normalized_links = tuple(
-            link.strip() for link in self.evidence_links if link.strip()
-        )
+        normalized_links = tuple(link.strip() for link in self.evidence_links if link.strip())
         object.__setattr__(self, "evidence_links", normalized_links)
         normalized_consequence = (self.unblock_consequence or "").strip() or None
         object.__setattr__(self, "unblock_consequence", normalized_consequence)
@@ -366,9 +361,7 @@ def render_questions_markdown(questions: Iterable[InterviewQuestion]) -> str:
         lines.append("- none")
     else:
         for question in ordered:
-            lines.append(
-                f"- `{question.question_id}` `[{question.policy.value}]` {question.text}"
-            )
+            lines.append(f"- `{question.question_id}` `[{question.policy.value}]` {question.text}")
     lines.append("")
     return "\n".join(lines)
 
@@ -536,9 +529,7 @@ def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
         for answer in ordered:
             lines.append(f"- {answer.question_id} [{answer.resolution.value}] {answer.text}")
     evidence = tuple(
-        (answer.question_id, link)
-        for answer in ordered
-        for link in answer.evidence_links
+        (answer.question_id, link) for answer in ordered for link in answer.evidence_links
     )
     consequences = tuple(
         (answer.question_id, answer.unblock_consequence)
@@ -551,8 +542,7 @@ def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
     if consequences:
         lines.extend(("", "## Unblock consequence", ""))
         lines.extend(
-            f"- `{question_id}`: {consequence}"
-            for question_id, consequence in consequences
+            f"- `{question_id}`: {consequence}" for question_id, consequence in consequences
         )
     lines.append("")
     return "\n".join(lines)
@@ -697,9 +687,7 @@ def _merge_questions(
     incoming: Iterable[InterviewQuestion],
 ) -> tuple[InterviewQuestion, ...]:
     merged = list(existing)
-    index_by_question_id = {
-        question.question_id: index for index, question in enumerate(merged)
-    }
+    index_by_question_id = {question.question_id: index for index, question in enumerate(merged)}
 
     for question in incoming:
         existing_index = index_by_question_id.get(question.question_id)
@@ -732,9 +720,7 @@ def _merge_answers(
             text=answer.text,
             resolution=answer.resolution,
             evidence_links=answer.evidence_links or existing_answer.evidence_links,
-            unblock_consequence=(
-                answer.unblock_consequence or existing_answer.unblock_consequence
-            ),
+            unblock_consequence=(answer.unblock_consequence or existing_answer.unblock_consequence),
         )
 
     return tuple(merged)
@@ -761,9 +747,7 @@ def persist_questions_document(
         if stage_output_questions_markdown is not None
         else ()
     )
-    taken_ids = {
-        question.question_id for question in (*existing_questions, *staged_questions)
-    }
+    taken_ids = {question.question_id for question in (*existing_questions, *staged_questions)}
     event_questions = _questions_from_events(events=adapter_question_events, taken_ids=taken_ids)
     merged = _merge_questions(
         existing=existing_questions,

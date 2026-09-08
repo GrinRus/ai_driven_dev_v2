@@ -34,9 +34,7 @@ class StageSummaryOptions:
 
 def _validate_stage_name(stage: str) -> None:
     if not is_valid_stage(stage):
-        raise typer.BadParameter(
-            f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}"
-        )
+        raise typer.BadParameter(f"Unknown stage '{stage}'. Expected one of: {', '.join(STAGES)}")
 
 
 def show_stage_questions(options: StageQuestionsOptions) -> None:
@@ -53,12 +51,7 @@ def show_stage_questions(options: StageQuestionsOptions) -> None:
 
     resolved_ids: set[str] = set()
     answers_path = (
-        options.root
-        / "workitems"
-        / options.work_item
-        / "stages"
-        / options.stage
-        / "answers.md"
+        options.root / "workitems" / options.work_item / "stages" / options.stage / "answers.md"
     )
     if answers_path.exists():
         resolved_ids = set(

@@ -134,8 +134,7 @@ def test_validate_semantic_outputs_requires_plan_dependency_lists_and_risk_mitig
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each `Risks` item must include mitigation direction "
-                "(for example `mitigation:`)."
+                "Each `Risks` item must include mitigation direction (for example `mitigation:`)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -296,8 +295,7 @@ def test_validate_semantic_outputs_requires_each_nested_plan_risk_to_include_mit
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each `Risks` item must include mitigation direction "
-                "(for example `mitigation:`)."
+                "Each `Risks` item must include mitigation direction (for example `mitigation:`)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -400,8 +398,7 @@ def test_validate_semantic_outputs_requires_each_subheaded_plan_risk_to_include_
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each `Risks` item must include mitigation direction "
-                "(for example `mitigation:`)."
+                "Each `Risks` item must include mitigation direction (for example `mitigation:`)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -437,8 +434,7 @@ def test_validate_semantic_outputs_flags_invalid_plan_fixture_bundle() -> None:
         ValidationFinding(
             code=INCOMPLETE_SECTION_CODE,
             message=(
-                "Each `Risks` item must include mitigation direction "
-                "(for example `mitigation:`)."
+                "Each `Risks` item must include mitigation direction (for example `mitigation:`)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -492,8 +488,7 @@ def test_plan_scope_rejects_live_shaped_out_of_scope_helper(tmp_path: Path) -> N
         work_item,
         _scoped_plan(
             milestone=(
-                "Update `src/compose.ts` and create a shared helper in "
-                "`src/utils/error.ts`."
+                "Update `src/compose.ts` and create a shared helper in `src/utils/error.ts`."
             ),
             strategy="Modify `src/hono-base.ts` to consume the new helper.",
         ),

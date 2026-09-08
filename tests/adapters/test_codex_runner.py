@@ -47,8 +47,8 @@ def test_assemble_command_includes_stage_workspace_brief_and_prompt_packs(tmp_pa
 
     expected_workspace = context.workspace_root.resolve(strict=False).as_posix()
     expected_stage_brief = (
-        context.workspace_root / context.stage_brief_path
-    ).resolve(strict=False).as_posix()
+        (context.workspace_root / context.stage_brief_path).resolve(strict=False).as_posix()
+    )
     expected_prompt_1 = (tmp_path / context.prompt_pack_paths[0]).resolve(strict=False).as_posix()
     expected_prompt_2 = (tmp_path / context.prompt_pack_paths[1]).resolve(strict=False).as_posix()
 
@@ -96,9 +96,10 @@ def test_build_execution_environment_sets_runtime_metadata(tmp_path: Path) -> No
     assert env["AIDD_WORK_ITEM"] == "WI-123"
     assert env["AIDD_RUN_ID"] == "run-001"
     assert env["AIDD_WORKSPACE_ROOT"] == context.workspace_root.resolve(strict=False).as_posix()
-    assert env["AIDD_STAGE_BRIEF_PATH"] == (
-        context.workspace_root / context.stage_brief_path
-    ).resolve(strict=False).as_posix()
+    assert (
+        env["AIDD_STAGE_BRIEF_PATH"]
+        == (context.workspace_root / context.stage_brief_path).resolve(strict=False).as_posix()
+    )
     assert env["AIDD_PROMPT_PACK_PATHS"] == os.pathsep.join(
         (tmp_path / path).resolve(strict=False).as_posix() for path in context.prompt_pack_paths
     )

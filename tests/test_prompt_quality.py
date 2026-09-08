@@ -39,9 +39,7 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
 
     normalized_prompt = " ".join(prompt_text.split())
     assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
-    assert (
-        "Never create, edit, delete, or replace either record" in normalized_prompt
-    )
+    assert "Never create, edit, delete, or replace either record" in normalized_prompt
     assert "AIDD determines `succeeded` after validation" in prompt_text
     assert "Do not treat the previous failed validator report as a new result" in prompt_text
     assert "When repairing a draft `validator-report.md`" not in prompt_text
@@ -56,9 +54,7 @@ def test_stage_repair_prompt_uses_only_registered_validator_protocol_vocabulary(
         encoding="utf-8"
     )
     registered_codes = {spec.code for spec in VALIDATOR_FINDING_CODES}
-    prompt_codes = set(
-        re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", prompt_text)
-    )
+    prompt_codes = set(re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", prompt_text))
     assert prompt_codes <= registered_codes
     assert "When repairing a draft `validator-report.md`" not in prompt_text
     assert "legacy" not in prompt_text
@@ -67,26 +63,25 @@ def test_stage_repair_prompt_uses_only_registered_validator_protocol_vocabulary(
 @pytest.mark.parametrize("stage", STAGES)
 @pytest.mark.parametrize("mode", ("repair", "intervention"))
 def test_retry_prompts_preserve_aidd_and_operator_ownership(stage: str, mode: str) -> None:
-    prompt = (Path("prompt-packs") / "stages" / stage / f"{mode}.md").read_text(
-        encoding="utf-8"
-    )
+    prompt = (Path("prompt-packs") / "stages" / stage / f"{mode}.md").read_text(encoding="utf-8")
     assert "Do not write `stage-result.md` or `validator-report.md`" in prompt
     assert "AIDD" in prompt and "terminal status" in prompt
     assert "repair-brief.md" in prompt and "answers.md" in prompt
     assert "blocking question" in prompt.lower()
     assert "stable QID" in prompt
     for stale_action in (
-        "update `stage-result.md`", "set `stage-result.md`", "Re-copy the `stage-result.md`",
-        "When repairing a draft `validator-report.md`", "write `# Answers",
+        "update `stage-result.md`",
+        "set `stage-result.md`",
+        "Re-copy the `stage-result.md`",
+        "When repairing a draft `validator-report.md`",
+        "write `# Answers",
     ):
         assert stale_action not in prompt
 
 
 @pytest.mark.parametrize("stage", STAGES)
 def test_stage_run_prompts_make_interview_syntax_strict(stage: str) -> None:
-    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(encoding="utf-8")
 
     assert "## Interview document syntax" in run_prompt
     assert "`- Q1 [blocking] text`" in run_prompt
@@ -104,9 +99,7 @@ def test_stage_run_prompts_make_interview_syntax_strict(stage: str) -> None:
 
 @pytest.mark.parametrize("stage", STAGES)
 def test_stage_run_prompts_assign_terminal_records_to_aidd(stage: str) -> None:
-    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(encoding="utf-8")
 
     assert "## Runtime-authored outputs (always write)" in run_prompt
     assert "## AIDD-generated records (do not write)" in run_prompt
@@ -121,15 +114,13 @@ def test_stage_run_prompts_assign_terminal_records_to_aidd(stage: str) -> None:
 
 @pytest.mark.parametrize("stage", STAGES)
 def test_stage_intervention_prompts_protect_aidd_records(stage: str) -> None:
-    intervention_prompt = (
-        Path("prompt-packs") / "stages" / stage / "intervention.md"
-    ).read_text(encoding="utf-8")
+    intervention_prompt = (Path("prompt-packs") / "stages" / stage / "intervention.md").read_text(
+        encoding="utf-8"
+    )
     normalized_prompt = " ".join(intervention_prompt.split())
 
     assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
-    assert (
-        "Never create, edit, delete, or replace either record" in normalized_prompt
-    )
+    assert "Never create, edit, delete, or replace either record" in normalized_prompt
     assert "AIDD owns their canonical status, validation, history, and publication" in (
         normalized_prompt
     )
@@ -142,22 +133,19 @@ def test_stage_intervention_prompts_protect_aidd_records(stage: str) -> None:
     )
     body_without_boundary = normalized_prompt.replace(safe_boundary, "")
     for verb in ("write", "update", "create", "edit", "delete", "replace"):
-        assert re.search(
-            rf"(?i)\b{verb}\s+`(?:stage-result|validator-report)\.md`",
-            body_without_boundary,
-        ) is None
+        assert (
+            re.search(
+                rf"(?i)\b{verb}\s+`(?:stage-result|validator-report)\.md`",
+                body_without_boundary,
+            )
+            is None
+        )
 
 
 def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
-    questions_contract = Path("contracts/documents/questions.md").read_text(
-        encoding="utf-8"
-    )
-    answers_contract = Path("contracts/documents/answers.md").read_text(
-        encoding="utf-8"
-    )
-    native_prompt = Path("src/aidd/adapters/native_prompt.py").read_text(
-        encoding="utf-8"
-    )
+    questions_contract = Path("contracts/documents/questions.md").read_text(encoding="utf-8")
+    answers_contract = Path("contracts/documents/answers.md").read_text(encoding="utf-8")
+    native_prompt = Path("src/aidd/adapters/native_prompt.py").read_text(encoding="utf-8")
 
     for text in (questions_contract, answers_contract):
         assert "Canonical" in text
@@ -177,9 +165,7 @@ def test_plan_run_prompt_forbids_self_answered_downstream_policy() -> None:
     run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
 
     assert "Planning may ask downstream clarification questions" in run_prompt
-    assert "must not invent\n  `[resolved]` answers for missing operator decisions" in (
-        run_prompt
-    )
+    assert "must not invent\n  `[resolved]` answers for missing operator decisions" in (run_prompt)
     assert "If no operator answer is present" in run_prompt
 
 
@@ -187,9 +173,7 @@ def test_plan_run_prompt_forbids_self_answered_downstream_policy() -> None:
 def test_stage_run_and_system_prompts_forbid_model_authored_repair_brief(
     stage: str,
 ) -> None:
-    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(encoding="utf-8")
     system_prompt = (Path("prompt-packs") / "stages" / stage / "system.md").read_text(
         encoding="utf-8"
     )
@@ -203,12 +187,8 @@ def test_stage_run_and_system_prompts_forbid_model_authored_repair_brief(
 def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     run_prompt = Path("prompt-packs/stages/idea/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/idea/repair.md").read_text(encoding="utf-8")
-    system_prompt = Path("prompt-packs/stages/idea/system.md").read_text(
-        encoding="utf-8"
-    )
-    interview_prompt = Path("prompt-packs/stages/idea/interview.md").read_text(
-        encoding="utf-8"
-    )
+    system_prompt = Path("prompt-packs/stages/idea/system.md").read_text(encoding="utf-8")
+    interview_prompt = Path("prompt-packs/stages/idea/interview.md").read_text(encoding="utf-8")
     contract = Path("contracts/stages/idea.md").read_text(encoding="utf-8")
 
     assert "avoid unsupported absolute claims" in run_prompt
@@ -222,9 +202,7 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     assert "prose-only text is invalid" in run_prompt
     assert "do not put indented or nested bullets under a question" in run_prompt
     assert "Prose such as `No open questions.` is still invalid" in repair_prompt
-    assert (
-        "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt
-    )
+    assert "`SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`" in repair_prompt
     for text in (run_prompt, repair_prompt, system_prompt, interview_prompt, contract):
         assert "blocking answers" in text
         assert "interview answers" in text
@@ -282,9 +260,7 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
 def test_qa_prompts_do_not_downgrade_for_isolated_optional_broad_suite_failures() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
-    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(
-        encoding="utf-8"
-    )
+    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(encoding="utf-8")
     contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
 
     for text in (run_prompt, repair_prompt, system_prompt, contract):
@@ -309,9 +285,7 @@ def test_qa_prompts_keep_evidence_definitions_flat_and_outcome_bound() -> None:
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:
     run_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
-    system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
-        encoding="utf-8"
-    )
+    system_prompt = Path("prompt-packs/stages/review/system.md").read_text(encoding="utf-8")
 
     assert (
         "When present, selected task evidence, acceptance criteria, and "
@@ -330,16 +304,10 @@ def test_review_prompt_respects_authored_verification_boundary() -> None:
 
 
 def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> None:
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
-    review_repair_prompt = Path("prompt-packs/stages/review/repair.md").read_text(
-        encoding="utf-8"
-    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+    review_repair_prompt = Path("prompt-packs/stages/review/repair.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
-    qa_repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(
-        encoding="utf-8"
-    )
+    qa_repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
 
     assert "audit the\n   implementation against task-level details" in review_prompt
     assert "planned risk mitigations" in review_prompt
@@ -360,16 +328,10 @@ def test_review_and_qa_prompts_cross_check_tasklist_and_plan_obligations() -> No
 
 
 def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() -> None:
-    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
-    implement_contract = Path("contracts/stages/implement.md").read_text(
-        encoding="utf-8"
-    )
+    implement_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
     review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
     qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
 
@@ -391,26 +353,16 @@ def test_implement_review_and_qa_require_shared_surface_blast_radius_evidence() 
         assert "API compatibility" in text
         assert "docs consistency" in text
 
-    assert "explicitly mark the unchecked sibling surface as a residual risk" in (
-        implement_prompt
-    )
-    assert "Record a finding when implementation evidence does not cover" in (
-        review_prompt
-    )
+    assert "explicitly mark the unchecked sibling surface as a residual risk" in (implement_prompt)
+    assert "Record a finding when implementation evidence does not cover" in (review_prompt)
     assert "Missing help/usage, docs consistency, API compatibility" in qa_prompt
     assert "must force `QA verdict: not-ready`" in qa_contract
 
 
 def test_implement_stage_result_next_action_stays_flow_aware() -> None:
-    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
-        encoding="utf-8"
-    )
-    implement_contract = Path("contracts/stages/implement.md").read_text(
-        encoding="utf-8"
-    )
-    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(encoding="utf-8")
+    implement_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
     implement_repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
         encoding="utf-8"
     )
@@ -426,49 +378,33 @@ def test_implement_stage_result_next_action_stays_flow_aware() -> None:
 
     assert "implement -> review -> qa" in stage_result_contract
     assert "implement -> review -> qa" in implement_contract
-    assert "`implement` hands off to `review`, never\n  directly to `qa`" in (
-        implement_prompt
-    )
+    assert "`implement` hands off to `review`, never\n  directly to `qa`" in (implement_prompt)
     assert "downstream-order drift" in implement_repair_prompt
 
 
 def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
-    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
-        encoding="utf-8"
-    )
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(encoding="utf-8")
     research_contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
-    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(
-        encoding="utf-8"
-    )
+    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(encoding="utf-8")
     research_repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
         encoding="utf-8"
     )
     plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
     plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
-    plan_repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+    plan_repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(encoding="utf-8")
+    review_spec_contract = Path("contracts/stages/review-spec.md").read_text(encoding="utf-8")
+    review_spec_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(encoding="utf-8")
+    review_spec_repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
         encoding="utf-8"
     )
-    review_spec_contract = Path("contracts/stages/review-spec.md").read_text(
-        encoding="utf-8"
-    )
-    review_spec_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
-        encoding="utf-8"
-    )
-    review_spec_repair_prompt = Path(
-        "prompt-packs/stages/review-spec/repair.md"
-    ).read_text(encoding="utf-8")
-    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
-        encoding="utf-8"
-    )
-    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
     tasklist_repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
         encoding="utf-8"
     )
-    live_scenario = Path(
-        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
-    ).read_text(encoding="utf-8")
+    live_scenario = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml").read_text(
+        encoding="utf-8"
+    )
 
     assert "`research` -> `plan`" in stage_result_contract
     assert "`plan` -> `review-spec`" in stage_result_contract
@@ -502,18 +438,10 @@ def test_middle_stage_result_next_actions_stay_flow_aware() -> None:
 
 
 def test_stage_result_prompts_forbid_stale_placeholder_append() -> None:
-    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(
-        encoding="utf-8"
-    )
-    stage_preparation = Path("src/aidd/core/stage_preparation.py").read_text(
-        encoding="utf-8"
-    )
-    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(
-        encoding="utf-8"
-    )
-    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
+    stage_result_contract = Path("contracts/documents/stage-result.md").read_text(encoding="utf-8")
+    stage_preparation = Path("src/aidd/core/stage_preparation.py").read_text(encoding="utf-8")
+    research_prompt = Path("prompt-packs/stages/research/run.md").read_text(encoding="utf-8")
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
 
     for text in (stage_result_contract, stage_preparation):
         assert "Stage not run yet" in text
@@ -525,21 +453,11 @@ def test_stage_result_prompts_forbid_stale_placeholder_append() -> None:
 
 
 def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
-    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
-    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
-        encoding="utf-8"
-    )
-    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
-    implement_contract = Path("contracts/stages/implement.md").read_text(
-        encoding="utf-8"
-    )
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    implement_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
     review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
@@ -565,17 +483,13 @@ def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
         assert "internal-only" in text or "internal solely" in text
 
     assert "do not plan a concrete helper/module path as private" in tasklist_prompt
-    assert "before describing that helper as private or internal-only" in (
-        tasklist_contract
-    )
+    assert "before describing that helper as private or internal-only" in (tasklist_contract)
 
 
 def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
     contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
     run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
-    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
-        encoding="utf-8"
-    )
+    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(encoding="utf-8")
 
     assert "use stable ids such as `M1`, `M2`" in contract
     assert "tie checks to milestone ids such as `M1`" in contract
@@ -587,13 +501,9 @@ def test_plan_prompts_require_milestone_ids_and_verification_mapping() -> None:
 
 def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
     plan_contract = Path("contracts/stages/plan.md").read_text(encoding="utf-8")
-    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(
-        encoding="utf-8"
-    )
+    tasklist_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
     plan_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
-    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
+    tasklist_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
 
     for text in (plan_contract, tasklist_contract, plan_prompt, tasklist_prompt):
         normalized = " ".join(text.split())
@@ -602,9 +512,7 @@ def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
         assert "flags, path lists, environment variables" in normalized
         assert "coverage/cache-disabling options" in text
         assert "`--coverage.enabled=false`" in text
-        assert "do not replace them with" in normalized or "do not rewrite them as" in (
-            normalized
-        )
+        assert "do not replace them with" in normalized or "do not rewrite them as" in (normalized)
         assert "Optional broad checks outside the authored verification boundary" in text
         assert (
             "not become required pass criteria" in normalized
@@ -627,18 +535,12 @@ def test_implement_prompt_keeps_authored_command_and_outcome_in_one_code_span() 
 
 def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None:
     contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
-    document_contract = Path("contracts/documents/tasklist.md").read_text(
+    document_contract = Path("contracts/documents/tasklist.md").read_text(encoding="utf-8")
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
+    scenario = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml").read_text(
         encoding="utf-8"
     )
-    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
-        encoding="utf-8"
-    )
-    scenario = Path(
-        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
-    ).read_text(encoding="utf-8")
 
     for text in (contract, document_contract, run_prompt, repair_prompt, scenario):
         normalized = " ".join(text.split())
@@ -655,22 +557,14 @@ def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None
     assert "empty `- TL-1:`" in normalized_run
     assert "same top-level mapping bullet" in normalized_repair
     assert "only commands in nested bullets" in normalized_repair
-    assert "dedicated per-task `Verification notes` entries" in " ".join(
-        document_contract.split()
-    )
+    assert "dedicated per-task `Verification notes` entries" in " ".join(document_contract.split())
 
 
 def test_tasklist_contract_and_prompts_require_rich_task_cards() -> None:
-    document_contract = Path("contracts/documents/tasklist.md").read_text(
-        encoding="utf-8"
-    )
+    document_contract = Path("contracts/documents/tasklist.md").read_text(encoding="utf-8")
     stage_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
-    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
 
     for text in (document_contract, stage_contract, run_prompt, repair_prompt):
         assert "Outcome" in text
@@ -749,9 +643,7 @@ def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None
         assert "task-local" in text or "task `In scope`" in text
 
     run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
-    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
-        encoding="utf-8"
-    )
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
     assert "Do not propose an out-of-bound preferred path" in run_prompt
     assert "do not edit, broaden, or reinterpret that context document" in repair_prompt
 
@@ -759,12 +651,12 @@ def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None
 def test_tasklist_contract_freezes_semantics_before_presentation_normalization() -> None:
     document_contract = Path("contracts/documents/tasklist.md").read_text(encoding="utf-8")
     stage_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
-    safe_fixture = Path(
-        "contracts/examples/tasklist/variants/safe-presentation.md"
-    ).read_text(encoding="utf-8")
-    invalid_fixture = Path(
-        "contracts/examples/tasklist/variants/invalid-compact.md"
-    ).read_text(encoding="utf-8")
+    safe_fixture = Path("contracts/examples/tasklist/variants/safe-presentation.md").read_text(
+        encoding="utf-8"
+    )
+    invalid_fixture = Path("contracts/examples/tasklist/variants/invalid-compact.md").read_text(
+        encoding="utf-8"
+    )
 
     for text in (document_contract, stage_contract):
         assert "Required semantics versus Markdown presentation" in text
@@ -802,23 +694,15 @@ def test_plan_contract_and_prompts_enforce_canonical_allowed_scope() -> None:
         assert "helper" in text
 
     run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
-    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
-        encoding="utf-8"
-    )
+    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(encoding="utf-8")
     assert "Do not propose an out-of-bound preferred helper" in run_prompt
-    assert "keep a small private helper inside allowed files" in " ".join(
-        repair_prompt.split()
-    )
+    assert "keep a small private helper inside allowed files" in " ".join(repair_prompt.split())
     assert "do not edit, broaden, or reinterpret it" in repair_prompt
 
 
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
-    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
 
     for text in (run_prompt, repair_prompt):
         assert "stage-brief.md" in text
@@ -833,9 +717,7 @@ def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
 def test_qa_prompt_respects_selected_design_constraints() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
-    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(
-        encoding="utf-8"
-    )
+    system_prompt = Path("prompt-packs/stages/qa/system.md").read_text(encoding="utf-8")
 
     assert "Intentional design constraints selected by the authored task" in run_prompt
     assert "not residual release risks by themselves" in run_prompt
@@ -846,15 +728,9 @@ def test_qa_prompt_respects_selected_design_constraints() -> None:
 
 
 def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes() -> None:
-    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
-    review_system_prompt = Path("prompt-packs/stages/review/system.md").read_text(
-        encoding="utf-8"
-    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+    review_system_prompt = Path("prompt-packs/stages/review/system.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
     qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
@@ -865,9 +741,7 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
     assert "`git status --short --untracked-files=all` and" in implement_prompt
     assert "`git diff --name-only`" in implement_prompt
     assert "Do not leave lockfiles, dependency manifests" in implement_prompt
-    assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in (
-        implement_prompt
-    )
+    assert "`git stash`, `git reset`, `git checkout --`, or `git restore`" in (implement_prompt)
     assert "Newly created untracked source files under the" in review_prompt
     assert "allowed write scope are part of the AIDD deliverable" in review_prompt
     assert "Do not reject solely because such a file is absent from `git diff --stat`" in (
@@ -888,19 +762,11 @@ def test_review_and_implement_prompts_treat_untracked_files_as_workspace_changes
 
 
 def test_setup_workspace_prompts_and_contracts_protect_prepared_workspace() -> None:
-    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
-    implement_repair = Path("prompt-packs/stages/implement/repair.md").read_text(
-        encoding="utf-8"
-    )
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
+    implement_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    implement_repair = Path("prompt-packs/stages/implement/repair.md").read_text(encoding="utf-8")
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
-    implement_contract = Path("contracts/stages/implement.md").read_text(
-        encoding="utf-8"
-    )
+    implement_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
     review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
     qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
 
@@ -953,12 +819,8 @@ def test_setup_workspace_prompts_and_contracts_protect_prepared_workspace() -> N
 
 
 def test_review_and_qa_prompts_require_post_command_residue_truthfulness() -> None:
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
-    review_repair = Path("prompt-packs/stages/review/repair.md").read_text(
-        encoding="utf-8"
-    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
+    review_repair = Path("prompt-packs/stages/review/repair.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     qa_repair = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
     review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
@@ -985,16 +847,12 @@ def test_review_and_qa_prompts_require_post_command_residue_truthfulness() -> No
 
 def test_qa_prompts_require_ready_proceed_ignored_residue_evidence() -> None:
     run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
-    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(
-        encoding="utf-8"
-    )
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
     contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
-    document_contract = Path("contracts/documents/qa-report.md").read_text(
+    document_contract = Path("contracts/documents/qa-report.md").read_text(encoding="utf-8")
+    scenario = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml").read_text(
         encoding="utf-8"
     )
-    scenario = Path(
-        "harness/scenarios/live/hono-non-error-throw-handling.yaml"
-    ).read_text(encoding="utf-8")
 
     for text in (run_prompt, repair_prompt, contract, document_contract, scenario):
         normalized = " ".join(text.split())
@@ -1011,12 +869,8 @@ def test_qa_prompts_require_ready_proceed_ignored_residue_evidence() -> None:
 
 
 def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> None:
-    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(encoding="utf-8")
     contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
 
     for text in (run_prompt, repair_prompt, contract):
@@ -1031,12 +885,8 @@ def test_research_prompts_and_contracts_clean_ignored_verification_residue() -> 
 
 
 def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
-    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/research/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/research/repair.md").read_text(encoding="utf-8")
     contract = Path("contracts/stages/research.md").read_text(encoding="utf-8")
 
     for text in (run_prompt, repair_prompt, contract):
@@ -1074,9 +924,7 @@ def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> No
 
 
 def test_review_and_qa_use_setup_workspace_baseline_context() -> None:
-    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(
-        encoding="utf-8"
-    )
+    review_prompt = Path("prompt-packs/stages/review/run.md").read_text(encoding="utf-8")
     qa_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
     review_contract = Path("contracts/stages/review.md").read_text(encoding="utf-8")
     qa_contract = Path("contracts/stages/qa.md").read_text(encoding="utf-8")
@@ -1226,12 +1074,8 @@ def test_reusable_runtime_surface_has_no_live_target_or_eval_vocabulary() -> Non
 
 
 def test_review_spec_prompts_require_exact_decision_heading() -> None:
-    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(encoding="utf-8")
 
     assert "- `## Decision`" in run_prompt
     assert "sign-off status under `## Decision`" in run_prompt
@@ -1244,12 +1088,8 @@ def test_review_spec_prompts_require_exact_decision_heading() -> None:
 
 
 def test_review_spec_prompts_require_exact_readiness_vocabulary() -> None:
-    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(encoding="utf-8")
 
     assert "exactly one top-level bullet" in run_prompt
     assert "`ready`, `ready-with-conditions`, or `not-ready`" in run_prompt
@@ -1262,12 +1102,8 @@ def test_review_spec_prompts_require_exact_readiness_vocabulary() -> None:
 
 
 def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> None:
-    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(encoding="utf-8")
 
     assert "explicit `Severity`, `Evidence`, and `Rationale` text" in run_prompt
     assert "Severity: medium" in run_prompt
@@ -1287,15 +1123,9 @@ def test_review_spec_prompt_requires_issue_severity_and_rationale_shape() -> Non
 
 
 def test_review_spec_prompts_require_direct_evidence_and_reconciliation() -> None:
-    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(
-        encoding="utf-8"
-    )
-    contract = Path("contracts/documents/review-spec-report.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/review-spec/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/review-spec/repair.md").read_text(encoding="utf-8")
+    contract = Path("contracts/documents/review-spec-report.md").read_text(encoding="utf-8")
 
     assert "`critical` and `high` issues must cite direct evidence" in run_prompt
     assert "Do not write unsupported claims such as `source inspection shows`" in run_prompt
@@ -1309,12 +1139,8 @@ def test_review_spec_prompts_require_direct_evidence_and_reconciliation() -> Non
 
 
 def test_implement_prompts_require_executable_verification_evidence() -> None:
-    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(encoding="utf-8")
 
     assert "outcome claim is invalid unless the same bullet" in run_prompt
     assert "executable/check evidence" in run_prompt
@@ -1366,8 +1192,7 @@ def test_implement_prompt_requires_compatibility_consumers_and_clean_target_diff
     assert "`uv run pytest --collect-only -q`" in run_prompt
     assert "resolve any import or collection failure before handoff" in normalized
     assert (
-        "inspect `git diff --name-only` and restore tool-generated `uv.lock` changes"
-        in normalized
+        "inspect `git diff --name-only` and restore tool-generated `uv.lock` changes" in normalized
     )
     assert (
         "dependency or lockfile updates are allowed only when the selected task explicitly"
@@ -1376,9 +1201,7 @@ def test_implement_prompt_requires_compatibility_consumers_and_clean_target_diff
 
 
 def test_implement_prompt_requires_deterministic_async_test_cleanup() -> None:
-    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
 
     assert "Async test resource cleanup" in run_prompt
     assert "async generator or iterator" in run_prompt
@@ -1420,19 +1243,13 @@ def test_implement_prompts_enforce_selected_task_execution_boundary() -> None:
 
 
 def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> None:
-    document_contract = Path(
-        "contracts/documents/implementation-report.md"
-    ).read_text(encoding="utf-8")
+    document_contract = Path("contracts/documents/implementation-report.md").read_text(
+        encoding="utf-8"
+    )
     stage_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
-    system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(
-        encoding="utf-8"
-    )
-    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
-        encoding="utf-8"
-    )
-    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
-        encoding="utf-8"
-    )
+    system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(encoding="utf-8")
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(encoding="utf-8")
 
     for text in (document_contract, stage_contract, system_prompt, run_prompt):
         normalized = text.lower()
@@ -1453,9 +1270,7 @@ def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> No
 
 
 def test_implement_evidence_contract_does_not_mine_cross_task_prose_ids() -> None:
-    context_module = Path("src/aidd/validators/evidence_context.py").read_text(
-        encoding="utf-8"
-    )
+    context_module = Path("src/aidd/validators/evidence_context.py").read_text(encoding="utf-8")
 
     assert "Acceptance criteria" in context_module
     assert "without mining prose references" in context_module

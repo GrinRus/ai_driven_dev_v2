@@ -160,9 +160,9 @@ def validate_runtime_selectors(
                 f"Runtime {runtime_id} does not support typed selector {selector.value!r}."
             )
         if execution_mode not in definition.selector_execution_modes:
-            supported = ", ".join(
-                mode.value for mode in definition.selector_execution_modes
-            ) or "none"
+            supported = (
+                ", ".join(mode.value for mode in definition.selector_execution_modes) or "none"
+            )
             raise ValueError(
                 f"Runtime selector {selector.value!r} is not supported for runtime "
                 f"{runtime_id} execution mode {execution_mode.value!r}. "

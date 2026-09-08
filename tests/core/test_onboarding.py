@@ -235,9 +235,7 @@ def test_onboarding_create_validates_project_set_before_writing(tmp_path: Path) 
             raw_project_root="project",
             work_item="WI-PARTIAL",
             request_text="This must not create partial onboarding state.",
-            project_set=(
-                OnboardingProjectDeclaration(id="outside", root=outside),
-            ),
+            project_set=(OnboardingProjectDeclaration(id="outside", root=outside),),
         )
 
     assert not (project_root / ".aidd").exists()

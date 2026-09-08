@@ -19,9 +19,8 @@ def test_document_canvas_is_primary_and_evidence_inspector_is_conditional() -> N
         "{inspectorDecisionValue: groups.hasDecisionValue})" in artifacts
     )
     assert (
-        'if (!resolveStudioEvidenceVisibility('
-        '{inspectorDecisionValue: groups.hasDecisionValue}).inspector) return "";'
-        in artifacts
+        "if (!resolveStudioEvidenceVisibility("
+        '{inspectorDecisionValue: groups.hasDecisionValue}).inspector) return "";' in artifacts
     )
     assert "hierarchy-primary document-canvas" in artifacts
     assert "hierarchy-supporting evidence-inspector" in artifacts

@@ -305,9 +305,7 @@ def load_remediation_status(
         raise ValueError("Remediation status requires a stale_stages list.")
     return RemediationStatus(
         run_id=run_id,
-        stale_stages=tuple(
-            _stale_from_payload(item) for item in payload["stale_stages"]
-        ),
+        stale_stages=tuple(_stale_from_payload(item) for item in payload["stale_stages"]),
         requests=requests,
     )
 

@@ -79,9 +79,8 @@ def placeholder_outside_inline_code_is_content(
     text: str,
     placeholder_match: re.Match[str],
 ) -> bool:
-    if (
-        placeholder_match.group(0) == "..."
-        and not is_standalone_ellipsis_placeholder(text, placeholder_match)
+    if placeholder_match.group(0) == "..." and not is_standalone_ellipsis_placeholder(
+        text, placeholder_match
     ):
         return False
     if is_negated_placeholder_example_line(text, placeholder_match):

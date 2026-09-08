@@ -138,14 +138,12 @@ def test_write_command_transcripts_persists_all_step_transcripts(tmp_path: Path)
         duration_seconds=0.25,
     )
 
-    install_path, setup_path, run_path, verify_path, teardown_path = (
-        write_command_transcripts(
-            layout=layout,
-            setup_result=setup_result,
-            aidd_run_result=aidd_run_result,
-            verification_result=verification_result,
-            teardown_result=teardown_result,
-        )
+    install_path, setup_path, run_path, verify_path, teardown_path = write_command_transcripts(
+        layout=layout,
+        setup_result=setup_result,
+        aidd_run_result=aidd_run_result,
+        verification_result=verification_result,
+        teardown_result=teardown_result,
     )
 
     install_payload = json.loads(install_path.read_text(encoding="utf-8"))

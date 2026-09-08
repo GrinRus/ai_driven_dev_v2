@@ -368,9 +368,7 @@ def _qwen_live_result(
         run_result = _captured_run_result(
             capture=session.capture,
             exit_code=None,
-            exit_classification=(
-                state.terminal_classification or QwenExitClassification.DENIED
-            ),
+            exit_classification=(state.terminal_classification or QwenExitClassification.DENIED),
         )
         return LiveTransportResult(
             run_result=run_result,
@@ -398,12 +396,8 @@ def _qwen_live_result(
         details=f"qwen-live: {run_result.exit_classification.value}",
         runtime_jsonl_path=events_path if events_path.exists() else None,
         events_jsonl_path=events_path if events_path.exists() else None,
-        operator_requests_path=(
-            broker.requests_path if broker.requests_path.exists() else None
-        ),
-        operator_decisions_path=(
-            broker.decisions_path if broker.decisions_path.exists() else None
-        ),
+        operator_requests_path=(broker.requests_path if broker.requests_path.exists() else None),
+        operator_decisions_path=(broker.decisions_path if broker.decisions_path.exists() else None),
     )
 
 

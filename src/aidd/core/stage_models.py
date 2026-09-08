@@ -187,9 +187,7 @@ class AdapterExecutionOutcome:
     ) -> None:
         if status is None:
             resolved_status = (
-                AdapterExecutionStatus.SUCCEEDED
-                if succeeded
-                else AdapterExecutionStatus.FAILED
+                AdapterExecutionStatus.SUCCEEDED if succeeded else AdapterExecutionStatus.FAILED
             )
         else:
             resolved_status = (

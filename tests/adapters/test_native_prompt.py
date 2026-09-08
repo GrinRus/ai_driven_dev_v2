@@ -26,18 +26,13 @@ _PROTECTED_RECORD_MUTATION = re.compile(
 
 def _without_protected_record_boundaries(prompt: str) -> str:
     """Remove expected negative rules before checking for contradictory mutations."""
-    safe_prefixes = (
-        "Never create, edit, delete, or replace either record",
-    )
+    safe_prefixes = ("Never create, edit, delete, or replace either record",)
     negative_boundary = re.compile(
         r"(?i)\bdo not write\b[^.`\n]*`(?:stage-result|validator-report)\.md`[^.\n]*(?:[.;]|$)"
     )
     lines: list[str] = []
     for line in prompt.splitlines():
-        if any(
-            line.strip().removeprefix("- ").startswith(prefix)
-            for prefix in safe_prefixes
-        ):
+        if any(line.strip().removeprefix("- ").startswith(prefix) for prefix in safe_prefixes):
             continue
         lines.append(negative_boundary.sub("", line))
     return "\n".join(lines)
@@ -49,9 +44,9 @@ def test_protected_record_mutation_matcher_detects_reintroduced_update() -> None
         "Update `stage-result.md` to reflect the repaired outcome."
     )
 
-    assert _PROTECTED_RECORD_MUTATION.findall(
-        _without_protected_record_boundaries(prompt)
-    ) == ["Update `stage-result.md`"]
+    assert _PROTECTED_RECORD_MUTATION.findall(_without_protected_record_boundaries(prompt)) == [
+        "Update `stage-result.md`"
+    ]
 
 
 def test_native_prompt_compiler_includes_attempt_bundle_and_contract(
@@ -130,9 +125,7 @@ def test_native_prompt_compiler_includes_operator_request_context(
     stage_brief_path = stage_root / "stage-brief.md"
     input_bundle_path = stage_root / "attempts" / "attempt-0002" / "input-bundle.md"
     operator_request_path = stage_root / "operator-requests" / "request-0001.md"
-    prompt_pack_path = (
-        repository_root / "prompt-packs" / "stages" / "plan" / "intervention.md"
-    )
+    prompt_pack_path = repository_root / "prompt-packs" / "stages" / "plan" / "intervention.md"
     input_bundle_path.parent.mkdir(parents=True)
     operator_request_path.parent.mkdir(parents=True)
     prompt_pack_path.parent.mkdir(parents=True)
@@ -176,9 +169,7 @@ def test_composed_stage_request_respects_runtime_write_authority(
     repository_root = DEFAULT_STAGE_CONTRACTS_ROOT.parent.parent
     workspace_root = tmp_path / "target-repository" / ".aidd"
     work_item = "WI-OWNERSHIP"
-    bundle = prepare_stage_bundle(
-        workspace_root=workspace_root, work_item=work_item, stage=stage
-    )
+    bundle = prepare_stage_bundle(workspace_root=workspace_root, work_item=work_item, stage=stage)
     stage_brief_path = tmp_path / "stage-brief.md"
     stage_brief_path.write_text(bundle.stage_brief_markdown, encoding="utf-8")
     registry = resolve_stage_output_registry(
@@ -202,24 +193,32 @@ def test_composed_stage_request_respects_runtime_write_authority(
     )
     runtime_output = registry.runtime_authored[0].relative_to(workspace_root).as_posix()
     generated_output = f"workitems/{work_item}/stages/{stage}/stage-result.md"
-    repair_context = render_repair_brief(
-        validator_report_markdown=render_validator_report(findings=(
-            ValidationFinding(
-                code="SEM-INCOMPLETE-SECTION", severity="high",
-                message="Correct the located substantive-output finding.",
-                location=ValidationIssueLocation(workspace_relative_path=runtime_output),
+    repair_context = (
+        render_repair_brief(
+            validator_report_markdown=render_validator_report(
+                findings=(
+                    ValidationFinding(
+                        code="SEM-INCOMPLETE-SECTION",
+                        severity="high",
+                        message="Correct the located substantive-output finding.",
+                        location=ValidationIssueLocation(workspace_relative_path=runtime_output),
+                    ),
+                    ValidationFinding(
+                        code="SEM-INCOMPLETE-SECTION",
+                        severity="high",
+                        message="Stage must name exactly the canonical current stage.",
+                        location=ValidationIssueLocation(workspace_relative_path=generated_output),
+                    ),
+                )
             ),
-            ValidationFinding(
-                code="SEM-INCOMPLETE-SECTION", severity="high",
-                message="Stage must name exactly the canonical current stage.",
-                location=ValidationIssueLocation(workspace_relative_path=generated_output),
-            ),
-        )),
-        validator_report_path=f"workitems/{work_item}/stages/{stage}/validator-report.md",
-        prior_stage_artifacts=(),
-        stage_attempt_count=1,
-        max_repair_attempts=2,
-    ) if repair_mode else None
+            validator_report_path=f"workitems/{work_item}/stages/{stage}/validator-report.md",
+            prior_stage_artifacts=(),
+            stage_attempt_count=1,
+            max_repair_attempts=2,
+        )
+        if repair_mode
+        else None
+    )
     operator_request = "Preserve evidence and clarify the current stage recommendation."
     prompt = build_native_prompt_text(
         runtime_id="codex",

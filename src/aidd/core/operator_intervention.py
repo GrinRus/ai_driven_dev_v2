@@ -50,9 +50,15 @@ def _write_text_atomic(path: Path, content: str) -> None:
 
 
 def _utc_timestamp(moment: datetime | None = None) -> str:
-    return (moment or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0).isoformat().replace(
-        "+00:00",
-        "Z",
+    return (
+        (moment or datetime.now(UTC))
+        .astimezone(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace(
+            "+00:00",
+            "Z",
+        )
     )
 
 
@@ -114,8 +120,7 @@ def _stage_scope_target_documents(
     return tuple(
         path
         for path in runtime_outputs
-        if path.suffix.lower() == ".md"
-        and path.name not in _CONTROL_DOCUMENTS_BLOCKED_AS_TARGETS
+        if path.suffix.lower() == ".md" and path.name not in _CONTROL_DOCUMENTS_BLOCKED_AS_TARGETS
     )
 
 
@@ -173,9 +178,7 @@ def validate_operator_target_documents(
         if not resolved.is_relative_to(resolved_workspace):
             raise ValueError(f"Target document escapes workspace root: {target}")
         if not resolved.is_relative_to(resolved_stage_root):
-            raise ValueError(
-                f"Target document is outside current stage scope '{stage}': {target}"
-            )
+            raise ValueError(f"Target document is outside current stage scope '{stage}': {target}")
         if resolved.suffix.lower() != ".md":
             raise ValueError(f"Target document must be Markdown: {target}")
         if (
@@ -395,11 +398,7 @@ def list_operator_intervention_requests(
     if not root.exists():
         return ()
     paths = sorted(
-        (
-            path
-            for path in root.iterdir()
-            if path.is_file() and _request_number(path) is not None
-        ),
+        (path for path in root.iterdir() if path.is_file() and _request_number(path) is not None),
         key=lambda path: _request_number(path) or 0,
     )
     return tuple(_request_from_path(work_item=work_item, stage=stage, path=path) for path in paths)

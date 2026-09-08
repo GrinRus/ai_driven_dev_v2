@@ -90,8 +90,7 @@ def run_preflight(
             name="source-version",
             status="pass" if source_version == candidate_version else "fail",
             detail=(
-                f"pyproject.toml project.version={source_version}; "
-                f"candidate={candidate_version}"
+                f"pyproject.toml project.version={source_version}; candidate={candidate_version}"
             ),
         )
     )
@@ -247,10 +246,7 @@ def _run_packaged_ui_browser(project_root: Path) -> CommandResult:
     except subprocess.TimeoutExpired:
         return CommandResult(
             returncode=124,
-            stderr=(
-                "packaged UI browser runner timed out after "
-                f"{BROWSER_TIMEOUT_SECONDS:.0f}s"
-            ),
+            stderr=(f"packaged UI browser runner timed out after {BROWSER_TIMEOUT_SECONDS:.0f}s"),
             failure_kind="timeout",
         )
     except OSError as exc:

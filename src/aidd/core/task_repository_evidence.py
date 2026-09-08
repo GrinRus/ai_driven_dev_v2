@@ -215,9 +215,7 @@ def task_diff_evidence(
         )
     if context.task.execution_mode is TaskExecutionMode.VERIFICATION_ONLY and observed:
         issues.append(
-            "Verification-only task changed repository paths: "
-            + ", ".join(observed)
-            + "."
+            "Verification-only task changed repository paths: " + ", ".join(observed) + "."
         )
     allowed_scope = None
     try:

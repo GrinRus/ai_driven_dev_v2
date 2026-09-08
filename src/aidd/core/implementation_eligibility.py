@@ -12,13 +12,7 @@ def implementation_finalization_blocker(
     """Return why downstream stages cannot trust implementation success."""
 
     tasklist_path = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / work_item / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     if not tasklist_path.is_file():
         return f"Published tasklist is missing: {tasklist_path.as_posix()}."

@@ -86,13 +86,7 @@ def _write_workspace(tmp_path: Path, *, finalization: str = "pending") -> tuple[
     workspace = tmp_path / ".aidd"
     work_item = "WI-CHECKPOINT"
     tasklist = (
-        workspace
-        / "workitems"
-        / work_item
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace / "workitems" / work_item / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     tasklist.parent.mkdir(parents=True)
     tasklist.write_text(
@@ -304,13 +298,7 @@ def test_implement_checkpoint_catches_failed_task_marked_blocked_stage(tmp_path:
         json.dumps({"status": "blocked"}),
         encoding="utf-8",
     )
-    stage_documents_root = (
-        workspace
-        / "workitems"
-        / "WI-CHECKPOINT"
-        / "stages"
-        / "implement"
-    )
+    stage_documents_root = workspace / "workitems" / "WI-CHECKPOINT" / "stages" / "implement"
     stage_documents_root.mkdir(parents=True, exist_ok=True)
     validator_report_path = stage_documents_root / "validator-report.md"
     validator_report_path.write_text(
@@ -343,8 +331,7 @@ def test_implement_checkpoint_catches_failed_task_marked_blocked_stage(tmp_path:
 
     assert result.classification == "fail"
     assert (
-        "implementation-status-drift:failed-task-stage-blocked:TL-1"
-        in result.payload["findings"]
+        "implementation-status-drift:failed-task-stage-blocked:TL-1" in result.payload["findings"]
     )
     assert "implementation-status-drift:validator-fail-stage-blocked" in result.payload["findings"]
     assert result.payload["stage_lifecycle"] == {

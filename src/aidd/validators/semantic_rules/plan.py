@@ -294,9 +294,7 @@ def validate_plan(context: SemanticDocumentContext) -> tuple[ValidationFinding, 
                         )
                     )
                 else:
-                    unknown_milestone_ids = sorted(
-                        referenced_milestone_ids - plan_milestone_ids
-                    )
+                    unknown_milestone_ids = sorted(referenced_milestone_ids - plan_milestone_ids)
                     if unknown_milestone_ids:
                         unknown_ids_text = ", ".join(unknown_milestone_ids)
                         findings.append(

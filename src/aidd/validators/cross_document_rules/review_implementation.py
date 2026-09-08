@@ -47,10 +47,7 @@ def _available_review_evidence_references(
     work_item_root = context.workspace_root / "workitems" / context.work_item
     roots = (
         work_item_root / "context",
-        *(
-            work_item_root / "stages" / stage / "output"
-            for stage in _REVIEW_UPSTREAM_STAGES
-        ),
+        *(work_item_root / "stages" / stage / "output" for stage in _REVIEW_UPSTREAM_STAGES),
     )
     references: set[str] = set()
     for root in roots:

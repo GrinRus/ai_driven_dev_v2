@@ -54,9 +54,7 @@ def test_command_evidence_is_content_addressed_and_projection_is_bounded(
             encoding="utf-8",
         )
     assert sum(path.stat().st_size for path in derived_paths) < 20_000
-    assert sum(
-        path.stat().st_size for path in tmp_path.rglob("*") if path.is_file()
-    ) < 1_030_000
+    assert sum(path.stat().st_size for path in tmp_path.rglob("*") if path.is_file()) < 1_030_000
     assert read_command_output(bundle_root=tmp_path, command_payload=first) == (
         output,
         "warning\n",
@@ -102,6 +100,4 @@ def test_step_transcript_references_one_canonical_command_record(tmp_path: Path)
     assert "stdout_text" not in command
     assert command["stdout_preview"] == "test output\n"
     evidence_path = tmp_path / command["evidence_path"]
-    assert hashlib.sha256(evidence_path.read_bytes()).hexdigest() == command[
-        "evidence_sha256"
-    ]
+    assert hashlib.sha256(evidence_path.read_bytes()).hexdigest() == command["evidence_sha256"]

@@ -78,9 +78,7 @@ def test_registered_runtime_launch_failures_commit_equivalent_evidence(
     assert result.runtime_log_path is not None
     assert result.runtime_exit_metadata_path is not None
     assert "[launch-failure]" in result.runtime_log_path.read_text(encoding="utf-8")
-    metadata = json.loads(
-        result.runtime_exit_metadata_path.read_text(encoding="utf-8")
-    )
+    metadata = json.loads(result.runtime_exit_metadata_path.read_text(encoding="utf-8"))
     assert metadata["adapter_outcome"] == "launch_failure"
     assert metadata["exit_code"] is None
     assert metadata["stop_reason"] == "launch_failure"

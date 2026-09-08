@@ -196,13 +196,7 @@ def _checkpoint_paths(
 ) -> _CheckpointPaths:
     run_root = workspace_root / "reports" / "runs" / work_item / run_id
     tasklist = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / work_item / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     stage_documents = workspace_root / "workitems" / work_item / "stages" / stage
     return _CheckpointPaths(
@@ -234,9 +228,7 @@ def _load_checkpoint_state(
     validator_verdict = _validator_verdict(_read_text(paths.validator_report))
     stage_result_status = _stage_result_status(_read_text(paths.stage_result))
     model = task_view or {}
-    authored_ids, authored_dependencies = _tasklist_cards(
-        _read_text(paths.tasklist)
-    )
+    authored_ids, authored_dependencies = _tasklist_cards(_read_text(paths.tasklist))
     return _CheckpointState(
         stage=stage,
         workspace_root=workspace_root,
@@ -313,8 +305,7 @@ def _collect_lifecycle_findings(state: _CheckpointState) -> tuple[list[str], lis
     blocked_stage = state.stage_status == "blocked" or state.stage_result_status == "blocked"
     if state.stage == "implement" and blocked_stage and failed_task_ids:
         findings.append(
-            "implementation-status-drift:failed-task-stage-blocked:"
-            + ",".join(failed_task_ids)
+            "implementation-status-drift:failed-task-stage-blocked:" + ",".join(failed_task_ids)
         )
     if state.stage == "implement" and state.validator_verdict == "fail" and blocked_stage:
         findings.append("implementation-status-drift:validator-fail-stage-blocked")
@@ -412,14 +403,13 @@ def _build_checkpoint_payload(
     review_eligible = review.get("eligible") is True or state.model.get("review_eligible") is True
     public_tasklist = _mapping(state.model.get("tasklist"))
     public_ledger_hash = public_tasklist.get("ledger_sha256")
-    source_hash = (
-        state.ledger.get("source_tasklist_sha256") if state.ledger is not None else None
-    )
+    source_hash = state.ledger.get("source_tasklist_sha256") if state.ledger is not None else None
     return {
         "schema_version": TASK_FLOW_CHECKPOINT_SCHEMA_VERSION,
-        "created_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace(
-            "+00:00", "Z"
-        ),
+        "created_at_utc": datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
         "classification": "pass" if not findings else "fail",
         "stage": state.stage,
         "identity": {

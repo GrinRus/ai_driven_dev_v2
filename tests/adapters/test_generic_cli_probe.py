@@ -48,11 +48,11 @@ def test_probe_handles_nonzero_version_command(tmp_path: Path) -> None:
     fake_cli = tmp_path / "fake-generic-cli"
     fake_cli.write_text(
         "#!/bin/sh\n"
-        "if [ \"$1\" = \"--version\" ]; then\n"
-        "  echo \"fake-generic-cli 0.1\" >&2\n"
+        'if [ "$1" = "--version" ]; then\n'
+        '  echo "fake-generic-cli 0.1" >&2\n'
         "  exit 1\n"
         "fi\n"
-        "echo \"ok\"\n",
+        'echo "ok"\n',
         encoding="utf-8",
     )
     fake_cli.chmod(0o755)

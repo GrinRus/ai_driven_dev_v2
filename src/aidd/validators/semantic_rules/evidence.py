@@ -16,9 +16,7 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"go test|cargo test|"
     r"make|git|grep|rg|sed|nl|echo|printf|flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc|perl"
-    r")\b[^`\n]*`|"
-    + GENERIC_BACKTICKED_COMMAND_FRAGMENT
-    + r"|"
+    r")\b[^`\n]*`|" + GENERIC_BACKTICKED_COMMAND_FRAGMENT + r"|"
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
     r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check)\b|"
@@ -213,9 +211,7 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
 
     shell_compound_candidate = normalized_candidate
     if _SHELL_COMPOUND_PATTERN.fullmatch(shell_compound_candidate) is None:
-        inline_result = _INLINE_SHELL_RESULT_SUFFIX_PATTERN.search(
-            shell_compound_candidate
-        )
+        inline_result = _INLINE_SHELL_RESULT_SUFFIX_PATTERN.search(shell_compound_candidate)
         if inline_result is not None:
             candidate_without_result = shell_compound_candidate[: inline_result.start()].rstrip()
             if _SHELL_COMPOUND_PATTERN.fullmatch(candidate_without_result) is not None:
@@ -223,8 +219,7 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
 
     if _SHELL_COMPOUND_PATTERN.fullmatch(shell_compound_candidate) is not None:
         return any(
-            token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES
-            for token in tokens[1:]
+            token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES for token in tokens[1:]
         )
     if explicit_container:
         return (
@@ -301,9 +296,13 @@ def has_implementation_command_evidence(verification_item: str) -> bool:
     for fence in _FENCED_COMMAND_PATTERN.finditer(command_candidate):
         for line in fence.group("body").splitlines():
             normalized_line = line.strip().removeprefix("$ ").strip()
-            if normalized_line and not normalized_line.startswith("#") and _looks_like_command(
-                normalized_line,
-                explicit_container=True,
+            if (
+                normalized_line
+                and not normalized_line.startswith("#")
+                and _looks_like_command(
+                    normalized_line,
+                    explicit_container=True,
+                )
             ):
                 return True
     if backticked_command_status is False:

@@ -99,17 +99,23 @@ def test_stale_running_reconstruction_is_idempotent(tmp_path: Path) -> None:
         },
     )
 
-    assert _find(
-        report_root=report_root,
-        work_root=work_root,
-        scenario_path=scenario_path,
-    ) == state_path
+    assert (
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+        == state_path
+    )
     first_payload = state_path.read_bytes()
-    assert _find(
-        report_root=report_root,
-        work_root=work_root,
-        scenario_path=scenario_path,
-    ) == state_path
+    assert (
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+        == state_path
+    )
 
     assert state_path.read_bytes() == first_payload
 
@@ -221,11 +227,14 @@ def test_provider_completion_evidence_is_retained_without_fabricating_stage_verd
     stage_output.write_text("# Stage result\n\nSucceeded.\n", encoding="utf-8")
     evidence_bytes = (runtime_events.read_bytes(), stage_output.read_bytes())
 
-    assert _find(
-        report_root=report_root,
-        work_root=work_root,
-        scenario_path=scenario_path,
-    ) == state_path
+    assert (
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+        == state_path
+    )
 
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert payload["status"] == "interrupted-resumable"
@@ -283,16 +292,22 @@ def test_terminal_state_can_be_reloaded_without_rewriting(tmp_path: Path) -> Non
     )
     original = state_path.read_bytes()
 
-    assert _find(
-        report_root=report_root,
-        work_root=work_root,
-        scenario_path=scenario_path,
-    ) == state_path
-    assert _find(
-        report_root=report_root,
-        work_root=work_root,
-        scenario_path=scenario_path,
-    ) == state_path
+    assert (
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+        == state_path
+    )
+    assert (
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+        == state_path
+    )
     assert state_path.read_bytes() == original
 
 
@@ -420,11 +435,14 @@ def test_canonical_awaiting_review_resume_requires_contained_evidence(
         },
     )
 
-    assert _find(
-        report_root=report_root,
-        work_root=work_root,
-        scenario_path=scenario_path,
-    ) == state_path
+    assert (
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+        == state_path
+    )
 
 
 def test_awaiting_review_rejects_evidence_escape(tmp_path: Path) -> None:

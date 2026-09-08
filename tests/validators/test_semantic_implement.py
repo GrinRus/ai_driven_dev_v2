@@ -80,8 +80,7 @@ def test_implementation_report_rejects_incidental_uv_lockfile_in_bounded_diff(
     )
 
     assert any(
-        finding.code == MISSING_DIFF_EVIDENCE_CODE
-        and "uv.lock" in finding.message
+        finding.code == MISSING_DIFF_EVIDENCE_CODE and "uv.lock" in finding.message
         for finding in findings
     )
 
@@ -135,8 +134,7 @@ def test_implementation_report_rejects_unresolved_import_after_shared_symbol_cha
     )
 
     assert any(
-        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
-        and "unresolved import" in finding.message
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE and "unresolved import" in finding.message
         for finding in findings
     )
 
@@ -161,11 +159,14 @@ def test_implementation_report_accepts_shared_symbol_change_with_required_eviden
         ),
     )
 
-    assert validate_semantic_outputs(
-        stage="implement",
-        work_item="WI-SEM-IMPLEMENT-COMPATIBLE",
-        workspace_root=workspace_root,
-    ) == ()
+    assert (
+        validate_semantic_outputs(
+            stage="implement",
+            work_item="WI-SEM-IMPLEMENT-COMPATIBLE",
+            workspace_root=workspace_root,
+        )
+        == ()
+    )
 
 
 def test_implementation_report_preserves_authored_command_result_span(tmp_path: Path) -> None:
@@ -196,9 +197,12 @@ def test_implementation_report_preserves_authored_command_result_span(tmp_path: 
         "## Risks\n\n- none\n\n## Follow-up\n\n- Continue to review.\n"
     )
     _write_implementation_report(workspace_root, work_item, exact_report)
-    assert validate_semantic_outputs(
-        stage="implement", work_item=work_item, workspace_root=workspace_root
-    ) == ()
+    assert (
+        validate_semantic_outputs(
+            stage="implement", work_item=work_item, workspace_root=workspace_root
+        )
+        == ()
+    )
 
     split_report = exact_report.replace(
         "`uv run --frozen pytest -q tests/test_responses.py -> pass`",
@@ -271,11 +275,14 @@ def test_implementation_report_accepts_verification_caveat_in_risks(
         "- Continue to review.\n",
     )
 
-    assert validate_semantic_outputs(
-        stage="implement",
-        work_item="WI-SEM-IMPLEMENT-RISK-CAVEAT",
-        workspace_root=workspace_root,
-    ) == ()
+    assert (
+        validate_semantic_outputs(
+            stage="implement",
+            work_item="WI-SEM-IMPLEMENT-RISK-CAVEAT",
+            workspace_root=workspace_root,
+        )
+        == ()
+    )
 
 
 def test_validate_semantic_outputs_accepts_example_style_implementation_report(
@@ -306,10 +313,10 @@ def test_validate_semantic_outputs_accepts_example_style_implementation_report(
             "```\n\n"
             "## Verification\n\n"
             "### TL-4 regression and gate evidence\n\n"
-            "- `.venv/bin/python -c \"import data_tool.cli\"` -> printed `OK`.\n"
+            '- `.venv/bin/python -c "import data_tool.cli"` -> printed `OK`.\n'
             "- `.venv/bin/pytest tests/` -> `1045 passed, 16 skipped`, exit `0`.\n"
             "- `.venv/bin/data-tool schema test.db` -> "
-            "`CREATE TABLE \"people\" (\"name\" TEXT, \"age\" TEXT);` "
+            '`CREATE TABLE "people" ("name" TEXT, "age" TEXT);` '
             "-> matches expected post-fix schema.\n"
             "- `.venv/bin/mypy data_tool tests` ->\n"
             "  `Success: no issues found in 55 source files`, exit `0`.\n"
@@ -596,7 +603,7 @@ def test_validate_semantic_outputs_accepts_ast_index_command_evidence_for_implem
             "- none\n\n"
             "## Verification\n\n"
             '- `ast-index rebuild && ast-index search "if tracker is not None" '
-            '--module sqlite_utils/cli.py --format json` -> pass '
+            "--module sqlite_utils/cli.py --format json` -> pass "
             "(two production matches reported).\n\n"
             "## Risks\n\n"
             "- No repository edits were made in this verification-only task.\n\n"
@@ -673,7 +680,7 @@ def test_validate_semantic_outputs_accepts_contract_summary_task_id_and_cli_subc
             "  - Observed: 3 passed in 0.50s\n"
             "  - Verdict: pass\n\n"
             "- Manual parity check (insert path, header-only CSV):\n"
-            "  - `insert ... --csv` with `input=\"name,age\\n\"`: "
+            '  - `insert ... --csv` with `input="name,age\\n"`: '
             "exit_code 0, no `creatures` table created\n"
             "  - `insert ... --csv --no-detect-types` with same input: "
             "exit_code 0, no `creatures` table created\n"
@@ -763,8 +770,8 @@ def test_validate_semantic_outputs_accepts_flat_example_verification_evidence(
             "- `T1` -- diff inspection: `git diff data_tool/cli.py` shows "
             "two hunks only, each adding the issue-naming comment plus the "
             "`if db.table(...).exists():` gate.\n"
-            "- `T1` -- regression reproduction: `uv run python -c \"...\"` invoking "
-            "`CliRunner().invoke(...)` -> `exit_code == 0`, `output == \"\"`, "
+            '- `T1` -- regression reproduction: `uv run python -c "..."` invoking '
+            '`CliRunner().invoke(...)` -> `exit_code == 0`, `output == ""`, '
             "`exception is None`. Observed.\n"
             "- `T2` -- revert sanity check: `git stash push -- data_tool/cli.py "
             "&& uv run pytest tests/test_cli.py::test_insert_detect_types_header_only_csv` "
@@ -897,20 +904,20 @@ def test_validate_semantic_outputs_accepts_python_c_output_evidence(
             "## Verification\n\n"
             "- `python -m pytest tests/test_cli_insert.py -q` "
             "-> output: `52 passed in 1.01s`.\n"
-            "- `python -c \"from click.testing import CliRunner; "
+            '- `python -c "from click.testing import CliRunner; '
             "from data_tool import cli; result = CliRunner().invoke("
             "cli.cli, ['insert', '--help']); print(result.output)\"` "
             "-> output contains: `--python-file FILE`.\n"
-            "- `python -c \"from click.testing import CliRunner; "
+            '- `python -c "from click.testing import CliRunner; '
             "from data_tool import cli; result = CliRunner().invoke("
             "cli.cli, ['insert', '/tmp/test.db', 'people', '--python-file', "
             "'/tmp/rows_test.py']); print(result.exit_code)\"` "
             "-> output: `0`.\n"
-            "- `python -c \"from click.testing import CliRunner; "
+            '- `python -c "from click.testing import CliRunner; '
             "from data_tool import cli; result = CliRunner().invoke("
             "cli.cli, ['insert', '/tmp/test.db', 'items', '--python-file', "
             "'/tmp/rows_test.py', '--csv']); print(result.output); "
-            "print(result.exit_code)\"` "
+            'print(result.exit_code)"` '
             "-> output: `Error: Cannot use --python-file with --csv\\n1`.\n\n"
             "## Risks\n\n"
             "- No residual product risk remains for the selected task.\n\n"
@@ -1139,9 +1146,7 @@ def test_validate_semantic_outputs_accepts_shell_compound_command_evidence(
         workspace_root=workspace_root,
     )
 
-    assert not any(
-        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
-    )
+    assert not any(finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings)
 
 
 def test_validate_semantic_outputs_accepts_assignment_before_shell_compound(
@@ -1176,9 +1181,7 @@ def test_validate_semantic_outputs_accepts_assignment_before_shell_compound(
         workspace_root=workspace_root,
     )
 
-    assert not any(
-        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
-    )
+    assert not any(finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings)
 
 
 def test_validate_semantic_outputs_rejects_shell_like_compound_prose(
@@ -1211,9 +1214,7 @@ def test_validate_semantic_outputs_rejects_shell_like_compound_prose(
         workspace_root=workspace_root,
     )
 
-    assert any(
-        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
-    )
+    assert any(finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings)
 
 
 def test_validate_semantic_outputs_accepts_example_noop_blocker_evidence(
@@ -1236,14 +1237,14 @@ def test_validate_semantic_outputs_accepts_example_noop_blocker_evidence(
             "the guard for the T1 observation, then reverted it. Net diff is empty.\n\n"
             "## Verification\n\n"
             "- VN-1 (scratch guard observation):\n"
-            "  - Command: `.venv/bin/python -c \"...\"` invoking `cli.cli` with "
-            "`[\"insert\", \"--csv\", \"--detect-types\", <db>, \"data\", <csv>]`.\n"
-            "  - Observed: exit code `0`, `result.stderr == \"\"`, "
-            "`db[\"data\"].exists() is False`, `db.table_names() == []`.\n"
+            '  - Command: `.venv/bin/python -c "..."` invoking `cli.cli` with '
+            '`["insert", "--csv", "--detect-types", <db>, "data", <csv>]`.\n'
+            '  - Observed: exit code `0`, `result.stderr == ""`, '
+            '`db["data"].exists() is False`, `db.table_names() == []`.\n'
             "  - Outcome: T1 fail path confirmed; halts the task graph.\n\n"
             "- VN-3 (`insert_all` empty-iterator behaviour):\n"
-            "  - Command: `.venv/bin/python -c \"...\"` calling "
-            "`Database(db_path)[\"t\"].insert_all([])`.\n"
+            '  - Command: `.venv/bin/python -c "..."` calling '
+            '`Database(db_path)["t"].insert_all([])`.\n'
             "  - Observed: the target table does not exist after the call; "
             "`db.table_names() == []`.\n"
             "  - Outcome: the planned guard cannot satisfy the table-creation clause.\n\n"
@@ -1295,10 +1296,7 @@ def test_validate_semantic_outputs_flags_invalid_implement_noop_fixture_bundle()
         ),
         ValidationFinding(
             code=INCOMPLETE_EXECUTION_SUMMARY_CODE,
-            message=(
-                "No-op output must include an actionable next step in "
-                "`Follow-up notes`."
-            ),
+            message=("No-op output must include an actionable next step in `Follow-up notes`."),
             severity="medium",
             location=ValidationIssueLocation(
                 workspace_relative_path=(
@@ -1310,8 +1308,7 @@ def test_validate_semantic_outputs_flags_invalid_implement_noop_fixture_bundle()
         ValidationFinding(
             code=MISSING_DIFF_EVIDENCE_CODE,
             message=(
-                "Change summary claims completed implementation but touched-files "
-                "list is empty."
+                "Change summary claims completed implementation but touched-files list is empty."
             ),
             severity="high",
             location=ValidationIssueLocation(
@@ -1324,8 +1321,7 @@ def test_validate_semantic_outputs_flags_invalid_implement_noop_fixture_bundle()
         ValidationFinding(
             code=UNVERIFIABLE_CHECK_CLAIM_CODE,
             message=(
-                "Verification note includes outcome claim without executable "
-                "command evidence."
+                "Verification note includes outcome claim without executable command evidence."
             ),
             severity="high",
             location=ValidationIssueLocation(
@@ -1365,8 +1361,7 @@ def test_validate_semantic_outputs_flags_invalid_implement_verification_fixture_
         ValidationFinding(
             code=UNVERIFIABLE_CHECK_CLAIM_CODE,
             message=(
-                "Verification note includes outcome claim without executable "
-                "command evidence."
+                "Verification note includes outcome claim without executable command evidence."
             ),
             severity="high",
             location=ValidationIssueLocation(
@@ -1466,9 +1461,7 @@ def test_aggregate_mode_accepts_mixed_repository_and_verification_evidence(
 ) -> None:
     workspace_root = tmp_path / "workspace"
     work_item = "WI-SEM-IMPLEMENT-MIXED-AGGREGATE"
-    selection_path = (
-        workspace_root / "workitems" / work_item / "context" / "task-selection.md"
-    )
+    selection_path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
     selection_path.parent.mkdir(parents=True, exist_ok=True)
     selection_path.write_text(
         "# Task Selection\n\n## Selected task\n\n"
@@ -1507,8 +1500,7 @@ def test_aggregate_mode_accepts_mixed_repository_and_verification_evidence(
     )
 
     assert any(
-        finding.code == MISSING_DIFF_EVIDENCE_CODE
-        and "Verification-only task" in finding.message
+        finding.code == MISSING_DIFF_EVIDENCE_CODE and "Verification-only task" in finding.message
         for finding in task_local_findings
     )
     assert aggregate_findings == ()
@@ -1567,8 +1559,8 @@ def test_validate_semantic_outputs_accepts_live_sh_cleanup_verification(
         "## Touched files\n\n"
         "- `src/compose.ts` - normalize caught non-Error values.\n\n"
         "## Verification\n\n"
-        "- `sh -c 'residue=\"$(find . -name __pycache__ -print)\"; "
-        "[ -z \"$residue\" ] || { printf \"%s\\n\" \"$residue\"; exit 1; }'` "
+        '- `sh -c \'residue="$(find . -name __pycache__ -print)"; '
+        '[ -z "$residue" ] || { printf "%s\\n" "$residue"; exit 1; }\'` '
         "-> pass (exit code 0; no generated cache residue reported).\n"
         "- `git status --ignored --short --untracked-files=all` -> pass "
         "(exit code 0; no ignored verification residue).\n\n"
@@ -1815,9 +1807,7 @@ def test_validate_semantic_outputs_rejects_ambiguous_assignments_without_hanging
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous_handler)
 
-    assert UNVERIFIABLE_CHECK_CLAIM_CODE in {
-        finding.code for finding in findings
-    }
+    assert UNVERIFIABLE_CHECK_CLAIM_CODE in {finding.code for finding in findings}
 
 
 def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verification(

@@ -17,10 +17,7 @@ def test_segmented_filters_publish_pressed_state_from_the_same_selection() -> No
     assert 'aria-pressed="${state.logFilter === filter ? "true" : "false"}"' in logs
     assert 'aria-pressed="${state.logViewMode === mode ? "true" : "false"}"' in logs
     assert 'aria-pressed="${state.rawLogMode ? "true" : "false"}"' in logs
-    assert (
-        'aria-pressed="${state.implementDiffFilter === id ? "true" : "false"}"'
-        in implementation
-    )
+    assert 'aria-pressed="${state.implementDiffFilter === id ? "true" : "false"}"' in implementation
     for mode in ("preview", "source", "compare"):
         pressed_state = (
             f'aria-pressed="${{state.artifactViewMode === "{mode}" ? "true" : "false"}}"'

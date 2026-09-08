@@ -16,9 +16,7 @@ REPAIR_BUDGET_EXHAUSTED_CODE = "CROSS-REPAIR-BUDGET-EXHAUSTED"
 PROJECT_SET_EVIDENCE_MISSING_CODE = "CROSS-PROJECT-SET-EVIDENCE-MISSING"
 
 _REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
-_STAGE_STATUS_PATTERN = re.compile(
-    r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE
-)
+_STAGE_STATUS_PATTERN = re.compile(r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE)
 _PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
 _ATTEMPT_TRIGGER_PATTERN = re.compile(
     r"\bAttempt\s+`?\d+`?\s+\(`?(initial|repair|resume|intervention)`?\)",
@@ -97,9 +95,7 @@ def _project_set_findings(context: CrossDocumentContext) -> tuple[ValidationFind
             findings.append(
                 ValidationFinding(
                     PROJECT_SET_EVIDENCE_MISSING_CODE,
-                    "Project-set evidence must cite declared "
-                    + " and ".join(missing_parts)
-                    + ".",
+                    "Project-set evidence must cite declared " + " and ".join(missing_parts) + ".",
                     "high",
                     ValidationIssueLocation(result_relative, evidence_line),
                 )

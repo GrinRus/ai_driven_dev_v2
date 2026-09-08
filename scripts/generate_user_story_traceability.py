@@ -92,9 +92,7 @@ def load_registry(
 
     source = _non_empty_text(root.get("source"), context="registry.source")
     if source != SOURCE_RELATIVE_PATH:
-        raise ValueError(
-            f"registry.source must be {SOURCE_RELATIVE_PATH}, got {source}"
-        )
+        raise ValueError(f"registry.source must be {SOURCE_RELATIVE_PATH}, got {source}")
     _relative_file(source, repo_root=repo_root, context="registry.source")
     declared_story_ids = _USER_STORY_ID_PATTERN.findall(
         (repo_root / source).read_text(encoding="utf-8")
@@ -110,10 +108,7 @@ def load_registry(
         raise ValueError("registry.referencePolicy.pathFormat must be repository-relative")
     raw_groups = policy.get("requiredGroups")
     if not isinstance(raw_groups, list) or tuple(raw_groups) != REQUIRED_GROUPS:
-        raise ValueError(
-            "registry.referencePolicy.requiredGroups must be "
-            f"{list(REQUIRED_GROUPS)}"
-        )
+        raise ValueError(f"registry.referencePolicy.requiredGroups must be {list(REQUIRED_GROUPS)}")
 
     raw_stories = root.get("stories")
     if not isinstance(raw_stories, list):
@@ -128,13 +123,9 @@ def load_registry(
     registry_ids: list[str] = []
     for index, raw_story in enumerate(raw_stories, start=1):
         story = _mapping(raw_story, context=f"registry.stories[{index}]")
-        story_id = _non_empty_text(
-            story.get("id"), context=f"registry.stories[{index}].id"
-        )
+        story_id = _non_empty_text(story.get("id"), context=f"registry.stories[{index}].id")
         registry_ids.append(story_id)
-        title = _non_empty_text(
-            story.get("title"), context=f"registry.stories[{index}].title"
-        )
+        title = _non_empty_text(story.get("title"), context=f"registry.stories[{index}].title")
         assessment = _non_empty_text(
             story.get("assessment"), context=f"registry.stories[{index}].assessment"
         )
@@ -142,9 +133,7 @@ def load_registry(
         for group in REQUIRED_GROUPS:
             raw_references = story.get(group)
             if not isinstance(raw_references, list) or not raw_references:
-                raise ValueError(
-                    f"{story_id} must declare non-empty {group} references"
-                )
+                raise ValueError(f"{story_id} must declare non-empty {group} references")
             normalized: list[str] = []
             for ref_index, raw_reference in enumerate(raw_references, start=1):
                 reference = _non_empty_text(
@@ -267,8 +256,7 @@ def _check_or_write(*, registry_path: Path, view_path: Path, repo_root: Path, wr
         return 1
     if existing != rendered:
         print(
-            "traceability view is stale or non-deterministic; "
-            "run with --write to regenerate it",
+            "traceability view is stale or non-deterministic; run with --write to regenerate it",
             file=sys.stderr,
         )
         return 1

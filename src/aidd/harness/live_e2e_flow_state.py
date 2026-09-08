@@ -187,9 +187,7 @@ def build_flow_state_payload(
     }
     raw_interruption = extra.get("interruption") if extra is not None else None
     interruption_reason = (
-        raw_interruption.get("reason")
-        if isinstance(raw_interruption, Mapping)
-        else None
+        raw_interruption.get("reason") if isinstance(raw_interruption, Mapping) else None
     )
     payload["process_segments"] = process_segments_payload(
         update_process_segments(
@@ -434,10 +432,7 @@ def reconcile_stale_owner_for_resume(
                 payload.get("process_segments"),
                 owner_pid=observation.evaluator_pid,
                 finished_at_utc=reconciled_at,
-                fallback_started_at_utc=(
-                    active_step.get("started_at_utc")
-                    or previous_updated_at
-                ),
+                fallback_started_at_utc=(active_step.get("started_at_utc") or previous_updated_at),
             )
         )
         write_json_atomic(state_path_value, payload)
@@ -503,9 +498,7 @@ def _contained_required_quality_path(*, raw_path: str, run_root: Path) -> Path:
     resolved_run_root = run_root.resolve(strict=False)
     resolved_required = required.resolve(strict=False)
     if not resolved_required.is_relative_to(resolved_run_root):
-        raise ValueError(
-            "Quality-review evidence path must stay inside the canonical run bundle."
-        )
+        raise ValueError("Quality-review evidence path must stay inside the canonical run bundle.")
     if required.is_symlink():
         raise ValueError("Quality-review evidence path must not be a symlink.")
     return required

@@ -181,12 +181,16 @@ def capture_source_integrity(source_checkout: Path) -> SourceIntegritySnapshot:
         "--exclude-standard",
         "-z",
     )
-    tracked_status = _run_git_bytes(
-        source,
-        "status",
-        "--porcelain",
-        "--untracked-files=no",
-    ).decode("utf-8", errors="replace").strip()
+    tracked_status = (
+        _run_git_bytes(
+            source,
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+        )
+        .decode("utf-8", errors="replace")
+        .strip()
+    )
     return SourceIntegritySnapshot(
         revision=revision,
         tree=tree,
@@ -224,14 +228,8 @@ def _validate_preflight_roots(
         raise LiveAcceptanceSessionError(
             "Provider root must be exactly one component below the external live root."
         )
-    if (
-        source == external
-        or source.is_relative_to(external)
-        or external.is_relative_to(source)
-    ):
-        raise LiveAcceptanceSessionError(
-            "Source checkout and external live root must not overlap."
-        )
+    if source == external or source.is_relative_to(external) or external.is_relative_to(source):
+        raise LiveAcceptanceSessionError("Source checkout and external live root must not overlap.")
     return source, external, provider
 
 
@@ -321,9 +319,7 @@ def _provider_auth_cleanup(
     for component in (None, *relative.parent.parts):
         if component is not None:
             if component in {"", ".", ".."}:
-                violations.append(
-                    "provider auth destination has a non-canonical component"
-                )
+                violations.append("provider auth destination has a non-canonical component")
                 parent_chain_valid = False
                 break
             current /= component
@@ -333,23 +329,15 @@ def _provider_auth_cleanup(
             if evidence.seed_mode == "none":
                 parent_chain_valid = False
                 break
-            violations.append(
-                "provider auth destination parent could not be inspected"
-            )
+            violations.append("provider auth destination parent could not be inspected")
             parent_chain_valid = False
             break
         except OSError:
-            violations.append(
-                "provider auth destination parent could not be inspected"
-            )
+            violations.append("provider auth destination parent could not be inspected")
             parent_chain_valid = False
             break
-        if stat.S_ISLNK(parent_metadata.st_mode) or not stat.S_ISDIR(
-            parent_metadata.st_mode
-        ):
-            violations.append(
-                "provider auth destination parent is not a real directory"
-            )
+        if stat.S_ISLNK(parent_metadata.st_mode) or not stat.S_ISDIR(parent_metadata.st_mode):
+            violations.append("provider auth destination parent is not a real directory")
             parent_chain_valid = False
             break
     if parent_chain_valid:
@@ -393,11 +381,7 @@ def _provider_auth_cleanup(
     cleanup_status: ProviderAuthCleanupStatus = (
         "failed"
         if violations
-        else (
-            "private-auth-retained"
-            if destination_exists
-            else "no-private-auth"
-        )
+        else ("private-auth-retained" if destination_exists else "no-private-auth")
     )
     return replace(evidence, cleanup_status=cleanup_status), tuple(violations)
 
@@ -533,9 +517,7 @@ class LiveAcceptanceSession:
             violations.append("source checkout root escaped or became a symlink")
         try:
             source_postflight = capture_source_integrity(self.source_checkout)
-            violations.extend(
-                _source_violations(self.source_baseline, source_postflight)
-            )
+            violations.extend(_source_violations(self.source_baseline, source_postflight))
         except LiveAcceptanceSessionError as postflight_error:
             source_postflight = self.source_baseline
             violations.append(f"source postflight failed: {postflight_error}")

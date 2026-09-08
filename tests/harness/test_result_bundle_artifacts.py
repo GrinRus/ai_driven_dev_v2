@@ -116,9 +116,7 @@ def test_aidd_evidence_is_materialized_before_source_cleanup(tmp_path: Path) -> 
     work_item_root = source_workspace / "workitems" / "WI-EVIDENCE"
     run_root = source_workspace / "reports" / "runs" / "WI-EVIDENCE" / "product-1"
     (work_item_root / "stages" / "qa").mkdir(parents=True)
-    (run_root / "stages" / "implement" / "attempts" / "attempt-0001").mkdir(
-        parents=True
-    )
+    (run_root / "stages" / "implement" / "attempts" / "attempt-0001").mkdir(parents=True)
     (run_root / "stages" / "qa").mkdir(parents=True)
     (work_item_root / "stages" / "qa" / "validator-report.md").write_text(
         "# canonical validator\n", encoding="utf-8"
@@ -128,19 +126,12 @@ def test_aidd_evidence_is_materialized_before_source_cleanup(tmp_path: Path) -> 
     )
     attempt_root = run_root / "stages" / "implement" / "attempts" / "attempt-0001"
     (attempt_root / "runtime.log").write_text("raw runtime\n", encoding="utf-8")
-    (attempt_root / "runtime-exit.json").write_text(
-        '{"exit_code":0}\n', encoding="utf-8"
-    )
+    (attempt_root / "runtime-exit.json").write_text('{"exit_code":0}\n', encoding="utf-8")
     (run_root / "stages" / "implement" / "task-ledger.json").write_text(
         '{"schema_version":1}\n', encoding="utf-8"
     )
     finalization_root = (
-        run_root
-        / "stages"
-        / "implement"
-        / "finalization"
-        / "attempts"
-        / "attempt-0001"
+        run_root / "stages" / "implement" / "finalization" / "attempts" / "attempt-0001"
     )
     finalization_root.mkdir(parents=True)
     (finalization_root / "finalization-state.json").write_text(
@@ -174,11 +165,7 @@ def test_aidd_evidence_is_materialized_before_source_cleanup(tmp_path: Path) -> 
 
     shutil.rmtree(source_workspace)
     canonical_validator = (
-        layout.run_root
-        / references["work_item_root"]
-        / "stages"
-        / "qa"
-        / "validator-report.md"
+        layout.run_root / references["work_item_root"] / "stages" / "qa" / "validator-report.md"
     )
     assert canonical_validator.is_file()
     assert (layout.run_root / references["task_ledger"]).is_file()

@@ -392,10 +392,13 @@ def test_repair_attempts_used_treats_initial_attempt_as_non_repair() -> None:
 
 
 def test_repair_accounting_does_not_charge_resume_or_intervention_attempts() -> None:
-    assert repair_attempts_used(
-        stage_attempt_count=5,
-        attempt_modes=("initial", "resume", "repair", "intervention", "repair-extension"),
-    ) == 1
+    assert (
+        repair_attempts_used(
+            stage_attempt_count=5,
+            attempt_modes=("initial", "resume", "repair", "intervention", "repair-extension"),
+        )
+        == 1
+    )
 
 
 @pytest.mark.parametrize("modes", ((None,), ("unknown",), ()))
@@ -487,12 +490,20 @@ def test_repair_brief_assigns_generated_record_corrections_to_aidd(document_name
     source_path = f"workitems/WI-001/stages/plan/{document_name}"
     message = "Required generated record section is incomplete."
     brief = render_repair_brief(
-        validator_report_markdown=render_validator_report(findings=(ValidationFinding(
-            code="SEM-INCOMPLETE-SECTION", message=message, severity="low",
-            location=ValidationIssueLocation(workspace_relative_path=source_path),
-        ),)),
+        validator_report_markdown=render_validator_report(
+            findings=(
+                ValidationFinding(
+                    code="SEM-INCOMPLETE-SECTION",
+                    message=message,
+                    severity="low",
+                    location=ValidationIssueLocation(workspace_relative_path=source_path),
+                ),
+            )
+        ),
         validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
-        prior_stage_artifacts=(), stage_attempt_count=1, max_repair_attempts=1,
+        prior_stage_artifacts=(),
+        stage_attempt_count=1,
+        max_repair_attempts=1,
     )
     assert f"AIDD must reconcile `{source_path}`" in brief
     assert f"Update `{source_path}`" not in brief
@@ -1239,7 +1250,8 @@ def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_p
 
 @pytest.mark.parametrize("malformed", ({}, {"schema_version": 0}, False))
 def test_malformed_recorded_grant_stops_before_revalidation_or_replacement(
-    tmp_path: Path, malformed: object,
+    tmp_path: Path,
+    malformed: object,
 ) -> None:
     workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
     metadata_path = workspace_root / "reports/runs/WI-001/run-001/stages/plan/stage-metadata.json"
@@ -1255,9 +1267,11 @@ def test_malformed_recorded_grant_stops_before_revalidation_or_replacement(
 
     with pytest.raises(ValueError, match="[Gg]rant"):
         preflight_repair_extension(
-            workspace_root=workspace_root, grant=grant,
+            workspace_root=workspace_root,
+            grant=grant,
             current_configuration_identity="codex:config-001",
-            latest_stage_status="repair-exhausted", latest_attempt_mode="repair",
+            latest_stage_status="repair-exhausted",
+            latest_attempt_mode="repair",
             revalidate_documents=revalidate,
         )
     assert callback_calls == []

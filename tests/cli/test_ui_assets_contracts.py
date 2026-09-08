@@ -817,7 +817,7 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function selectedRuntimeReady()",
             "function runtimeReadinessMessage()",
             'function renderContextualRunnerControl({actionLabel = "launch", '
-            'inspector = false} = {})',
+            "inspector = false} = {})",
             "data-contextual-runner-control",
             "data-open-runner",
             "runtime.eligible === true",
@@ -2222,9 +2222,7 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
     assert 'event.key === "End"' in operator_main
     assert "renderTruncationNotice(" in _asset_text("/operator-artifacts-documents.js")
     assert 'closest("[data-stage-mobile-toggle]")' in operator_main
-    assert 'stageMobileToggle.setAttribute("aria-expanded", String(!expanded));' in (
-        operator_main
-    )
+    assert 'stageMobileToggle.setAttribute("aria-expanded", String(!expanded));' in (operator_main)
 
 
 def test_operator_css_custom_properties_are_resolved() -> None:

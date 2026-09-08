@@ -432,9 +432,7 @@ def test_validate_semantic_outputs_isolates_treatment_metadata_per_qa_risk(
     assert findings == (
         ValidationFinding(
             code=RISK_UNDERREPORT_CODE,
-            message=(
-                "Each residual risk item must include mitigation and/or ownership notes."
-            ),
+            message=("Each residual risk item must include mitigation and/or ownership notes."),
             severity="medium",
             location=ValidationIssueLocation(
                 workspace_relative_path=(
@@ -445,9 +443,7 @@ def test_validate_semantic_outputs_isolates_treatment_metadata_per_qa_risk(
         ),
         ValidationFinding(
             code=RISK_UNDERREPORT_CODE,
-            message=(
-                "Each residual risk item must include mitigation and/or ownership notes."
-            ),
+            message=("Each residual risk item must include mitigation and/or ownership notes."),
             severity="medium",
             location=ValidationIssueLocation(
                 workspace_relative_path=(
@@ -511,8 +507,7 @@ def test_validate_semantic_outputs_flags_ready_with_residual_risk_entry(
             severity="high",
             location=ValidationIssueLocation(
                 workspace_relative_path=(
-                    "workitems/WI-SEM-QA-READY-WITH-RESIDUAL-RISK/stages/qa/"
-                    "qa-report.md"
+                    "workitems/WI-SEM-QA-READY-WITH-RESIDUAL-RISK/stages/qa/qa-report.md"
                 ),
                 line_number=16,
             ),
@@ -568,8 +563,7 @@ def test_validate_semantic_outputs_flags_known_issue_block_missing_severity(
         ValidationFinding(
             code=RISK_UNDERREPORT_CODE,
             message=(
-                "Each residual risk item must include explicit severity "
-                "(critical/high/medium/low)."
+                "Each residual risk item must include explicit severity (critical/high/medium/low)."
             ),
             severity="medium",
             location=ValidationIssueLocation(
@@ -600,9 +594,7 @@ def test_validate_semantic_outputs_flags_invalid_qa_fixture_bundle() -> None:
             ),
             severity="high",
             location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"
-                ),
+                workspace_relative_path=("workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"),
                 line_number=15,
             ),
         ),
@@ -614,9 +606,7 @@ def test_validate_semantic_outputs_flags_invalid_qa_fixture_bundle() -> None:
             ),
             severity="high",
             location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"
-                ),
+                workspace_relative_path=("workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"),
                 line_number=11,
             ),
         ),
@@ -628,11 +618,8 @@ def test_validate_semantic_outputs_flags_invalid_qa_fixture_bundle() -> None:
             ),
             severity="high",
             location=ValidationIssueLocation(
-                workspace_relative_path=(
-                    "workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"
-                ),
+                workspace_relative_path=("workitems/WI-SEM-QA-INVALID/stages/qa/qa-report.md"),
                 line_number=3,
             ),
         ),
     )
-

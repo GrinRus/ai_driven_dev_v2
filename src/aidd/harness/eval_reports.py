@@ -83,9 +83,7 @@ from aidd.harness.scenarios import Scenario
 from aidd.runtime_catalog import get_runtime_definition
 
 EXIT_CODE_PATTERN = re.compile(r"non-zero exit \((?P<code>\d+)\)")
-PRODUCT_RUN_ID_PATTERN = re.compile(
-    r"\brun_id=(?P<run_id>[A-Za-z0-9][A-Za-z0-9._-]{0,127})\b"
-)
+PRODUCT_RUN_ID_PATTERN = re.compile(r"\brun_id=(?P<run_id>[A-Za-z0-9][A-Za-z0-9._-]{0,127})\b")
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,13 +171,9 @@ def _first_validation_failure_detail(payload: dict[str, object]) -> str | None:
             if validation_result in {"failed", "blocked"}:
                 final_failure_code = str(raw_stage.get("final_failure_code") or "").strip()
                 suffix = (
-                    f"; final failure code `{final_failure_code}`"
-                    if final_failure_code
-                    else ""
+                    f"; final failure code `{final_failure_code}`" if final_failure_code else ""
                 )
-                return (
-                    f"stage `{stage}` validation result `{validation_result}`{suffix}"
-                )
+                return f"stage `{stage}` validation result `{validation_result}`{suffix}"
     return None
 
 
@@ -241,9 +235,7 @@ def _failure_cause_for_state(
             evidence_link="validator-report.md",
         )
 
-    exit_code = (
-        None if state.aidd_run_result is None else state.aidd_run_result.exit_code
-    )
+    exit_code = None if state.aidd_run_result is None else state.aidd_run_result.exit_code
     return FailureCause(
         category=FailureCauseCategory.RUNTIME,
         phase=FailureCausePhase.EXECUTION,
@@ -297,10 +289,10 @@ def stage_failure_events_from_timing_payload(
             terminal_status = str(raw_attempt.get("terminal_status") or stage_status)
             runtime_exit = raw_attempt.get("runtime_exit_classification")
             failed_validation = validation_result in {"failed", "blocked"}
-            failed_terminal = (
-                attempt_index == len(attempts)
-                and terminal_status in {"failed", "blocked"}
-            )
+            failed_terminal = attempt_index == len(attempts) and terminal_status in {
+                "failed",
+                "blocked",
+            }
             failed_runtime = runtime_exit not in (None, "success")
             if not (failed_validation or failed_terminal or failed_runtime):
                 continue
@@ -310,9 +302,7 @@ def stage_failure_events_from_timing_payload(
             if attempt_index == len(attempts) and final_failure_code:
                 failure_detail = f"final failure code `{final_failure_code}`"
                 if repair_reason != "n/a":
-                    failure_detail = (
-                        f"{failure_detail}; preceding repair reason: {repair_reason}"
-                    )
+                    failure_detail = f"{failure_detail}; preceding repair reason: {repair_reason}"
             events.append(
                 CoarseRuntimeEvent(
                     line_number=(stage_index * 100) + attempt_index,
@@ -339,22 +329,16 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
     ]
 
     if state.prepared_repository is not None:
-        lines.append(
-            f"prepared_repository={state.prepared_repository.repo_path.as_posix()}"
-        )
+        lines.append(f"prepared_repository={state.prepared_repository.repo_path.as_posix()}")
         lines.append(f"resolved_revision={state.prepared_repository.resolved_revision}")
     if state.prepared_working_copy is not None:
-        lines.append(
-            f"working_copy={state.prepared_working_copy.working_copy_path.as_posix()}"
-        )
+        lines.append(f"working_copy={state.prepared_working_copy.working_copy_path.as_posix()}")
     if state.install_result is not None:
         lines.append(f"install_channel={state.install_result.install_channel}")
         lines.append(f"artifact_source={state.install_result.artifact_source}")
         lines.append(f"artifact_identity={state.install_result.artifact_identity}")
         lines.append(f"install_home={state.install_result.install_home.as_posix()}")
-        lines.append(
-            f"installed_command={' '.join(state.install_result.installed_command)}"
-        )
+        lines.append(f"installed_command={' '.join(state.install_result.installed_command)}")
         lines.append(f"install_commands={len(state.install_result.command_transcripts)}")
         for transcript in state.install_result.command_transcripts:
             lines.append(f"install_command={transcript.command}")
@@ -370,9 +354,7 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
         lines.append(f"setup_commands={len(state.setup_result.command_transcripts)}")
         if state.setup_result.failed_command is not None:
             lines.append(f"setup_failed_command={state.setup_result.failed_command}")
-            lines.append(
-                f"setup_failed_exit_code={state.setup_result.failed_exit_code}"
-            )
+            lines.append(f"setup_failed_exit_code={state.setup_result.failed_exit_code}")
     if state.aidd_run_result is not None:
         lines.append(f"aidd_exit_code={state.aidd_run_result.exit_code}")
         if state.aidd_run_result.stdout_text.strip():
@@ -382,26 +364,17 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
             lines.append("aidd_stderr:")
             lines.extend(state.aidd_run_result.stderr_text.rstrip().splitlines())
     if state.verification_result is not None:
-        lines.append(
-            f"verification_commands={len(state.verification_result.command_transcripts)}"
-        )
+        lines.append(f"verification_commands={len(state.verification_result.command_transcripts)}")
         if state.verification_result.failed_command is not None:
+            lines.append(f"verification_failed_command={state.verification_result.failed_command}")
             lines.append(
-                f"verification_failed_command={state.verification_result.failed_command}"
-            )
-            lines.append(
-                "verification_failed_exit_code="
-                f"{state.verification_result.failed_exit_code}"
+                f"verification_failed_exit_code={state.verification_result.failed_exit_code}"
             )
     if state.teardown_result is not None:
         lines.append(f"teardown_commands={len(state.teardown_result.command_transcripts)}")
         if state.teardown_result.failed_command is not None:
-            lines.append(
-                f"teardown_failed_command={state.teardown_result.failed_command}"
-            )
-            lines.append(
-                f"teardown_failed_exit_code={state.teardown_result.failed_exit_code}"
-            )
+            lines.append(f"teardown_failed_command={state.teardown_result.failed_command}")
+            lines.append(f"teardown_failed_exit_code={state.teardown_result.failed_exit_code}")
 
     for error in (
         state.prep_error,
@@ -525,9 +498,7 @@ def render_validator_report_source(
         "Semantic checks": ["- none"],
         "Cross-document checks": ["- none"],
     }
-    sections[finding_section] = [
-        f"- `{code}` (`high`) in `{location}`: {safe_message}"
-    ]
+    sections[finding_section] = [f"- `{code}` (`high`) in `{location}`: {safe_message}"]
     return "\n".join(
         (
             "# Validator Report",
@@ -571,9 +542,7 @@ def render_log_analysis_markdown(
     if failure_cause is not None:
         validate_verdict_compatibility(verdict=status, cause=failure_cause)
     signal_line = (
-        str(boundary.signal_line_number)
-        if boundary.signal_line_number is not None
-        else "n/a"
+        str(boundary.signal_line_number) if boundary.signal_line_number is not None else "n/a"
     )
     base = (
         "# Log Analysis\n\n"
@@ -683,8 +652,7 @@ def _timed_out_stage_attempts(
                 raw_attempt.get("runtime_exit_classification") or "unknown"
             )
             timed_out = (
-                bool(raw_attempt.get("timed_out"))
-                or runtime_exit_classification == "timeout"
+                bool(raw_attempt.get("timed_out")) or runtime_exit_classification == "timeout"
             )
             if not timed_out:
                 continue
@@ -750,9 +718,7 @@ def render_runtime_diagnostics_markdown(
         timeout_stage_budget = "`none`"
 
     config_source = (
-        "`n/a`"
-        if runtime_config_path is None
-        else f"`{runtime_config_path.as_posix()}`"
+        "`n/a`" if runtime_config_path is None else f"`{runtime_config_path.as_posix()}`"
     )
     default_timeout = _format_timeout_seconds(timeout_config.default_timeout_seconds)
     stage_timeout_profile = _stage_timeout_summary(timeout_config.stage_timeout_seconds)
@@ -820,9 +786,7 @@ def grader_payload(
     }
 
 
-def _product_run_id_for_state(
-    *, prep: EvalRunPreparation, state: EvalExecutionState
-) -> str | None:
+def _product_run_id_for_state(*, prep: EvalRunPreparation, state: EvalExecutionState) -> str | None:
     """Resolve the product run created in the isolated target workspace."""
 
     if state.aidd_run_result is None or state.prepared_working_copy is None:
@@ -840,9 +804,7 @@ def _product_run_id_for_state(
 
     # Some adapters expose the authoritative run id only in their bounded CLI output.
     # Use the last emitted id, which is the terminal invocation for stage scenarios.
-    output = "\n".join(
-        (state.aidd_run_result.stdout_text, state.aidd_run_result.stderr_text)
-    )
+    output = "\n".join((state.aidd_run_result.stdout_text, state.aidd_run_result.stderr_text))
     for match in reversed(tuple(PRODUCT_RUN_ID_PATTERN.finditer(output))):
         try:
             return SafeIdentifier.parse(match.group("run_id"), label="product_run_id").value
@@ -1010,17 +972,9 @@ def persist_eval_reports(
     first_failure_boundary = select_first_failure_boundary(
         runtime_events=parse_runtime_log_text(runtime_log_source),
         normalized_events=normalized_events,
-        validator_failures=parse_validator_report_failures_text(
-            validator_report_source
-        ),
-        stage_metadata_failures=stage_failure_events_from_timing_payload(
-            stage_timing_payload
-        ),
-        aidd_exit_code=(
-            None
-            if state.aidd_run_result is None
-            else state.aidd_run_result.exit_code
-        ),
+        validator_failures=parse_validator_report_failures_text(validator_report_source),
+        stage_metadata_failures=stage_failure_events_from_timing_payload(stage_timing_payload),
+        aidd_exit_code=(None if state.aidd_run_result is None else state.aidd_run_result.exit_code),
         verification_exit_code=verification_exit_code,
     )
     first_failure_boundary = _boundary_for_failure_cause(
@@ -1034,11 +988,7 @@ def persist_eval_reports(
     )
 
     outcome = HarnessOutcome(
-        aidd_exit_code=(
-            None
-            if state.aidd_run_result is None
-            else state.aidd_run_result.exit_code
-        ),
+        aidd_exit_code=(None if state.aidd_run_result is None else state.aidd_run_result.exit_code),
         verification_failed=classification.verification_failed,
         blocked_by_questions=classification.blocked_by_questions,
         infrastructure_failure=classification.infrastructure_failure,
@@ -1058,8 +1008,7 @@ def persist_eval_reports(
         first_failure_note=first_failure_note,
         verification_summary=(
             "verification command(s) passed"
-            if state.verification_result is not None
-            and state.verification_error is None
+            if state.verification_result is not None and state.verification_error is None
             else "verification command returned non-zero status"
             if state.verification_error is not None
             else None
@@ -1115,16 +1064,12 @@ def persist_eval_reports(
             "runtime_jsonl_source": (
                 "n/a" if runtime_jsonl_source_path is None else RUNTIME_JSONL_FILENAME
             ),
-            "events_jsonl": (
-                "n/a" if events_jsonl_source_path is None else EVENTS_JSONL_FILENAME
-            ),
+            "events_jsonl": ("n/a" if events_jsonl_source_path is None else EVENTS_JSONL_FILENAME),
             "events_jsonl_source": (
                 "n/a" if events_jsonl_source_path is None else EVENTS_JSONL_FILENAME
             ),
             "resource_source": (
-                "packaged"
-                if state.install_result is not None
-                else prep.resource_layout.source
+                "packaged" if state.install_result is not None else prep.resource_layout.source
             ),
             "artifact_path": (
                 "n/a"
@@ -1184,9 +1129,7 @@ def persist_eval_reports(
                 runtime_id=runtime_id,
                 runtime_config_path=state.live_runtime_config_path,
                 harness_timeout_seconds=(
-                    None
-                    if state.aidd_run_result is None
-                    else state.aidd_run_result.timeout_seconds
+                    None if state.aidd_run_result is None else state.aidd_run_result.timeout_seconds
                 ),
             ),
             stage_timing_markdown=rendered_stage_timing,
@@ -1288,9 +1231,7 @@ def persist_eval_reports(
             }
         )
         try:
-            metadata_payload = json.loads(
-                layout.harness_metadata_path.read_text(encoding="utf-8")
-            )
+            metadata_payload = json.loads(layout.harness_metadata_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError):
             metadata_payload = {}
         if not isinstance(metadata_payload, dict):

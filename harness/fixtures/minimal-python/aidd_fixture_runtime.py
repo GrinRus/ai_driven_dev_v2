@@ -477,8 +477,7 @@ def _task_acceptance_evidence(*, evidence_path: str, outcome: str) -> str:
 
 def _review_documents() -> dict[str, str]:
     implementation_path = (
-        "workitems/WI-DETERMINISTIC-TASKS/stages/implement/output/"
-        "implementation-report.md"
+        "workitems/WI-DETERMINISTIC-TASKS/stages/implement/output/implementation-report.md"
     )
     task_evidence = _task_acceptance_evidence(
         evidence_path=implementation_path,
@@ -512,8 +511,7 @@ def _review_documents() -> dict[str, str]:
 
 def _qa_documents() -> dict[str, str]:
     implementation_path = (
-        "workitems/WI-DETERMINISTIC-TASKS/stages/implement/output/"
-        "implementation-report.md"
+        "workitems/WI-DETERMINISTIC-TASKS/stages/implement/output/implementation-report.md"
     )
     task_evidence = _task_acceptance_evidence(
         evidence_path=implementation_path,

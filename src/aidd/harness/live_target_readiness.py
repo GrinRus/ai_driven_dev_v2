@@ -207,8 +207,7 @@ def run_live_target_readiness(
                 prerequisites=prerequisites,
                 command_transcripts=tuple(transcripts),
                 failure_reason=(
-                    f"Target readiness command failed ({completed.exit_code}): "
-                    f"{command}\n{detail}"
+                    f"Target readiness command failed ({completed.exit_code}): {command}\n{detail}"
                 ),
             )
             raise LiveTargetReadinessError(result.failure_reason or "", result=result)

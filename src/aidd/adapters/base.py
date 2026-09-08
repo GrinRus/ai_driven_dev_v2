@@ -136,9 +136,7 @@ class RuntimeAdapterDescriptor:
         object.__setattr__(self, "runtime_id", runtime_id)
         if self.registration is not None:
             if not isinstance(self.registration, RuntimeAdapterRegistration):
-                raise TypeError(
-                    "registration must be a RuntimeAdapterRegistration when provided."
-                )
+                raise TypeError("registration must be a RuntimeAdapterRegistration when provided.")
             if self.registration.runtime_id != runtime_id:
                 raise ValueError("registration.runtime_id must match descriptor.runtime_id.")
         for field_name in ("protected_paths", "credential_paths", "config_paths"):

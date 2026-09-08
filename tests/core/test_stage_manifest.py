@@ -15,9 +15,7 @@ def test_stage_manifest_from_document_paths_exposes_required_path_lists() -> Non
 
     assert manifest.stage == "plan"
     assert manifest.purpose == "Convert research findings into an execution plan."
-    assert manifest.required_input_paths == (
-        "workitems/WI-001/stages/research/research-report.md",
-    )
+    assert manifest.required_input_paths == ("workitems/WI-001/stages/research/research-report.md",)
     assert manifest.required_output_paths == (
         "workitems/WI-001/stages/plan/plan.md",
         "stage-result.md",

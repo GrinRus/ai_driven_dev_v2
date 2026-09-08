@@ -82,8 +82,7 @@ def operator_artifact_category(*, key: str, kind: str, path: str) -> str:
     if "/stages/" in normalized_path and "/output/" in normalized_path:
         return "published-stage-output"
     if (
-        normalized_key
-        in {"input_bundle", "stage_brief", "repair_context", "operator_request"}
+        normalized_key in {"input_bundle", "stage_brief", "repair_context", "operator_request"}
         or "/operator-requests/" in normalized_path
     ):
         return "runtime-input"
@@ -103,8 +102,7 @@ def operator_artifact_safe_key(key: str) -> str:
 def operator_artifact_is_canonical(*, key: str, kind: str, path: str) -> bool:
     return (
         kind == "document"
-        and operator_artifact_category(key=key, kind=kind, path=path)
-        == "canonical-stage-document"
+        and operator_artifact_category(key=key, kind=kind, path=path) == "canonical-stage-document"
     )
 
 
@@ -647,11 +645,7 @@ def _artifact_graph_node(
     status = "missing"
     if exists:
         status = result_status or "present"
-    detail_prefix = (
-        "Published output mirror"
-        if kind == "mirror"
-        else f"Indexed {kind}"
-    )
+    detail_prefix = "Published output mirror" if kind == "mirror" else f"Indexed {kind}"
     return OperatorEvidenceGraphNode(
         node_id=node_id,
         label=label,
@@ -704,13 +698,16 @@ def _add_attempt_file_node(
     nodes: dict[str, OperatorEvidenceGraphNode],
     edges: dict[tuple[str, str, str], OperatorEvidenceGraphEdge],
 ) -> Path | None:
-    path = _attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    ) / filename
+    path = (
+        _attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        / filename
+    )
     if not path.exists():
         return None
     relative_path = workspace_relative_path(workspace_root, path)
@@ -861,11 +858,7 @@ def _add_approval_nodes(
         return
     try:
         requests = load_operator_requests(requests_path)
-        decisions = (
-            load_operator_decisions(decisions_path)
-            if decisions_path is not None
-            else ()
-        )
+        decisions = load_operator_decisions(decisions_path) if decisions_path is not None else ()
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         incomplete_reasons.append(f"approval-log-unreadable: {exc}")
         return
@@ -875,11 +868,7 @@ def _add_approval_nodes(
         decision = decisions_by_request.get(request.id)
         status = "pending"
         if decision is not None:
-            status = (
-                "approved"
-                if decision.is_approval
-                else decision.action.value
-            )
+            status = "approved" if decision.is_approval else decision.action.value
         request_node_id = f"approval-request:{request.id}"
         _add_node(
             nodes,
@@ -1422,8 +1411,7 @@ def _validation_results(
             status=result.final_state,
             path=f"workitems/{work_item}/stages/{stage}/stage-result.md",
             detail=(
-                f"Stage finished as {result.final_state} "
-                f"after {result.attempt_count} attempt(s)."
+                f"Stage finished as {result.final_state} after {result.attempt_count} attempt(s)."
             ),
         ),
     )
@@ -1562,10 +1550,7 @@ def _document_versions(
         stage=stage,
     )
     trigger_by_attempt = (
-        {
-            entry.attempt_number: entry.trigger
-            for entry in stage_metadata.repair_history
-        }
+        {entry.attempt_number: entry.trigger for entry in stage_metadata.repair_history}
         if stage_metadata is not None
         else {}
     )

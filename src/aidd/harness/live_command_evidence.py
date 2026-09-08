@@ -16,9 +16,9 @@ COMMAND_PREVIEW_BYTE_LIMIT = 2048
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
-    return (
-        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
-    ).encode("utf-8")
+    return (json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode(
+        "utf-8"
+    )
 
 
 def _bounded_preview(value: str, *, byte_limit: int) -> tuple[str, bool]:
@@ -30,9 +30,7 @@ def _bounded_preview(value: str, *, byte_limit: int) -> tuple[str, bool]:
 
 def _atomic_write_bytes(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(
-        f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
-    )
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     try:
         temporary.write_bytes(content)
         os.replace(temporary, path)
@@ -52,9 +50,7 @@ def persist_command_evidence(
     timeout_seconds: float | None,
     projection_extra: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    normalized_command = (
-        list(command) if not isinstance(command, str) else command
-    )
+    normalized_command = list(command) if not isinstance(command, str) else command
     evidence_payload = {
         "command": normalized_command,
         "duration_seconds": duration_seconds,

@@ -185,6 +185,7 @@ StageInteractPreparer = Callable[[StageInteractOptions], PreparedStageInteractio
 ReadinessProbeProvider = Callable[[AiddConfig], Mapping[str, RuntimeReadinessProbeReport]]
 LocalFolderOpener = Callable[[Path], None]
 
+
 @dataclass(frozen=True, slots=True)
 class UiServerOptions:
     work_item: str | None
@@ -476,8 +477,7 @@ def _service_task_action_projection(
         guard_reason = "Another run mutation is in progress; wait for it to finish."
     elif runner.get("eligible") is not True:
         guard_reason = str(
-            runner.get("disabled_reason")
-            or "Selected Runner is not ready for task mutation."
+            runner.get("disabled_reason") or "Selected Runner is not ready for task mutation."
         )
     else:
         guard_reason = None
@@ -489,15 +489,13 @@ def _service_task_action_projection(
         state["disabled_reason"] = guard_reason
         states[name] = state
     projection["states"] = states
-    projection["recommended"] = (
-        next(
-            (
-                name
-                for name in ("run", "resume", "finalize")
-                if states.get(name, {}).get("eligible") is True
-            ),
-            None,
-        )
+    projection["recommended"] = next(
+        (
+            name
+            for name in ("run", "resume", "finalize")
+            if states.get(name, {}).get("eligible") is True
+        ),
+        None,
     )
     return projection
 
@@ -1456,9 +1454,7 @@ def _collect_runtime_readiness_probe_reports(
                 provider_command=provider_report.command,
                 capabilities=RuntimeCapabilityProbeReport(
                     supports_raw_log_stream=provider_report.supports_raw_log_stream,
-                    supports_structured_log_stream=(
-                        provider_report.supports_structured_log_stream
-                    ),
+                    supports_structured_log_stream=(provider_report.supports_structured_log_stream),
                     supports_questions=provider_report.supports_questions,
                     supports_resume=provider_report.supports_resume,
                     supports_subagents=provider_report.supports_subagents,
@@ -1539,9 +1535,7 @@ class OperatorUiService:
             )
         else:
             self._context = None
-        self._recent_project_roots: list[Path] = (
-            [project_root] if self._context is not None else []
-        )
+        self._recent_project_roots: list[Path] = [project_root] if self._context is not None else []
         self._transport = OperatorUiTransport(self)
         self._router = self._transport.router
 
@@ -1718,9 +1712,7 @@ class OperatorUiService:
         unexpected = tuple(sorted(key for key, values in params.items() if values))
         if unexpected:
             raise ValueError(
-                "Inbox does not accept project or path selectors: "
-                + ", ".join(unexpected)
-                + "."
+                "Inbox does not accept project or path selectors: " + ", ".join(unexpected) + "."
             )
         durable = resolve_operator_inbox_view(
             project_root=self.project_root,
@@ -1841,15 +1833,11 @@ class OperatorUiService:
                 "task_id": task_id,
                 "run_id": run_id,
                 "status": ledger.entry(task_id).status.value,
-                "task_view": self._task_view(
-                    {"run_id": [run_id], "task_id": [task_id]}
-                ),
+                "task_view": self._task_view({"run_id": [run_id], "task_id": [task_id]}),
             }
 
         try:
-            return self._start_job(
-                kind="task", stage="implement", target=_target, run_id=run_id
-            )
+            return self._start_job(kind="task", stage="implement", target=_target, run_id=run_id)
         except Exception:
             release_run_mutation_lease(lease)
             raise
@@ -2080,9 +2068,7 @@ class OperatorUiService:
         raw_constraints = payload.get("constraints")
         request_constraints = None if raw_constraints is None else str(raw_constraints)
         raw_additional = payload.get("additional_information")
-        request_additional_information = (
-            None if raw_additional is None else str(raw_additional)
-        )
+        request_additional_information = None if raw_additional is None else str(raw_additional)
         raw_request = payload.get("request", payload.get("brief", ""))
         if not isinstance(raw_request, str) or not raw_request.strip():
             raise ValueError("request is required.")
@@ -2134,7 +2120,7 @@ class OperatorUiService:
                     "request": _operator_request_context_payload(
                         workspace_root=self.workspace_root,
                         context=current,
-                        preview_markdown="# User request\n\n" f"{request_text.strip()}\n",
+                        preview_markdown=f"# User request\n\n{request_text.strip()}\n",
                     ),
                 }
             )
@@ -2470,9 +2456,7 @@ class OperatorUiService:
 
         job = cast(
             dict[str, object],
-            self._start_job(
-                kind="remediation-rerun", stage=None, target=_target, run_id=run_id
-            ),
+            self._start_job(kind="remediation-rerun", stage=None, target=_target, run_id=run_id),
         )
         job["run_id"] = run_id
         job["runtime"] = runtime
@@ -2548,12 +2532,8 @@ class OperatorUiService:
 
     def _get_routes(self) -> dict[str, Callable[[dict[str, list[str]]], UiResponse]]:
         return {
-            "/api/onboarding/state": lambda params: _json_response(
-                self._onboarding_state()
-            ),
-            "/api/project-home": lambda params: _json_response(
-                self._project_home(params)
-            ),
+            "/api/onboarding/state": lambda params: _json_response(self._onboarding_state()),
+            "/api/project-home": lambda params: _json_response(self._project_home(params)),
             "/api/inbox": lambda params: _json_response(self._inbox(params)),
             "/api/work-item/resume": lambda params: _json_response(
                 self._work_item_resume_context(params)
@@ -2563,31 +2543,19 @@ class OperatorUiService:
             ),
             "/api/run": self._get_run,
             "/api/dashboard": self._get_dashboard,
-            "/api/run/timeline": lambda params: _json_response(
-                self._run_timeline(params)
-            ),
-            "/api/run/history": lambda params: _json_response(
-                self._run_history(params)
-            ),
+            "/api/run/timeline": lambda params: _json_response(self._run_timeline(params)),
+            "/api/run/history": lambda params: _json_response(self._run_history(params)),
             "/api/run/accountability": lambda params: _json_response(
                 self._run_accountability(params)
             ),
-            "/api/run/comparison": lambda params: _json_response(
-                self._run_comparison(params)
-            ),
-            "/api/repository/diff": lambda params: _json_response(
-                self._repository_diff(params)
-            ),
+            "/api/run/comparison": lambda params: _json_response(self._run_comparison(params)),
+            "/api/repository/diff": lambda params: _json_response(self._repository_diff(params)),
             "/api/implement/evidence": lambda params: _json_response(
                 self._implementation_evidence(params)
             ),
             "/api/tasks": lambda params: _json_response(self._task_view(params)),
-            "/api/review/findings": lambda params: _json_response(
-                self._review_findings(params)
-            ),
-            "/api/qa/verdict": lambda params: _json_response(
-                self._qa_verdict(params)
-            ),
+            "/api/review/findings": lambda params: _json_response(self._review_findings(params)),
+            "/api/qa/verdict": lambda params: _json_response(self._qa_verdict(params)),
             "/api/remediation/requests": lambda params: _json_response(
                 self._remediation_requests(params)
             ),
@@ -2595,9 +2563,7 @@ class OperatorUiService:
                 self._remediation_status(params)
             ),
             "/api/next-flow/source-findings": self._get_next_flow_source_findings,
-            "/api/runtime-readiness": lambda params: _json_response(
-                self._runtime_readiness()
-            ),
+            "/api/runtime-readiness": lambda params: _json_response(self._runtime_readiness()),
             "/api/stage": self._get_stage,
             "/api/questions": self._get_questions,
             "/api/answers": self._get_answers,
@@ -2921,9 +2887,7 @@ class OperatorUiService:
             ),
             "/api/work-item/request": self._post_operator_request_context,
             "/api/answers": self._post_answer,
-            "/api/stage/run": lambda payload: _json_response(
-                self._start_stage_job(payload)
-            ),
+            "/api/stage/run": lambda payload: _json_response(self._start_stage_job(payload)),
             "/api/stage/repair-extension": lambda payload: _json_response(
                 self._start_stage_repair_extension_job(payload),
                 status=HTTPStatus.ACCEPTED,
@@ -2961,24 +2925,16 @@ class OperatorUiService:
             "/api/next-flow/clone-draft/create": self._next_flow_create_clone_draft,
             "/api/next-flow/launch": self._next_flow_launch,
             "/api/next-flow/archive": self._next_flow_archive,
-            "/api/workflow/run": lambda payload: _json_response(
-                self._start_workflow_job(payload)
-            ),
-            "/api/open-folder": lambda payload: _json_response(
-                self._open_folder(payload)
-            ),
-            "/api/server/stop": lambda payload: _json_response(
-                self._request_server_stop()
-            ),
+            "/api/workflow/run": lambda payload: _json_response(self._start_workflow_job(payload)),
+            "/api/open-folder": lambda payload: _json_response(self._open_folder(payload)),
+            "/api/server/stop": lambda payload: _json_response(self._request_server_stop()),
         }
 
     def _post_answer(self, payload: dict[str, Any]) -> UiResponse:
         stage = str(payload.get("stage", STAGES[0])).strip() or STAGES[0]
         question_id = str(payload.get("question_id", "")).strip()
         text = str(payload.get("text", "")).strip()
-        raw_resolution = str(
-            payload.get("resolution", AnswerResolution.RESOLVED)
-        ).strip()
+        raw_resolution = str(payload.get("resolution", AnswerResolution.RESOLVED)).strip()
         if not question_id:
             return _error_response("question_id is required.")
         if not text:
@@ -2996,9 +2952,7 @@ class OperatorUiService:
         try:
             resolution = AnswerResolution(raw_resolution)
         except ValueError:
-            return _error_response(
-                "resolution must be one of: resolved, partial, deferred."
-            )
+            return _error_response("resolution must be one of: resolved, partial, deferred.")
         evidence_links = _answer_links_from_payload(payload)
         consequence = str(payload.get("unblock_consequence") or "").strip() or None
         answer = InterviewAnswer(
@@ -3016,9 +2970,7 @@ class OperatorUiService:
                 stage=stage,
             )
             preview_answers = tuple(
-                answer
-                for answer in existing_answers
-                if answer.question_id != question_id
+                answer for answer in existing_answers if answer.question_id != question_id
             ) + (answer,)
             return _json_response(
                 {
@@ -3115,16 +3067,10 @@ class OperatorUiService:
             return Path(raw_attempt_path)
         raw_job_workspace = job.get("workspace_root")
         job_workspace_root = (
-            Path(raw_job_workspace)
-            if isinstance(raw_job_workspace, str)
-            else self.workspace_root
+            Path(raw_job_workspace) if isinstance(raw_job_workspace, str) else self.workspace_root
         )
         raw_job_work_item = job.get("work_item")
-        job_work_item = (
-            raw_job_work_item
-            if isinstance(raw_job_work_item, str)
-            else self.work_item
-        )
+        job_work_item = raw_job_work_item if isinstance(raw_job_work_item, str) else self.work_item
         result = job.get("result")
         stage = job.get("stage")
         run_id: object = None
@@ -3235,9 +3181,7 @@ class OperatorUiService:
         if not isinstance(raw_author, str) or not raw_author.strip():
             raise ValueError("author must be a non-empty string when provided.")
         raw_reason = payload.get("reason")
-        if raw_reason is not None and (
-            not isinstance(raw_reason, str) or not raw_reason.strip()
-        ):
+        if raw_reason is not None and (not isinstance(raw_reason, str) or not raw_reason.strip()):
             raise ValueError("reason must be a non-empty string when provided.")
         author = raw_author.strip()
         reason = (
@@ -3524,9 +3468,7 @@ class OperatorUiService:
                 return self._run_workflow(prepared_payload, job_id=job_id)
 
         try:
-            return self._start_job(
-                kind="workflow", stage=None, target=_target, run_id=run_id
-            )
+            return self._start_job(kind="workflow", stage=None, target=_target, run_id=run_id)
         except Exception:
             release_run_mutation_lease(lease)
             raise
@@ -3862,12 +3804,8 @@ class OperatorUiService:
                     correlated_work_item = (
                         result_work_item if isinstance(result_work_item, str) else None
                     )
-                    correlated_run_id = (
-                        result_run_id if isinstance(result_run_id, str) else None
-                    )
-                    correlated_stage = (
-                        result_stage if isinstance(result_stage, str) else None
-                    )
+                    correlated_run_id = result_run_id if isinstance(result_run_id, str) else None
+                    correlated_stage = result_stage if isinstance(result_stage, str) else None
                     self._jobs.correlate(
                         job_id,
                         work_item=correlated_work_item,
@@ -4113,9 +4051,7 @@ class OperatorUiService:
             protected_scope = UiProtectedWriteScope(
                 status="invalid",
                 prefixes=(),
-                source_path=(
-                    f"workitems/{self.work_item}/context/allowed-write-scope.md"
-                ),
+                source_path=(f"workitems/{self.work_item}/context/allowed-write-scope.md"),
                 message=str(exc),
             )
         else:

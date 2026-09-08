@@ -8,13 +8,7 @@ _SEMANTIC_FIXTURES_ROOT = Path(__file__).parent / "fixtures" / "semantic"
 
 def _write_rich_tasklist_for_evidence(workspace_root: Path, work_item: str) -> None:
     path = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / work_item / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -44,6 +38,7 @@ One bounded task supplies structured aggregate evidence.
 """,
         encoding="utf-8",
     )
+
 
 def _git(project_root: Path, *args: str) -> None:
     subprocess.run(

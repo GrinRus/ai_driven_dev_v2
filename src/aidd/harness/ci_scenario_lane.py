@@ -32,9 +32,8 @@ class CiScenarioLaneResult:
 
     @property
     def succeeded(self) -> bool:
-        return (
-            self.discovered_ids == self.executed_ids
-            and all(execution.exit_code == 0 for execution in self.executions)
+        return self.discovered_ids == self.executed_ids and all(
+            execution.exit_code == 0 for execution in self.executions
         )
 
 

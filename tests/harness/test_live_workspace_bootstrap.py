@@ -93,44 +93,32 @@ def test_bootstrap_selected_task_preserves_authored_constraints_with_visible_req
         resolved_revision="abc123",
     )
 
-    selected_task_text = (
-        work_item_root / "context" / "selected-task.md"
-    ).read_text(encoding="utf-8")
-    user_request_text = (
-        work_item_root / "context" / "user-request.md"
-    ).read_text(encoding="utf-8")
+    selected_task_text = (work_item_root / "context" / "selected-task.md").read_text(
+        encoding="utf-8"
+    )
+    user_request_text = (work_item_root / "context" / "user-request.md").read_text(encoding="utf-8")
 
     assert "## Visible Product Request" in selected_task_text
     assert "Please route non-Error thrown values through configured onError." in (
         selected_task_text
     )
     assert "## Authored Task Constraints" in selected_task_text
-    assert "Normalize non-Error thrown values at the error boundary." in (
-        selected_task_text
-    )
-    assert "The implementation follows the authored semantic target." in (
-        selected_task_text
-    )
+    assert "Normalize non-Error thrown values at the error boundary." in (selected_task_text)
+    assert "The implementation follows the authored semantic target." in (selected_task_text)
     assert "Runtime boundary plus focused tests." in selected_task_text
     assert "## Authored Task Constraints" not in user_request_text
-    assert "Please route non-Error thrown values through configured onError." in (
-        user_request_text
-    )
+    assert "Please route non-Error thrown values through configured onError." in (user_request_text)
     assert not (work_item_root / "context" / "allowed-write-scope.md").exists()
 
 
 def test_bootstrap_hono_live_task_exposes_target_change_before_stage_run(
     tmp_path: Path,
 ) -> None:
-    scenario = load_scenario(
-        Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
-    )
+    scenario = load_scenario(Path("harness/scenarios/live/hono-non-error-throw-handling.yaml"))
     selected_task = select_authored_task(scenario)
     assert selected_task is not None
     working_copy = tmp_path / "target"
-    work_item_root = (
-        working_copy / ".aidd" / "workitems" / "WI-LIVE-HONO-SMOKE"
-    )
+    work_item_root = working_copy / ".aidd" / "workitems" / "WI-LIVE-HONO-SMOKE"
     work_item_root.mkdir(parents=True)
 
     bootstrap_live_work_item(
@@ -141,23 +129,15 @@ def test_bootstrap_hono_live_task_exposes_target_change_before_stage_run(
         resolved_revision=scenario.repo.revision,
     )
 
-    selected_task_text = (
-        work_item_root / "context" / "selected-task.md"
-    ).read_text(encoding="utf-8")
-    user_request_text = (
-        work_item_root / "context" / "user-request.md"
-    ).read_text(encoding="utf-8")
+    selected_task_text = (work_item_root / "context" / "selected-task.md").read_text(
+        encoding="utf-8"
+    )
+    user_request_text = (work_item_root / "context" / "user-request.md").read_text(encoding="utf-8")
 
     assert "## Visible Product Request" in selected_task_text
     assert "## Authored Task Constraints" in selected_task_text
-    assert (
-        "Normalize non-Error thrown values at the error boundary"
-        in selected_task_text
-    )
-    assert (
-        "preserves the existing public error type contracts"
-        in selected_task_text
-    )
+    assert "Normalize non-Error thrown values at the error boundary" in selected_task_text
+    assert "preserves the existing public error type contracts" in selected_task_text
     assert "Hono should route thrown non-Error values" in user_request_text
     assert "## Authored Task Constraints" not in user_request_text
     scope = resolve_allowed_write_scope(working_copy / ".aidd", "WI-LIVE-HONO-SMOKE")
@@ -192,9 +172,7 @@ def test_bootstrap_keeps_post_flow_checks_out_of_authored_verification_context(
     selected_task = select_authored_task(scenario)
     assert selected_task is not None
     working_copy = tmp_path / "target"
-    work_item_root = (
-        working_copy / ".aidd" / "workitems" / "WI-LIVE-SQLITE-SMOKE"
-    )
+    work_item_root = working_copy / ".aidd" / "workitems" / "WI-LIVE-SQLITE-SMOKE"
     work_item_root.mkdir(parents=True)
 
     bootstrap_live_work_item(
@@ -205,9 +183,9 @@ def test_bootstrap_keeps_post_flow_checks_out_of_authored_verification_context(
         resolved_revision=scenario.repo.revision,
     )
 
-    verification_output = (
-        work_item_root / "context" / "verification-output.md"
-    ).read_text(encoding="utf-8")
+    verification_output = (work_item_root / "context" / "verification-output.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "uv run pytest -q" in verification_output
     assert "Evaluator-Owned Post-Flow Verification" in verification_output

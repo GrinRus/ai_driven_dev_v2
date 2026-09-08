@@ -82,7 +82,6 @@ Two bounded tasks with complete dependency and verification evidence.
 """
 
 
-
 def prepare_task_execution(
     *,
     workspace_root: Path,
@@ -123,6 +122,7 @@ def complete_task_execution(
         succeeded=succeeded,
         blocker=blocker,
     )
+
 
 def test_task_ledger_enforces_dependencies_and_hash(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -167,6 +167,7 @@ def test_task_ledger_enforces_dependencies_and_hash(tmp_path: Path) -> None:
             plan=changed_plan,
         )
 
+
 def test_task_ledger_rejects_v1_without_upgrading_finalization() -> None:
     retired = TaskLedger.create(parse_task_plan(_tasklist())).to_dict()
     retired["schema_version"] = 1
@@ -194,6 +195,7 @@ def test_task_ledger_v2_round_trip_preserves_finalization_transitions() -> None:
         == "publish"
     )
 
+
 def test_run_mutation_lease_is_reentrant_and_conflicts_between_threads(
     tmp_path: Path,
 ) -> None:
@@ -214,6 +216,7 @@ def test_run_mutation_lease_is_reentrant_and_conflicts_between_threads(
                 future.result()
 
     assert not (run_root / ".mutation-lease").exists()
+
 
 def test_run_mutation_lease_reclaims_dead_same_host_owner(tmp_path: Path) -> None:
     run_root = tmp_path / "run-1"
@@ -236,6 +239,7 @@ def test_run_mutation_lease_reclaims_dead_same_host_owner(tmp_path: Path) -> Non
 
     assert not lease_path.exists()
 
+
 def test_run_mutation_lease_can_transfer_to_worker_thread(tmp_path: Path) -> None:
     import concurrent.futures
 
@@ -249,6 +253,7 @@ def test_run_mutation_lease_can_transfer_to_worker_thread(tmp_path: Path) -> Non
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         assert executor.submit(_worker).result() == "ui-task"
     assert not (run_root / ".mutation-lease").exists()
+
 
 def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     tmp_path: Path,
@@ -374,6 +379,7 @@ def test_reconciliation_repairs_stage_projection_after_ledger_commit(tmp_path: P
     ]
     assert resumed.ledger.entry("TL-1").attempt_count == 2
 
+
 def test_blocked_task_preserves_questions_and_answers_until_resume(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist_path = (
@@ -440,12 +446,21 @@ def test_blocked_task_preserves_questions_and_answers_until_resume(tmp_path: Pat
 
 
 @pytest.mark.parametrize("invalid_file", ("stage-metadata", "run-manifest"))
-@pytest.mark.parametrize("operation", (
-    "global-attempt", "task-attempt", "new-ledger-service", "reconciliation",
-    "finalization", "finalization-service",
-))
+@pytest.mark.parametrize(
+    "operation",
+    (
+        "global-attempt",
+        "task-attempt",
+        "new-ledger-service",
+        "reconciliation",
+        "finalization",
+        "finalization-service",
+    ),
+)
 def test_invalid_current_state_stops_before_attempt_or_ledger_mutation(
-    tmp_path: Path, invalid_file: str, operation: str,
+    tmp_path: Path,
+    invalid_file: str,
+    operation: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     work_item, run_id = "WI-1", "run-1"
@@ -453,23 +468,32 @@ def test_invalid_current_state_stops_before_attempt_or_ledger_mutation(
     tasklist.parent.mkdir(parents=True)
     tasklist.write_text(_tasklist(), encoding="utf-8")
     manifest_path = create_run_manifest(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id,
-        runtime_id="generic-cli", stage_target="implement", config_snapshot={},
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target="implement",
+        config_snapshot={},
     )
     persist_stage_status(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id,
-        stage="implement", status="executing",
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="implement",
+        status="executing",
     )
     ledger = TaskLedger.create(parse_task_plan(_tasklist()))
     if operation == "reconciliation":
         attempt = (
-            workspace_root / "reports/runs/WI-1/run-1/stages/implement/tasks/TL-1/attempts"
+            workspace_root
+            / "reports/runs/WI-1/run-1/stages/implement/tasks/TL-1/attempts"
             / "attempt-0001"
         )
         attempt.mkdir(parents=True)
         (attempt / "task-state.json").write_text('{"status":"executing"}\n')
         ledger = ledger.transition(
-            "TL-1", TaskExecutionStatus.EXECUTING,
+            "TL-1",
+            TaskExecutionStatus.EXECUTING,
             latest_attempt_path=attempt.relative_to(workspace_root).as_posix(),
         )
     if operation.startswith("finalization"):
@@ -478,10 +502,16 @@ def test_invalid_current_state_stops_before_attempt_or_ledger_mutation(
             ledger = ledger.transition(task.id, TaskExecutionStatus.SUCCEEDED)
     if operation != "new-ledger-service":
         persist_task_ledger(
-            workspace_root=workspace_root, work_item=work_item, run_id=run_id, ledger=ledger,
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            ledger=ledger,
         )
     metadata_path = run_stage_metadata_path(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="implement",
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="implement",
     )
     invalid_path = metadata_path if invalid_file == "stage-metadata" else manifest_path
     payload = json.loads(invalid_path.read_text())
@@ -504,36 +534,55 @@ def test_invalid_current_state_stops_before_attempt_or_ledger_mutation(
         raise AssertionError("Invalid persisted state must stop before execution")
 
     service = ImplementationExecutionService(
-        task_executor=forbidden_callback, aggregate_finalizer=forbidden_callback,
+        task_executor=forbidden_callback,
+        aggregate_finalizer=forbidden_callback,
     )
     request = ImplementationExecutionRequest(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id, project_root=tmp_path,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        project_root=tmp_path,
     )
     with pytest.raises(ValueError, match="schema_version"):
         if operation == "global-attempt":
             persist_execution_state(
-                workspace_root=workspace_root, work_item=work_item, run_id=run_id,
-                stage="implement", attempt_mode="initial",
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage="implement",
+                attempt_mode="initial",
             )
         elif operation == "task-attempt":
             prepare_task_attempt(
-                workspace_root=workspace_root, work_item=work_item, run_id=run_id,
-                task_id="TL-1", project_root=tmp_path,
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                task_id="TL-1",
+                project_root=tmp_path,
                 repository_baseline=lambda **kwargs: {
-                    "schema_version": 1, "task_id": "TL-1", "status": [], "files": {},
+                    "schema_version": 1,
+                    "task_id": "TL-1",
+                    "status": [],
+                    "files": {},
                 },
             )
         elif operation == "new-ledger-service":
             service.run_task(request, task_id="TL-1")
         elif operation == "reconciliation":
             reconcile_task_execution_state(
-                workspace_root=workspace_root, work_item=work_item, run_id=run_id, ledger=ledger,
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                ledger=ledger,
             )
         elif operation == "finalization-service":
             service.finalize(request)
         else:
             prepare_task_finalization(
-                workspace_root=workspace_root, work_item=work_item, run_id=run_id, ledger=ledger,
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                ledger=ledger,
             )
     assert calls == []
     assert snapshot() == before

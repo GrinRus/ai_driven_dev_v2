@@ -128,11 +128,7 @@ def test_run_paths_reject_symlink_escapes(tmp_path: Path, escape_level: str) -> 
                 work_item_root.symlink_to(outside, target_is_directory=True)
             else:
                 attempts = (
-                    work_item_root
-                    / "run-1"
-                    / RUN_STAGES_DIRNAME
-                    / "plan"
-                    / RUN_ATTEMPTS_DIRNAME
+                    work_item_root / "run-1" / RUN_STAGES_DIRNAME / "plan" / RUN_ATTEMPTS_DIRNAME
                 )
                 attempts.parent.mkdir(parents=True)
                 attempts.symlink_to(outside, target_is_directory=True)
@@ -192,9 +188,7 @@ def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: 
         for entry in prompt_pack_provenance
         if entry["path"] == "prompt-packs/stages/plan/system.md"
     )
-    expected_hash = hashlib.sha256(
-        Path(system_prompt["path"]).read_bytes()
-    ).hexdigest()
+    expected_hash = hashlib.sha256(Path(system_prompt["path"]).read_bytes()).hexdigest()
     assert system_prompt["sha256"] == expected_hash
     assert payload["schema_version"] == 1
 
@@ -283,12 +277,15 @@ def test_create_run_manifest_records_packaged_resource_revision_and_adapter_id(
 def test_next_attempt_number_starts_from_one_when_attempts_missing(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
 
-    assert next_attempt_number(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    ) == 1
+    assert (
+        next_attempt_number(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        )
+        == 1
+    )
 
 
 def test_create_next_attempt_directory_uses_monotonic_numbering(tmp_path: Path) -> None:
@@ -348,15 +345,17 @@ def test_attempt_artifact_index_records_canonical_stage_document_paths(tmp_path:
 
     payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
     expected_doc_keys = {
-        name.removesuffix(".md").replace("-", "_")
-        for name in RESERVED_STAGE_FILENAMES
+        name.removesuffix(".md").replace("-", "_") for name in RESERVED_STAGE_FILENAMES
     }
     expected_doc_keys.add("plan")
     assert set(payload["documents"]) == expected_doc_keys
 
-    assert payload["documents"]["plan"] == (
-        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "plan.md"
-    ).relative_to(workspace_root).as_posix()
+    assert (
+        payload["documents"]["plan"]
+        == (workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "plan.md")
+        .relative_to(workspace_root)
+        .as_posix()
+    )
     for filename in RESERVED_STAGE_FILENAMES:
         key = filename.removesuffix(".md").replace("-", "_")
         expected_path = (
@@ -397,9 +396,7 @@ def test_attempt_artifact_index_records_project_set_context_when_present(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    project_set_context = (
-        workspace_root / "workitems" / "WI-001" / "context" / "project-set.md"
-    )
+    project_set_context = workspace_root / "workitems" / "WI-001" / "context" / "project-set.md"
     project_set_context.parent.mkdir(parents=True)
     project_set_context.write_text("# Project set\n\n- `api`\n", encoding="utf-8")
 
@@ -548,9 +545,7 @@ def test_attempt_artifact_index_records_runtime_exit_metadata_when_present(
     )
 
     assert payload["logs"]["runtime_log"].endswith("/attempt-0001/runtime.log")
-    assert payload["logs"]["runtime_exit_metadata"].endswith(
-        "/attempt-0001/runtime-exit.json"
-    )
+    assert payload["logs"]["runtime_exit_metadata"].endswith("/attempt-0001/runtime-exit.json")
 
 
 def test_attempt_artifact_index_records_optional_jsonl_logs_when_present(

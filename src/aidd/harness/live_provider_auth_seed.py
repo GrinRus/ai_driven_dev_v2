@@ -83,9 +83,7 @@ def _validate_distinct_homes(operator_home: Path, private_home: Path) -> None:
         or operator_home.is_relative_to(private_home)
         or private_home.is_relative_to(operator_home)
     ):
-        raise LiveProviderAuthSeedError(
-            "Operator and provider-private homes must be separate."
-        )
+        raise LiveProviderAuthSeedError("Operator and provider-private homes must be separate.")
 
 
 def _source_identity(
@@ -116,13 +114,9 @@ def _source_identity(
             )
         if is_last:
             if not stat.S_ISREG(metadata.st_mode):
-                raise LiveProviderAuthSeedError(
-                    "Provider auth source must be a regular file."
-                )
+                raise LiveProviderAuthSeedError("Provider auth source must be a regular file.")
             if metadata.st_nlink != 1:
-                raise LiveProviderAuthSeedError(
-                    "Provider auth source must not be hard linked."
-                )
+                raise LiveProviderAuthSeedError("Provider auth source must not be hard linked.")
             if metadata.st_size > MAX_PROVIDER_AUTH_SEED_BYTES:
                 raise LiveProviderAuthSeedError(
                     "Provider auth source exceeds the 1 MiB size limit."
@@ -162,9 +156,7 @@ def _prepare_destination_parent(
     try:
         private_home.chmod(0o700)
     except OSError as exc:
-        raise LiveProviderAuthSeedError(
-            "Unable to protect provider-private home."
-        ) from exc
+        raise LiveProviderAuthSeedError("Unable to protect provider-private home.") from exc
 
     current = private_home
     for component in relative_path.parent.parts:
@@ -190,13 +182,11 @@ def _prepare_destination_parent(
             )
         if stat.S_ISLNK(metadata.st_mode):
             raise LiveProviderAuthSeedError(
-                f"Provider auth destination component {component!r} "
-                "must not be a symlink."
+                f"Provider auth destination component {component!r} must not be a symlink."
             )
         if not stat.S_ISDIR(metadata.st_mode):
             raise LiveProviderAuthSeedError(
-                f"Provider auth destination component {component!r} "
-                "must be a directory."
+                f"Provider auth destination component {component!r} must be a directory."
             )
         try:
             current.chmod(0o700)
@@ -240,9 +230,7 @@ def _open_source(path: Path) -> int:
     try:
         return os.open(path, flags)
     except OSError as exc:
-        raise LiveProviderAuthSeedError(
-            "Unable to open provider auth source."
-        ) from exc
+        raise LiveProviderAuthSeedError("Unable to open provider auth source.") from exc
 
 
 def _seed_file(
@@ -252,9 +240,7 @@ def _seed_file(
     destination: Path,
 ) -> int:
     if _optional_lstat(destination, label="provider auth destination") is not None:
-        raise LiveProviderAuthSeedError(
-            "Provider auth destination already exists."
-        )
+        raise LiveProviderAuthSeedError("Provider auth destination already exists.")
 
     source_descriptor = _open_source(source)
     temporary_path: Path | None = None
@@ -262,18 +248,14 @@ def _seed_file(
     try:
         before = os.fstat(source_descriptor)
         if not _matches_source(before, source_identity):
-            raise LiveProviderAuthSeedError(
-                "Provider auth source changed before copy."
-            )
+            raise LiveProviderAuthSeedError("Provider auth source changed before copy.")
         try:
             temporary_descriptor, temporary_name = tempfile.mkstemp(
                 prefix=".provider-auth-seed-",
                 dir=destination.parent,
             )
         except OSError as exc:
-            raise LiveProviderAuthSeedError(
-                "Unable to create provider auth staging file."
-            ) from exc
+            raise LiveProviderAuthSeedError("Unable to create provider auth staging file.") from exc
         temporary_path = Path(temporary_name)
         try:
             os.fchmod(temporary_descriptor, 0o600)
@@ -284,24 +266,15 @@ def _seed_file(
             os.fsync(temporary_descriptor)
             staged_digest = _digest_descriptor(temporary_descriptor)
         except OSError as exc:
-            raise LiveProviderAuthSeedError(
-                "Unable to copy provider auth source."
-            ) from exc
+            raise LiveProviderAuthSeedError("Unable to copy provider auth source.") from exc
         finally:
             os.close(temporary_descriptor)
 
         after = os.fstat(source_descriptor)
-        if (
-            not _matches_source(after, source_identity)
-            or copied_size != source_identity.size_bytes
-        ):
-            raise LiveProviderAuthSeedError(
-                "Provider auth source changed during copy."
-            )
+        if not _matches_source(after, source_identity) or copied_size != source_identity.size_bytes:
+            raise LiveProviderAuthSeedError("Provider auth source changed during copy.")
         if staged_digest != source_digest:
-            raise LiveProviderAuthSeedError(
-                "Provider auth staging verification failed."
-            )
+            raise LiveProviderAuthSeedError("Provider auth staging verification failed.")
         staged = _safe_lstat(temporary_path, label="provider auth staging file")
         if (
             not stat.S_ISREG(staged.st_mode)
@@ -309,13 +282,9 @@ def _seed_file(
             or staged.st_size != copied_size
             or stat.S_IMODE(staged.st_mode) != 0o600
         ):
-            raise LiveProviderAuthSeedError(
-                "Provider auth staging metadata is invalid."
-            )
+            raise LiveProviderAuthSeedError("Provider auth staging metadata is invalid.")
         if _optional_lstat(destination, label="provider auth destination") is not None:
-            raise LiveProviderAuthSeedError(
-                "Provider auth destination appeared during copy."
-            )
+            raise LiveProviderAuthSeedError("Provider auth destination appeared during copy.")
         try:
             os.link(
                 temporary_path,
@@ -323,9 +292,7 @@ def _seed_file(
                 follow_symlinks=False,
             )
         except OSError as exc:
-            raise LiveProviderAuthSeedError(
-                "Unable to publish provider auth destination."
-            ) from exc
+            raise LiveProviderAuthSeedError("Unable to publish provider auth destination.") from exc
         published = True
         temporary_path.unlink()
         final = _safe_lstat(destination, label="published provider auth")
@@ -335,9 +302,7 @@ def _seed_file(
             or final.st_size != copied_size
             or stat.S_IMODE(final.st_mode) != 0o600
         ):
-            raise LiveProviderAuthSeedError(
-                "Published provider auth metadata is invalid."
-            )
+            raise LiveProviderAuthSeedError("Published provider auth metadata is invalid.")
         return copied_size
     except Exception:
         if published:

@@ -109,6 +109,5 @@ def test_eval_summary_regression_repeated_scenario_runs() -> None:
         "`runtime` |" in markdown
     )
     assert (
-        "| `AIDD-LIVE-010` | `eval-run-011` | `generic-cli` | `pass` | 6.000 | "
-        "`none` |" in markdown
+        "| `AIDD-LIVE-010` | `eval-run-011` | `generic-cli` | `pass` | 6.000 | `none` |" in markdown
     )

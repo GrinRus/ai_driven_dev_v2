@@ -42,8 +42,7 @@ def test_native_prompt_module_is_the_only_prompt_read_owner() -> None:
 
     assert "_read_text_for_prompt" in _defined_names(native_prompt_path)
     assert all(
-        "_read_text_for_prompt" not in _defined_names(runner_path)
-        for runner_path in runner_paths
+        "_read_text_for_prompt" not in _defined_names(runner_path) for runner_path in runner_paths
     )
 
 

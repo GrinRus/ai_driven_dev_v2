@@ -22,7 +22,7 @@ class LifecycleObservation:
     outer_watchdog_fired: bool
 
 
-_HELPER = r'''
+_HELPER = r"""
 import json
 import os
 import sys
@@ -99,7 +99,7 @@ print(json.dumps({
     "stderr_observed": bool(result.stderr_text),
     "outer_watchdog_fired": False,
 }), flush=True)
-'''
+"""
 
 
 def _observe_probe(scenario: str, tmp_path: Path) -> LifecycleObservation:

@@ -21,9 +21,7 @@ _ENTRY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _TASK_ID_PATTERN = re.compile(r"\b((?:[A-Z][A-Z0-9]{0,15}-\d+)|T\d+)\b(?!-AC)")
-_ACCEPTANCE_ID_PATTERN = re.compile(
-    r"\b((?:[A-Z][A-Z0-9]{0,15}-\d+|T\d+)-AC[1-9]\d*)\b"
-)
+_ACCEPTANCE_ID_PATTERN = re.compile(r"\b((?:[A-Z][A-Z0-9]{0,15}-\d+|T\d+)-AC[1-9]\d*)\b")
 _EVIDENCE_PATTERN = re.compile(r"`[^`]+`|\bEV-\d+\b", re.IGNORECASE)
 
 
@@ -108,9 +106,7 @@ def validate_aggregate_task_evidence(
         )
 
     expected = {
-        (task.id, criterion.id)
-        for task in plan.tasks
-        for criterion in task.acceptance_criteria
+        (task.id, criterion.id) for task in plan.tasks for criterion in task.acceptance_criteria
     }
     observed: list[tuple[str, str]] = []
     non_pass = False
@@ -130,13 +126,9 @@ def validate_aggregate_task_evidence(
         identity_fields = re.split(
             r";\s*Evidence\s*:", entry.raw_line, maxsplit=1, flags=re.IGNORECASE
         )[0]
-        task_ids = {
-            match.group(1).upper()
-            for match in _TASK_ID_PATTERN.finditer(identity_fields)
-        }
+        task_ids = {match.group(1).upper() for match in _TASK_ID_PATTERN.finditer(identity_fields)}
         acceptance_ids = {
-            match.group(1).upper()
-            for match in _ACCEPTANCE_ID_PATTERN.finditer(identity_fields)
+            match.group(1).upper() for match in _ACCEPTANCE_ID_PATTERN.finditer(identity_fields)
         }
         if task_ids != {entry.task_id} or acceptance_ids != {entry.acceptance_id}:
             findings.append(

@@ -226,8 +226,7 @@ def validate_required_sections(
                     ValidationFinding(
                         code=STALE_STAGE_RESULT_PLACEHOLDER_CODE,
                         message=(
-                            "stage-result.md retains stale placeholder text "
-                            "`Stage not run yet.`"
+                            "stage-result.md retains stale placeholder text `Stage not run yet.`"
                         ),
                         severity="high",
                         location=ValidationIssueLocation(

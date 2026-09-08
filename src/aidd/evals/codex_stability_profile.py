@@ -19,10 +19,7 @@ from aidd.harness.scenarios import Scenario, load_scenario
 
 CODEX_STABILITY_PROFILE_SCHEMA_VERSION = 1
 DEFAULT_CODEX_STABILITY_PROFILE_ROOT = (
-    Path(__file__).resolve().parents[3]
-    / "tests"
-    / "fixtures"
-    / "w43-e5-s2-t1-codex-stability"
+    Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "w43-e5-s2-t1-codex-stability"
 )
 DEFAULT_CODEX_STABILITY_PROFILE_PATH = (
     DEFAULT_CODEX_STABILITY_PROFILE_ROOT / "codex-stability-profile.json"
@@ -199,8 +196,7 @@ def _string_tuple(value: object, *, context: str, allow_empty: bool = False) -> 
     if not allow_empty and not value:
         raise CodexStabilityProfileError(f"{context} must be non-empty.")
     normalized = tuple(
-        _required_string(item, context=f"{context}[{index}]")
-        for index, item in enumerate(value)
+        _required_string(item, context=f"{context}[{index}]") for index, item in enumerate(value)
     )
     if len(normalized) != len(set(normalized)):
         raise CodexStabilityProfileError(f"{context} must not contain duplicates.")
@@ -285,8 +281,7 @@ def _parse_profile(raw: object) -> CodexStabilityProfile:
         raise CodexStabilityProfileError("Codex stability profile must be an object.")
     if raw.get("schema_version") != CODEX_STABILITY_PROFILE_SCHEMA_VERSION:
         raise CodexStabilityProfileError(
-            "Unsupported Codex stability profile schema version: "
-            f"{raw.get('schema_version')!r}."
+            f"Unsupported Codex stability profile schema version: {raw.get('schema_version')!r}."
         )
     scenario = raw.get("scenario")
     runtime_config = raw.get("runtime_config")
@@ -307,8 +302,7 @@ def _parse_profile(raw: object) -> CodexStabilityProfile:
     metric_ids = tuple(metric.metric_id for metric in metrics)
     if metric_ids != CODEX_STABILITY_METRIC_IDS:
         raise CodexStabilityProfileError(
-            "metrics must use the canonical ordered ids: "
-            + ", ".join(CODEX_STABILITY_METRIC_IDS)
+            "metrics must use the canonical ordered ids: " + ", ".join(CODEX_STABILITY_METRIC_IDS)
         )
     return CodexStabilityProfile(
         schema_version=CODEX_STABILITY_PROFILE_SCHEMA_VERSION,
@@ -417,8 +411,7 @@ def validate_profile_against_scenario(
         raise CodexStabilityProfileError("Codex stability profiles require a live scenario.")
     if scenario.scenario_id != profile.scenario_id:
         raise CodexStabilityProfileError(
-            f"Profile scenario id {profile.scenario_id!r} does not match "
-            f"{scenario.scenario_id!r}."
+            f"Profile scenario id {profile.scenario_id!r} does not match {scenario.scenario_id!r}."
         )
     if profile.runtime_id not in scenario.runtime_targets:
         raise CodexStabilityProfileError("Profile runtime is not allowed by the scenario.")
@@ -457,9 +450,7 @@ def _metric_observations(
     for definition in profile.metrics:
         payload = raw.get(definition.metric_id)
         if not isinstance(payload, dict):
-            raise CodexStabilityProfileError(
-                f"metrics.{definition.metric_id} must be an object."
-            )
+            raise CodexStabilityProfileError(f"metrics.{definition.metric_id} must be an object.")
         numerator = payload.get("numerator")
         denominator = payload.get("denominator")
         value = payload.get("value")
@@ -535,11 +526,11 @@ def validate_repetition_evidence(
         or len(stage_scope) != 2
         or tuple(stage_scope) != (profile.stage_start, profile.stage_end)
     ):
-        raise CodexStabilityProfileError(
-            "stage_scope must match the profile's idea -> qa scope."
-        )
-    if not isinstance(attempts, list) or not attempts or not all(
-        isinstance(item, dict) for item in attempts
+        raise CodexStabilityProfileError("stage_scope must match the profile's idea -> qa scope.")
+    if (
+        not isinstance(attempts, list)
+        or not attempts
+        or not all(isinstance(item, dict) for item in attempts)
     ):
         raise CodexStabilityProfileError("attempts must be a non-empty list of objects.")
     if not isinstance(evidence_links, list) or not evidence_links:

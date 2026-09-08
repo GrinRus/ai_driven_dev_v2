@@ -195,13 +195,9 @@ def _read_static_text(filename: str) -> str:
 
 
 _STATIC_TEXT_BY_FILENAME = {
-    asset.filename: _read_static_text(asset.filename)
-    for asset in _OPERATOR_STATIC_ASSET_MANIFEST
+    asset.filename: _read_static_text(asset.filename) for asset in _OPERATOR_STATIC_ASSET_MANIFEST
 }
-_STATIC_ASSET_BY_ROUTE = {
-    asset.route: asset
-    for asset in _OPERATOR_STATIC_ASSET_MANIFEST
-}
+_STATIC_ASSET_BY_ROUTE = {asset.route: asset for asset in _OPERATOR_STATIC_ASSET_MANIFEST}
 
 
 def operator_static_asset_manifest() -> tuple[OperatorStaticAsset, ...]:

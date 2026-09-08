@@ -101,14 +101,10 @@ class CrossDocumentContext:
         plan_path = work_item_root / "stages" / "plan" / "output" / "plan.md"
         review_path = stage_root / "review-report.md"
         qa_path = stage_root / "qa-report.md"
-        upstream_review_path = (
-            work_item_root / "stages" / "review" / "output" / "review-report.md"
-        )
+        upstream_review_path = work_item_root / "stages" / "review" / "output" / "review-report.md"
         implementation_output_root = work_item_root / "stages" / "implement" / "output"
         implementation_report_path = implementation_output_root / "implementation-report.md"
-        published_tasklist_path = (
-            work_item_root / "stages" / "tasklist" / "output" / "tasklist.md"
-        )
+        published_tasklist_path = work_item_root / "stages" / "tasklist" / "output" / "tasklist.md"
         return cls(
             stage=stage,
             work_item=work_item,

@@ -21,9 +21,7 @@ def _repo_root() -> Path:
 
 
 def _registry_payload() -> dict[str, object]:
-    payload = yaml.safe_load(
-        (_repo_root() / REGISTRY_RELATIVE_PATH).read_text(encoding="utf-8")
-    )
+    payload = yaml.safe_load((_repo_root() / REGISTRY_RELATIVE_PATH).read_text(encoding="utf-8"))
     assert isinstance(payload, dict)
     return payload
 

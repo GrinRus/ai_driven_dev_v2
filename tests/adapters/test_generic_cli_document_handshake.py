@@ -129,14 +129,10 @@ def _run_runtime_script(
 
 def _valid_output_documents(*, unresolved_question: bool = False) -> dict[str, str]:
     questions_block = (
-        "- `Q1` `[blocking]` Confirm scope boundaries.\n"
-        if unresolved_question
-        else "- none\n"
+        "- `Q1` `[blocking]` Confirm scope boundaries.\n" if unresolved_question else "- none\n"
     )
     answers_block = (
-        "- `Q1` `[partial]` Scope still under review.\n"
-        if unresolved_question
-        else "- none\n"
+        "- `Q1` `[partial]` Scope still under review.\n" if unresolved_question else "- none\n"
     )
     return {
         "plan.md": (
@@ -248,8 +244,7 @@ def test_generic_cli_handshake_invalid_output_flow_stops(tmp_path: Path) -> None
     )
     assert structural.findings
     assert not any(
-        finding.code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
-        for finding in structural.findings
+        finding.code == "STRUCT-MISSING-REQUIRED-DOCUMENT" for finding in structural.findings
     )
 
     persist_stage_status(
@@ -336,10 +331,7 @@ def test_generic_cli_handshake_question_blocked_flow_waits(tmp_path: Path) -> No
         workspace_root=workspace_root,
         discovery=discovery,
     )
-    assert any(
-        finding.code == "CROSS-BLOCKING-UNANSWERED"
-        for finding in structural.findings
-    )
+    assert any(finding.code == "CROSS-BLOCKING-UNANSWERED" for finding in structural.findings)
     interview_routing = route_stage_questions_to_interview(
         workspace_root=workspace_root,
         discovery=discovery,

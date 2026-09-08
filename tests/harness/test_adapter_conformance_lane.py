@@ -35,6 +35,5 @@ def test_adapter_conformance_lane_reports_per_runtime_pass(runtime_id: str) -> N
     runtime_result = result_by_runtime[runtime_id]
     failed_dimensions = runtime_result.failed_required_dimensions()
     assert not failed_dimensions, (
-        f"{runtime_id} failed required conformance dimensions: "
-        f"{', '.join(failed_dimensions)}"
+        f"{runtime_id} failed required conformance dimensions: {', '.join(failed_dimensions)}"
     )

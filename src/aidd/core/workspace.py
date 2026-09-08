@@ -277,7 +277,7 @@ def _render_user_request_markdown(
         and constraints is None
         and additional_information is None
     ):
-        return "# User request\n\n" f"{request_text}\n"
+        return f"# User request\n\n{request_text}\n"
 
     normalized_title = (title or "").strip()
     normalized_brief = (brief if brief is not None else request_text).strip()
@@ -300,7 +300,7 @@ def _render_user_request_markdown(
         if normalized:
             sections.append((heading, normalized))
     body = "\n\n".join(f"## {heading}\n\n{value}" for heading, value in sections)
-    return "# User request\n\n" f"{body}\n"
+    return f"# User request\n\n{body}\n"
 
 
 def _render_repository_state_markdown(

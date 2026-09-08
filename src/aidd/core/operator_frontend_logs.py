@@ -99,4 +99,5 @@ def resolve_operator_run_log_view(
     )
     return _bounded_operator_run_log(summary, tail_bytes=tail_bytes, limit_bytes=limit_bytes)
 
+
 __all__ = ["resolve_operator_run_log_view", "resolve_operator_run_view"]

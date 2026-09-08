@@ -90,23 +90,15 @@ def bootstrap_live_work_item(
         )
 
     context_root = work_item_root / "context"
-    repository_revision = (
-        resolved_revision
-        or scenario.repo.revision
-        or "unresolved-at-bootstrap"
-    )
+    repository_revision = resolved_revision or scenario.repo.revision or "unresolved-at-bootstrap"
     target_task = scenario.task.strip()
-    verify_command_lines = tuple(
-        f"- `{command}`" for command in selected_task.verification
-    )
+    verify_command_lines = tuple(f"- `{command}`" for command in selected_task.verification)
     acceptance_criteria_lines = tuple(
         f"- AC-{index}: {criterion}"
         for index, criterion in enumerate(selected_task.acceptance_criteria, start=1)
     )
     selection_policy = (
-        scenario.feature_source.selection_policy
-        if scenario.feature_source is not None
-        else "n/a"
+        scenario.feature_source.selection_policy if scenario.feature_source is not None else "n/a"
     )
 
     context_documents = {

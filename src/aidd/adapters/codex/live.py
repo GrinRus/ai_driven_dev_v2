@@ -232,9 +232,7 @@ def _required_option_value(
 ) -> tuple[str, int]:
     value_index = index + 1
     if value_index >= len(tokens) or tokens[value_index].startswith("-"):
-        raise CodexLiveCommandError(
-            f"codex-live-command: option {option!r} requires a value."
-        )
+        raise CodexLiveCommandError(f"codex-live-command: option {option!r} requires a value.")
     return _non_empty_option_value(tokens[value_index], option=option), value_index + 1
 
 
@@ -250,8 +248,7 @@ def _non_empty_option_value(value: str, *, option: str) -> str:
 def _merge_model_option(*, current: str | None, candidate: str) -> str:
     if current is not None and current != candidate:
         raise CodexLiveCommandError(
-            "codex-live-command: conflicting model options "
-            f"{current!r} and {candidate!r}."
+            f"codex-live-command: conflicting model options {current!r} and {candidate!r}."
         )
     return candidate
 
@@ -356,9 +353,7 @@ class _JsonRpcLineClient:
         append_jsonl(self.transcript_path, {"direction": "client", "payload": dict(payload)})
         if self.process.stdin is None:
             return
-        self.process.stdin.write(
-            (json.dumps(dict(payload), sort_keys=True) + "\n").encode("utf-8")
-        )
+        self.process.stdin.write((json.dumps(dict(payload), sort_keys=True) + "\n").encode("utf-8"))
         self.process.stdin.flush()
 
     def next_message(self, *, timeout_seconds: float) -> Mapping[str, Any] | None:
@@ -511,11 +506,7 @@ def _initialize_codex_live_session(
         broker=broker,
         operator_decision_provider=operator_decision_provider,
     )
-    if (
-        pending_request_id is not None
-        or denied_reason is not None
-        or stop_reason is not None
-    ):
+    if pending_request_id is not None or denied_reason is not None or stop_reason is not None:
         return _CodexLiveInitialization(
             thread_id=None,
             early_result=_early_stop_result(
@@ -554,11 +545,7 @@ def _initialize_codex_live_session(
         broker=broker,
         operator_decision_provider=operator_decision_provider,
     )
-    if (
-        pending_request_id is not None
-        or denied_reason is not None
-        or stop_reason is not None
-    ):
+    if pending_request_id is not None or denied_reason is not None or stop_reason is not None:
         return _CodexLiveInitialization(
             thread_id=None,
             early_result=_early_stop_result(
@@ -624,8 +611,7 @@ def execute_codex_live_transport(
             ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details=(
-                "blocked_for_operator: codex live broker requires app-server "
-                "stdio approval support"
+                "blocked_for_operator: codex live broker requires app-server stdio approval support"
             ),
         )
     session = _start_codex_live_session(
@@ -702,30 +688,25 @@ def _execute_codex_live_turn(
     run_result = _run_result(
         process=session.process,
         client=session.client,
-        stop_reason=(
-            CodexExitClassification.SUCCESS if drained.completed else None
-        ),
+        stop_reason=(CodexExitClassification.SUCCESS if drained.completed else None),
     )
     status = (
         AdapterExecutionStatus.SUCCEEDED
-        if drained.completed
-        and run_result.exit_classification is CodexExitClassification.SUCCESS
+        if drained.completed and run_result.exit_classification is CodexExitClassification.SUCCESS
         else AdapterExecutionStatus.FAILED
     )
-    details = "codex-live: success" if status is AdapterExecutionStatus.SUCCEEDED else (
-        f"codex-live: {run_result.exit_classification.value}"
+    details = (
+        "codex-live: success"
+        if status is AdapterExecutionStatus.SUCCEEDED
+        else (f"codex-live: {run_result.exit_classification.value}")
     )
     return LiveTransportResult(
         run_result=run_result,
         status=status,
         details=details,
         events_jsonl_path=session.transcript_path,
-        operator_requests_path=(
-            broker.requests_path if broker.requests_path.exists() else None
-        ),
-        operator_decisions_path=(
-            broker.decisions_path if broker.decisions_path.exists() else None
-        ),
+        operator_requests_path=(broker.requests_path if broker.requests_path.exists() else None),
+        operator_decisions_path=(broker.decisions_path if broker.decisions_path.exists() else None),
     )
 
 
@@ -909,9 +890,7 @@ def _poll_codex_live_turn(
                 pending_request_id=pending_request_id,
                 denied_reason=denied_reason,
                 early_classification=(
-                    CodexExitClassification.DENIED
-                    if denied_reason is not None
-                    else None
+                    CodexExitClassification.DENIED if denied_reason is not None else None
                 ),
                 terminal_result=None,
             )
@@ -979,11 +958,7 @@ def _drain_until_response(
                 return (
                     pending_request_id,
                     denied_reason,
-                    (
-                        CodexExitClassification.DENIED
-                        if denied_reason is not None
-                        else None
-                    ),
+                    (CodexExitClassification.DENIED if denied_reason is not None else None),
                 )
     return (
         None,
@@ -1140,17 +1115,13 @@ def _early_stop_result(
                 )
                 else None
             ),
-            exit_classification=(
-                stop_reason or CodexExitClassification.PROTOCOL_FAILURE
-            ),
+            exit_classification=(stop_reason or CodexExitClassification.PROTOCOL_FAILURE),
         ),
         status=AdapterExecutionStatus.FAILED,
         details=denied_reason or "codex-live: stopped",
         events_jsonl_path=transcript_path,
         operator_requests_path=broker.requests_path if broker.requests_path.exists() else None,
-        operator_decisions_path=(
-            broker.decisions_path if broker.decisions_path.exists() else None
-        ),
+        operator_decisions_path=(broker.decisions_path if broker.decisions_path.exists() else None),
     )
 
 

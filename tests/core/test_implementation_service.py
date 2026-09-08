@@ -424,9 +424,7 @@ def test_executor_exception_survives_corrupt_report_enrichment(
     )
     assert attempt_state is not None
     enrichment = json.loads(
-        (request.workspace_root / attempt_state / "attempt-state.json").read_text(
-            encoding="utf-8"
-        )
+        (request.workspace_root / attempt_state / "attempt-state.json").read_text(encoding="utf-8")
     )
     assert enrichment["enrichment_errors"][0].startswith("implementation report:")
 
@@ -529,17 +527,10 @@ def test_retry_reconciles_cleared_blocked_stage_after_task_failure(tmp_path: Pat
 
 def test_failed_task_preserves_genuine_question_block(tmp_path: Path) -> None:
     request = _request(tmp_path)
-    stage_root = (
-        request.workspace_root
-        / "workitems"
-        / request.work_item
-        / "stages"
-        / "implement"
-    )
+    stage_root = request.workspace_root / "workitems" / request.work_item / "stages" / "implement"
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "questions.md").write_text(
-        "# Questions\n\n## Questions\n\n"
-        "- Q1 [blocking] Confirm the release owner.\n",
+        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm the release owner.\n",
         encoding="utf-8",
     )
     persist_stage_status(
@@ -606,7 +597,9 @@ def test_service_has_no_cli_or_typer_imports() -> None:
 @pytest.mark.parametrize("snapshot_name", ("repository-baseline.json", "repository-final.json"))
 @pytest.mark.parametrize("executor_failure", (False, True))
 def test_invalid_snapshot_format_cannot_be_recaptured_or_turn_into_success(
-    tmp_path: Path, snapshot_name: str, executor_failure: bool,
+    tmp_path: Path,
+    snapshot_name: str,
+    executor_failure: bool,
 ) -> None:
     request = _request(tmp_path)
     successful_executor = _successful_executor(request)

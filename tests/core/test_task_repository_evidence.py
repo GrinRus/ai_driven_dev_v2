@@ -62,7 +62,6 @@ Two bounded tasks with complete dependency and verification evidence.
 """
 
 
-
 def prepare_task_execution(
     *,
     workspace_root: Path,
@@ -103,6 +102,7 @@ def complete_task_execution(
         succeeded=succeeded,
         blocker=blocker,
     )
+
 
 def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure(
     tmp_path: Path,
@@ -224,6 +224,7 @@ def test_verification_only_task_requires_empty_task_local_diff(tmp_path: Path) -
     assert clean_issues == ()
     assert any("Verification-only task changed" in issue for issue in changed_issues)
 
+
 def test_task_attempt_records_diff_relative_to_its_own_baseline(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist_path = (
@@ -267,6 +268,7 @@ def test_task_attempt_records_diff_relative_to_its_own_baseline(tmp_path: Path) 
     diff_payload = (context.task_attempt_path / "task-diff.json").read_text(encoding="utf-8")
     assert '"observed_touched_paths": [\n    "contracts/example.md"' in diff_payload
     assert '"issues": []' in diff_payload
+
 
 def test_task_attempt_fails_when_reported_paths_do_not_match_local_diff(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"

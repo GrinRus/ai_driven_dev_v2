@@ -41,8 +41,7 @@ def _payload(
         "reason": "stage-command-timeout",
         "reconciled": True,
         "evidence_path": (
-            working_copy
-            / ".aidd/reports/runs/WI-LIVE/run-live/stages/idea/"
+            working_copy / ".aidd/reports/runs/WI-LIVE/run-live/stages/idea/"
             "terminal-reconciliation.json"
         ).as_posix(),
     }
@@ -130,9 +129,7 @@ def test_harness_passes_validating_state_to_public_reconciliation(
     )
 
     assert result.payload["expected_state"] == "validating"
-    assert calls[0]["command"][calls[0]["command"].index("--expected-state") + 1] == (
-        "validating"
-    )
+    assert calls[0]["command"][calls[0]["command"].index("--expected-state") + 1] == ("validating")
 
 
 @pytest.mark.parametrize(
