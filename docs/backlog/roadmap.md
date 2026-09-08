@@ -869,7 +869,7 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     Ruff, strict mypy, all deterministic/conformance/browser/build lanes, and security checks.
     No runtime or UI-owned files changed.
 
-- `W49-E2-S3-T2` (next) Decompose `build_task_flow_checkpoint`.
+- `W49-E2-S3-T2` (done) Decompose `build_task_flow_checkpoint`.
   - Output: task-flow checkpoint assembly is split by responsibility while preserving byte-level
     checkpoint fixtures, failure evidence, and the existing public facade.
   - Scope: `src/aidd/harness/task_flow_checkpoint.py` and its focused tests only; no runtime or
@@ -877,6 +877,24 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
   - Verification: characterization fixtures remain byte-equivalent and the complexity baseline
     moves the extracted production blocks to grade C or lower without hiding unrelated E/F debt.
   - Dependencies: W49-E2-S3-T1, a fresh `origin/main`, and the merged W47 UI baseline.
+  - Completion evidence: PR #610 merged to `origin/main` at `cfcfe33c`; the public checkpoint
+    facade now delegates to typed path/state helpers and responsibility-specific finding and
+    payload builders. The focused checkpoint suite (9 tests), full harness suite (479 tests),
+    Ruff, strict mypy, complexity ratchet, and all required CI/security/browser/build lanes passed.
+    The facade is complexity grade A and extracted production blocks are grade C or lower; the
+    existing Markdown/JSON fixtures and finding order remain byte-equivalent. No runtime, static
+    UI, frontend-test, or neighboring UI checkout files changed.
+
+- `W49-E2-S3-T3` (next) Decompose `_validate_scenario_contract`.
+  - Output: scenario-manifest validation is split by contract concern while preserving the
+    current typed findings, fail-closed behavior, and public loader/report surfaces.
+  - Scope: `src/aidd/harness/scenarios.py` and its focused validation tests only; no runtime,
+    static UI, frontend-test, or neighboring UI checkout paths.
+  - Verification: the invalid-manifest characterization matrix remains unchanged, every malformed
+    contract still yields an actionable validation result, and the complexity baseline moves the
+    extracted production blocks to grade C or lower without suppressing unrelated debt.
+  - Dependencies: W49-E2-S3-T2, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
+    comparison with the neighboring UI refactor before implementation.
 
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |

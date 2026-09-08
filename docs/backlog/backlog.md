@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S3-T2` — Decompose `build_task_flow_checkpoint`.
+- `W49-E2-S3-T3` — Decompose `_validate_scenario_contract`.
 
 ## Soon
 
@@ -68,5 +68,11 @@ slice, and local task.
   PR #608 and is present on `origin/main` at `cb37d4eb`; the Radon baseline and CI ratchet cover
   new E/F blocks, complexity increases, malformed baseline data, and stale entries. The full
   3212-test Python suite, 141 Node DOM tests, Ruff, strict mypy, deterministic/conformance/
-  browser/build lanes, and security checks passed. No runtime or UI-owned files changed. The
-  next dependency-ready task is `W49-E2-S3-T2` for `build_task_flow_checkpoint` decomposition.
+  browser/build lanes, and security checks passed. No runtime or UI-owned files changed. `W49-E2-S3-T2`
+  completed in PR #610 and is present on `origin/main` at `cfcfe33c`; the checkpoint facade now
+  delegates to typed path/state, finding, and payload helpers. The focused checkpoint suite (9
+  tests), full harness suite (479 tests), Ruff, strict mypy, complexity ratchet, and all required
+  CI/security/browser/build lanes passed; the facade is complexity grade A and extracted blocks
+  are grade C or lower with byte-equivalent Markdown/JSON fixtures. No runtime, static UI,
+  frontend-test, or neighboring UI checkout files changed. The next dependency-ready task is
+  `W49-E2-S3-T3` for `_validate_scenario_contract` decomposition.
