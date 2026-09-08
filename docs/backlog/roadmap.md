@@ -1195,9 +1195,9 @@ human evidence is current, immutable, and retrievable.
     UI, frontend-test, browser-test, or neighboring UI checkout files changed; that checkout
     remains read-only at `4c1356bc`.
 
-### Epic W50-E2 — exact artifact candidate gate (`planned`)
+### Epic W50-E2 — exact artifact candidate gate (`done`)
 
-#### Slice W50-E2-S1 — freeze and local acceptance (`planned`)
+#### Slice W50-E2-S1 — freeze and local acceptance (`done`)
 
 - `W50-E2-S1-T1` (done) Freeze candidate SHA, source tree, wheel digest, scenario inventory,
   and test commands.
@@ -1246,12 +1246,20 @@ human evidence is current, immutable, and retrievable.
     scenario paths before merge. No UI-owned paths changed; the neighboring checkout remains
     read-only at `4c1356bc`.
 
-- `W50-E2-S1-T4` (next) Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
+- `W50-E2-S1-T4` (done) Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
   - Output: installed package version and wheel digest match the candidate manifest.
   - Scope: isolated package-channel verification; no UI implementation changes.
   - Verification: runner-owned `pipx` and `uv tool` environments execute the installed `aidd`
     binary and `doctor`, with a mismatched or unavailable artifact blocked.
   - Dependencies: `W50-E2-S1-T3` and the exact candidate wheel.
+  - Completion evidence: PR #642 merged to `origin/main` at `c9127799`; the read-only runner
+    performs clean install and exact-wheel replacement through both `pipx` and `uv tool` in
+    temporary runner-owned directories, executes the installed `aidd --version` and `doctor`,
+    verifies the PEP 610 `direct_url.json` wheel hash, and writes a canonical fail-closed report.
+    Focused release/docs/planning tests (98), full Python matrix, critical coverage, adapter
+    conformance, deterministic scenarios, packaged-browser (successful rerun after one unrelated
+    UI-baseline HTTP-400 flake), build, CodeQL, Scorecard, and dependency-review lanes passed.
+    No UI-owned paths changed; the neighboring checkout remains read-only at `4c1356bc`.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 
