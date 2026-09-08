@@ -39,7 +39,6 @@ from aidd.cli.support import (
     _runtime_execution_mode_for_runtime,
     console,
 )
-from aidd.cli.ui_assets import operator_static_asset_for_route
 from aidd.cli.ui_http import (
     UiResponse,
     _error_response,
@@ -53,7 +52,8 @@ from aidd.cli.ui_jobs import (
     UiRunningNowItem,
     compose_operator_inbox_with_jobs,
 )
-from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
+from aidd.cli.ui_routing import UiJobDecisionConflict
+from aidd.cli.ui_transport import OperatorUiTransport
 from aidd.config import AiddConfig, load_config
 from aidd.core.allowed_write_scope import (
     AllowedWriteScopeError,
@@ -1542,20 +1542,8 @@ class OperatorUiService:
         self._recent_project_roots: list[Path] = (
             [project_root] if self._context is not None else []
         )
-        self._router = OperatorUiRouter(
-            get_routes=self._get_routes(),
-            post_routes=self._post_routes(),
-            static_route_resolver=operator_static_asset_for_route,
-            dynamic_get_route=lambda path, params: self._handle_job_get(
-                path=path,
-                params=params,
-            ),
-            dynamic_post_route=lambda path, payload: self._handle_job_post(
-                path=path,
-                payload=payload,
-            ),
-            remote_mutation_guard=self._remote_mutation_error,
-        )
+        self._transport = OperatorUiTransport(self)
+        self._router = self._transport.router
 
     @property
     def workspace_root(self) -> Path:
@@ -2862,7 +2850,7 @@ class OperatorUiService:
         )
 
     def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
-        return self._router.handle_get(path, params)
+        return self._transport.handle_get(path, params)
 
     def _dashboard_view(
         self,
@@ -3064,7 +3052,7 @@ class OperatorUiService:
         )
 
     def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
-        return self._router.handle_post(path, payload)
+        return self._transport.handle_post(path, payload)
 
     def consume_shutdown_requested(self) -> bool:
         if not self._shutdown_requested:
@@ -4229,7 +4217,7 @@ def run_ui_server(options: UiServerOptions) -> None:
     service = OperatorUiService(options)
     server = ThreadingHTTPServer(
         (options.host, options.port),
-        handler_for(router=service._router, shutdown_service=service),
+        service._transport.handler(),
     )
     host, port = cast(tuple[str, int], server.server_address[:2])
     _warn_if_non_loopback_host(options.host)
