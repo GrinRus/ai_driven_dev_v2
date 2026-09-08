@@ -258,6 +258,29 @@ rewrite that metadata. Diagnostic readers cannot authorize execution or invent p
 Ledger, snapshot, and remediation formats are specified in
 `task-execution.md`.
 
+### Evidence freshness contract
+
+Retained evidence is projected against the exact candidate being evaluated by the
+runtime-agnostic `aidd.core.evidence_freshness` contract. The projection compares four
+identity dimensions: candidate Git SHA, evidence schema version, target pin, and a retrievable
+evidence locator. It never infers freshness from a timestamp, attempt number, or a successful
+verdict alone.
+
+The contract exposes exactly four states:
+
+| State | Meaning | Safe operator implication |
+| --- | --- | --- |
+| `current` | Locator is retrievable, schema is supported, target pin matches, and evidence SHA equals the candidate SHA. | Evidence may support a decision for this candidate. |
+| `stale` | All identity checks are valid, but evidence was produced for another candidate SHA. | Show as historical; it cannot qualify the current candidate. |
+| `incompatible` | Evidence is readable but its schema is unsupported or its target pin does not match. | Fail closed; do not compare or synthesize a verdict. |
+| `unavailable` | Locator, schema, candidate/evidence SHA, or target-pin evidence is missing or cannot be retrieved. | Explain the missing input and require refresh or recovery. |
+
+Missing provenance is never coerced to `current`, and a stale or unavailable terminal result
+cannot render Flow Complete. The result retains the compared identity and a human-readable
+reason so reports and the operator frontend can project the same state without mutating verdict
+history. The freshness result itself uses schema version `1`; the evidence document's own
+`evidence_schema_version` remains an independent compatibility check.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:
