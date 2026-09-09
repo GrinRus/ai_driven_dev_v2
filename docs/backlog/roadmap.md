@@ -125,6 +125,9 @@ runtime semantics.
   - Scope: external Claude Code live execution and evidence only.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
     answers, attempts, patches, or provider evidence.
+  - 2026-09-09 attempt `eval-live-007-claude-code-20260909T071417Z` reached `implement` but
+    failed canonical task-diff validation after TL-1/TL-2/TL-3 implementation evidence; retain
+    the task as `next` for a fresh rerun. See `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
 
 - `W36-E7-S4-T5` (parked) Record a final same-revision Codex and Claude acceptance pass after
   observed-session reconciliation.
