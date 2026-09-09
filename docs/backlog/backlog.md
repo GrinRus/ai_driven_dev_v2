@@ -7,13 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T7` — Preserve Claude Code's private temporary directory in isolated adapter
-  launches.
-
-## Soon
-
 - `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
-  AIDD revision and target pin after T7.
+  AIDD revision and target pin.
 
 ## Parking lot
 
@@ -42,10 +37,10 @@ slice, and local task.
 
 - `2026-09-09` Prior W49 evidence remains merged; detailed history is retained in `roadmap.md`
   and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
-  outside this worktree and read-only. T6 is done in PR #644 at `3df6a34e`; while resuming T4,
-  Claude Code exposed a second isolated-runtime blocker because its own temp root stayed at
-  `/tmp/claude-501`. T7 is promoted to preserve the private temp root in the adapter before T4
-  resumes. No UI-owned paths are in scope.
+  outside this worktree and read-only. T6 is done in PR #644 at `3df6a34e`; T7 is done in PR #647
+  at `c472cf4e` after the isolated Claude print smoke confirmed private temp state. T4 is now
+  promoted to resume the fresh `AIDD-LIVE-007` Claude acceptance run. No UI-owned paths are in
+  scope.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.

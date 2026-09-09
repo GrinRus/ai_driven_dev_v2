@@ -118,7 +118,7 @@ Goal: prove the installed Studio and governed full flow against one pinned mediu
 task through both maintained native providers without coupling live-evaluation behavior to product
 runtime semantics.
 
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (next) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T7` as the direct queue predecessor; `W36-E7-S4-T3` remains the
     historical provider-setup predecessor.
@@ -150,7 +150,7 @@ runtime semantics.
     `make check` (3,283 tests), and the clean Seatbelt smoke probe passed. No UI-owned paths
     changed; the neighboring checkout remains read-only at `4c1356bc`.
 
-- `W36-E7-S4-T7` (next) Preserve Claude Code's private temporary directory in isolated adapter
+- `W36-E7-S4-T7` (done) Preserve Claude Code's private temporary directory in isolated adapter
   launches.
   - Dependencies: `W36-E7-S4-T3`; this is a blocker discovered while resuming `W36-E7-S4-T4`.
   - Output: the Claude Code adapter maps the isolation-provided private `TMPDIR` to
@@ -160,6 +160,13 @@ runtime semantics.
   - Verification: an isolated Claude print launch can create its runtime temp state inside the
     provider subtree; the mapping is absent for ordinary launches and cannot be overridden by an
     outside path when the isolation marker is active.
+  - Completion evidence: PR #647 merged to `origin/main` at `c472cf4e`; the adapter maps the
+    private `TMPDIR` to `CLAUDE_CODE_TMPDIR` only for isolated launches and rejects outside
+    overrides. Focused adapter/conformance/planning/docs tests (138), instruction checks (45),
+    Ruff, mypy, full CI including Python 3.12–3.14, coverage, deterministic scenarios,
+    packaged-browser, build, and security lanes passed. A direct Seatbelt Kimi Claude print
+    smoke exited `0` with the private temp mapping. No UI-owned paths changed; the neighboring
+    checkout remains read-only at `4c1356bc`.
 
 ## Wave 42 — task-centered operator experience (`planned`)
 
