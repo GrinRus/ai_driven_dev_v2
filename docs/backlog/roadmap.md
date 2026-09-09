@@ -132,6 +132,18 @@ runtime semantics.
   - Verification: both fresh bundles name the same clean AIDD SHA, scenario and target revision,
     pass terminal quality gates, and match an anonymized digest-backed tracked summary.
 
+- `W36-E7-S4-T6` (next) Preserve explicit Claude provider configuration in isolated live runs.
+  - Dependencies: `W36-E7-S4-T3`; the task addresses the observed isolated auth blocker before
+    `W36-E7-S4-T4` is resumed.
+  - Output: provider-private launches retain non-secret `ANTHROPIC_BASE_URL` and
+    `ANTHROPIC_MODEL` configuration while credentials remain explicitly allowlisted and seeded.
+  - Scope: live acceptance isolation environment policy, deterministic isolation regression tests,
+    and the prod-like provider acceptance runbook; no UI-owned paths.
+  - Verification: a seeded Claude auth file plus `--credential-environment-key
+    ANTHROPIC_AUTH_TOKEN` passes the isolated probe and session guard, the Kimi model/endpoint
+    values survive into the private environment, and unrelated or sibling credentials remain
+    excluded.
+
 ## Wave 42 — task-centered operator experience (`planned`)
 
 Goal: replace the implemented document-first shell's ambiguous `Intent` vocabulary and weak task
