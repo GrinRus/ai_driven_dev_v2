@@ -38,9 +38,10 @@ slice, and local task.
 - `2026-09-09` Prior W49 evidence remains merged; detailed history is retained in `roadmap.md`
   and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
   outside this worktree and read-only. T6 is done in PR #644 at `3df6a34e`; T7 is done in PR #647
-  at `c472cf4e` after the isolated Claude print smoke confirmed private temp state. T4 is now
-  promoted to resume the fresh `AIDD-LIVE-007` Claude acceptance run. No UI-owned paths are in
-  scope.
+  at `c472cf4e` after the isolated Claude print smoke confirmed private temp state. T4 was
+  promoted for `AIDD-LIVE-007`, but run `eval-live-007-claude-code-20260909T071417Z` stopped at
+  implement task-diff validation after model repairs. T4 remains `Next`, T5 stays parked, and
+  no UI-owned paths are in scope; see `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.
