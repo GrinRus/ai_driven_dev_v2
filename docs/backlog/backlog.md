@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
-  AIDD revision and target pin.
+- `W36-E7-S4-T7` — Preserve Claude Code's private temporary directory in isolated adapter
+  launches.
 
 ## Soon
+
+- `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
+  AIDD revision and target pin after T7.
 
 ## Parking lot
 
@@ -39,10 +42,10 @@ slice, and local task.
 
 - `2026-09-09` Prior W49 evidence remains merged; detailed history is retained in `roadmap.md`
   and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
-  outside this worktree and read-only. Promoted `W36-E7-S4-T6` as the next dependency-ready task
-  after the isolated Claude probe showed that explicit Kimi configuration was dropped from the
-  provider-private environment; T6 is now done in PR #644 at `3df6a34e`, and T4 is promoted now
-  that the explicit Kimi provider configuration is preserved. No UI-owned paths are in scope.
+  outside this worktree and read-only. T6 is done in PR #644 at `3df6a34e`; while resuming T4,
+  Claude Code exposed a second isolated-runtime blocker because its own temp root stayed at
+  `/tmp/claude-501`. T7 is promoted to preserve the private temp root in the adapter before T4
+  resumes. No UI-owned paths are in scope.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.

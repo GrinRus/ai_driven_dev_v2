@@ -118,9 +118,10 @@ Goal: prove the installed Studio and governed full flow against one pinned mediu
 task through both maintained native providers without coupling live-evaluation behavior to product
 runtime semantics.
 
-- `W36-E7-S4-T4` (next) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
-  - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
+  - Dependencies: `W36-E7-S4-T7` as the direct queue predecessor; `W36-E7-S4-T3` remains the
+    historical provider-setup predecessor.
   - Scope: external Claude Code live execution and evidence only.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
     answers, attempts, patches, or provider evidence.
@@ -148,6 +149,17 @@ runtime semantics.
     explicit and seeded. Focused isolation/planning/docs tests (90), instruction checks, full
     `make check` (3,283 tests), and the clean Seatbelt smoke probe passed. No UI-owned paths
     changed; the neighboring checkout remains read-only at `4c1356bc`.
+
+- `W36-E7-S4-T7` (next) Preserve Claude Code's private temporary directory in isolated adapter
+  launches.
+  - Dependencies: `W36-E7-S4-T3`; this is a blocker discovered while resuming `W36-E7-S4-T4`.
+  - Output: the Claude Code adapter maps the isolation-provided private `TMPDIR` to
+    `CLAUDE_CODE_TMPDIR` without changing ordinary non-isolated launches.
+  - Scope: Claude Code adapter environment construction, provider-free regression tests, and
+    the prod-like acceptance runbook; no UI-owned paths.
+  - Verification: an isolated Claude print launch can create its runtime temp state inside the
+    provider subtree; the mapping is absent for ordinary launches and cannot be overridden by an
+    outside path when the isolation marker is active.
 
 ## Wave 42 — task-centered operator experience (`planned`)
 

@@ -86,7 +86,9 @@ Do not pass model or endpoint settings as credential keys, and do not put creden
 endpoint URL. The resulting evidence records only the runtime and probe status, never the token.
 
 The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
-data, and state directories. The platform backend permits read-only AIDD source access and
+data, and state directories. For Claude Code, the adapter maps the private `TMPDIR` to
+`CLAUDE_CODE_TMPDIR` so the provider's own runtime state cannot fall back to the host `/tmp`.
+The platform backend permits read-only AIDD source access and
 read/write access to the selected provider subtree, while sibling provider roots and the original
 operator home remain unreadable. On macOS the backend also resolves the active trusted
 `xcode-select` developer root under `/Applications` or `/Library/Developer` and grants it

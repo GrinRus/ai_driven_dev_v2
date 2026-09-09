@@ -226,6 +226,37 @@ def test_build_execution_environment_sets_stage_workspace_and_prompt_pack_values
     assert env["AIDD_RUNTIME_ID"] == "claude-code"
 
 
+def test_build_execution_environment_maps_isolated_tmpdir_for_claude_code(
+    tmp_path: Path,
+) -> None:
+    private_tmpdir = (tmp_path / "private-tmp").as_posix()
+    env = build_execution_environment(
+        context=_context(),
+        base_env={
+            "PATH": "/usr/bin",
+            "TMPDIR": private_tmpdir,
+            "CLAUDE_CODE_TMPDIR": "/tmp/host-owned",
+            "AIDD_LIVE_ISOLATION_ACTIVE": "1",
+        },
+    )
+
+    assert env["TMPDIR"] == private_tmpdir
+    assert env["CLAUDE_CODE_TMPDIR"] == private_tmpdir
+
+
+def test_build_execution_environment_does_not_add_claude_tmpdir_to_ordinary_runs(
+    tmp_path: Path,
+) -> None:
+    private_tmpdir = (tmp_path / "ordinary-tmp").as_posix()
+    env = build_execution_environment(
+        context=_context(),
+        base_env={"PATH": "/usr/bin", "TMPDIR": private_tmpdir},
+    )
+
+    assert env["TMPDIR"] == private_tmpdir
+    assert "CLAUDE_CODE_TMPDIR" not in env
+
+
 def test_build_subprocess_spec_sets_command_cwd_and_env(tmp_path: Path) -> None:
     repository_root = tmp_path / "repo"
     workspace_root = repository_root / ".aidd" / "workitems" / "WI-001"
