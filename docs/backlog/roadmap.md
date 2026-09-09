@@ -118,7 +118,7 @@ Goal: prove the installed Studio and governed full flow against one pinned mediu
 task through both maintained native providers without coupling live-evaluation behavior to product
 runtime semantics.
 
-- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (next) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.

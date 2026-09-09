@@ -7,6 +7,9 @@ slice, and local task.
 
 ## Next
 
+- `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
+  AIDD revision and target pin.
+
 ## Soon
 
 ## Parking lot
@@ -14,7 +17,6 @@ slice, and local task.
 - `W42-E7-S2-T3` — Record one genuine uncoached first-time operator observation when a participant
   and eligible environment are available; this is deferred human-usability evidence, not a pass.
 - `W43-E5-S2-T3` — Run a future cross-runtime lower-capability comparison after Codex-only alpha.
-- `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -39,8 +41,8 @@ slice, and local task.
   and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
   outside this worktree and read-only. Promoted `W36-E7-S4-T6` as the next dependency-ready task
   after the isolated Claude probe showed that explicit Kimi configuration was dropped from the
-  provider-private environment; T6 is now done in PR #644 at `3df6a34e`. No UI-owned paths are
-  in scope.
+  provider-private environment; T6 is now done in PR #644 at `3df6a34e`, and T4 is promoted now
+  that the explicit Kimi provider configuration is preserved. No UI-owned paths are in scope.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.
