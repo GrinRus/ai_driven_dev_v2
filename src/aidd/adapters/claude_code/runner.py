@@ -21,6 +21,9 @@ from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessS
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
 
+_LIVE_ISOLATION_MARKER = "AIDD_LIVE_ISOLATION_ACTIVE"
+_CLAUDE_CODE_TMPDIR = "CLAUDE_CODE_TMPDIR"
+
 
 @dataclass(frozen=True, slots=True)
 class ClaudeCodeCommandContext:
@@ -237,7 +240,7 @@ def build_execution_environment(
         repository_root=repository_root,
     )
 
-    return build_aidd_execution_environment(
+    environment = build_aidd_execution_environment(
         runtime_id="claude-code",
         workspace_root=resolved_workspace_root,
         stage=context.stage,
@@ -253,6 +256,14 @@ def build_execution_environment(
         repair_brief_path=context.repair_brief_path,
         operator_request_path=context.operator_request_path,
     )
+    if environment.get(_LIVE_ISOLATION_MARKER) == "1":
+        private_tmpdir = environment.get("TMPDIR")
+        if private_tmpdir:
+            # Claude Code keeps its own runtime state under /tmp unless its
+            # provider-specific override is set.  In an AIDD live boundary,
+            # force that state into the already-private temporary directory.
+            environment[_CLAUDE_CODE_TMPDIR] = private_tmpdir
+    return environment
 
 
 def build_subprocess_spec(
