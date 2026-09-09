@@ -7,6 +7,8 @@ slice, and local task.
 
 ## Next
 
+- `W36-E7-S4-T6` — Preserve explicit Claude provider configuration in isolated live runs.
+
 ## Soon
 
 ## Parking lot
@@ -35,9 +37,11 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-08` Prior W49 evidence remains merged; detailed history is retained in `roadmap.md`
+- `2026-09-09` Prior W49 evidence remains merged; detailed history is retained in `roadmap.md`
   and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
-  outside this worktree and read-only.
+  outside this worktree and read-only. Promoted `W36-E7-S4-T6` as the next dependency-ready task
+  after the isolated Claude probe showed that explicit Kimi configuration was dropped from the
+  provider-private environment. No UI-owned paths are in scope.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.
@@ -68,6 +72,6 @@ slice, and local task.
   tests (98) and all required CI/security/browser/build lanes passed; one unrelated UI-baseline
   browser HTTP-400 flake was cleared by rerun. No UI-owned paths changed; neighbor remains at
   `4c1356bc`.
-- W50-E2/S1 is complete and the local queue is intentionally empty. W50-E3 provider/human
-  acceptance is not promoted as a new local task; reuse the existing parked acceptance IDs only
-  when the required provider credentials and eligible participants/environments are available.
+- W50-E2/S1 remains complete. Provider/human acceptance continues to reuse the parked IDs after
+  this isolation fix, once the required credentials and eligible participants/environments are
+  available.

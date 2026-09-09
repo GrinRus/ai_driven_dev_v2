@@ -127,6 +127,8 @@ def test_private_environment_is_allowlisted_and_uses_provider_roots(
             "HOME": (tmp_path / "operator-home").as_posix(),
             "PATH": "/usr/bin",
             "LANG": "en_US.UTF-8",
+            "ANTHROPIC_BASE_URL": "https://gateway.example.test/anthropic",
+            "ANTHROPIC_MODEL": "kimi-k2.7-code",
             "AIDD_OWN_CREDENTIAL": "own-secret",
             "AIDD_SIBLING_CREDENTIAL": "sibling-secret",
             "UNRELATED": "must-not-cross",
@@ -138,6 +140,8 @@ def test_private_environment_is_allowlisted_and_uses_provider_roots(
     assert boundary.backend == "macos-seatbelt"
     assert boundary.environment["PATH"] == "/usr/bin"
     assert boundary.environment["LANG"] == "en_US.UTF-8"
+    assert boundary.environment["ANTHROPIC_BASE_URL"] == "https://gateway.example.test/anthropic"
+    assert boundary.environment["ANTHROPIC_MODEL"] == "kimi-k2.7-code"
     assert boundary.environment["AIDD_OWN_CREDENTIAL"] == "own-secret"
     assert "AIDD_SIBLING_CREDENTIAL" not in boundary.environment
     assert "UNRELATED" not in boundary.environment

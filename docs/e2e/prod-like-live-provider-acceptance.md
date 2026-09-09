@@ -77,6 +77,14 @@ it does not replace the isolated status probe. Use `--tool-read-root` only when 
 executable or its read-only dependencies live outside the system tool roots, AIDD source, and
 provider subtree. The launcher rejects a sibling provider tool root.
 
+For Claude Code installations routed through an Anthropic-compatible endpoint, the isolation
+environment preserves the non-secret `ANTHROPIC_BASE_URL` and `ANTHROPIC_MODEL` settings from the
+launching environment. Pass the actual secret explicitly, for example
+`--credential-environment-key ANTHROPIC_AUTH_TOKEN`, and retain
+`--seed-provider-auth-from-home` so the session guard recognises the seeded private auth state.
+Do not pass model or endpoint settings as credential keys, and do not put credentials in the
+endpoint URL. The resulting evidence records only the runtime and probe status, never the token.
+
 The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
 data, and state directories. The platform backend permits read-only AIDD source access and
 read/write access to the selected provider subtree, while sibling provider roots and the original

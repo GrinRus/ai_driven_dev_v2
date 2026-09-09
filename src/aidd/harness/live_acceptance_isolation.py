@@ -30,6 +30,12 @@ IsolationBackend = Literal["macos-seatbelt", "linux-bubblewrap"]
 _SAFE_ENVIRONMENT_KEYS = frozenset(
     {
         "COLORTERM",
+        # Claude Code may be routed to a compatible provider (for example Kimi)
+        # through these non-secret configuration variables.  Keep the values
+        # available inside the provider-private environment while credentials
+        # remain opt-in through --credential-environment-key.
+        "ANTHROPIC_BASE_URL",
+        "ANTHROPIC_MODEL",
         "LANG",
         "LC_ALL",
         "LC_CTYPE",
