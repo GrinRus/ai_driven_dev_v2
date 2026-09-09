@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T6` — Preserve explicit Claude provider configuration in isolated live runs.
-
 ## Soon
 
 ## Parking lot
@@ -41,7 +39,8 @@ slice, and local task.
   and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
   outside this worktree and read-only. Promoted `W36-E7-S4-T6` as the next dependency-ready task
   after the isolated Claude probe showed that explicit Kimi configuration was dropped from the
-  provider-private environment. No UI-owned paths are in scope.
+  provider-private environment; T6 is now done in PR #644 at `3df6a34e`. No UI-owned paths are
+  in scope.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.
