@@ -132,7 +132,7 @@ runtime semantics.
   - Verification: both fresh bundles name the same clean AIDD SHA, scenario and target revision,
     pass terminal quality gates, and match an anonymized digest-backed tracked summary.
 
-- `W36-E7-S4-T6` (next) Preserve explicit Claude provider configuration in isolated live runs.
+- `W36-E7-S4-T6` (done) Preserve explicit Claude provider configuration in isolated live runs.
   - Dependencies: `W36-E7-S4-T3`; the task addresses the observed isolated auth blocker before
     `W36-E7-S4-T4` is resumed.
   - Output: provider-private launches retain non-secret `ANTHROPIC_BASE_URL` and
@@ -143,6 +143,11 @@ runtime semantics.
     ANTHROPIC_AUTH_TOKEN` passes the isolated probe and session guard, the Kimi model/endpoint
     values survive into the private environment, and unrelated or sibling credentials remain
     excluded.
+  - Completion evidence: PR #644 merged to `origin/main` at `3df6a34e`; isolated provider
+    launches preserve non-secret `ANTHROPIC_BASE_URL`/`ANTHROPIC_MODEL` while credentials remain
+    explicit and seeded. Focused isolation/planning/docs tests (90), instruction checks, full
+    `make check` (3,283 tests), and the clean Seatbelt smoke probe passed. No UI-owned paths
+    changed; the neighboring checkout remains read-only at `4c1356bc`.
 
 ## Wave 42 — task-centered operator experience (`planned`)
 
