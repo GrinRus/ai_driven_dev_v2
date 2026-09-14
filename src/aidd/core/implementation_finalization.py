@@ -28,6 +28,7 @@ from aidd.core.workspace import work_item_context_root
 
 OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME = "outside-project-set.md"
 _PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
+_TOUCHED_FILE_PATH_PATTERN = re.compile(r"^-\s+`([^`\n]+)`")
 
 
 @dataclass(frozen=True, slots=True)
@@ -322,6 +323,58 @@ def _section_bullets(markdown: str, heading: str) -> tuple[str, ...]:
     return tuple(bullets)
 
 
+def _observed_task_paths(*, attempt_path: Path, task_id: str) -> tuple[str, ...] | None:
+    """Return task-diff paths when rich task evidence is available.
+
+    A missing task-diff is retained as a compatibility path for the small legacy fixtures
+    that exercise aggregate rendering without a task ledger. Rich task attempts always carry
+    this artifact and fail closed earlier when it is malformed.
+    """
+
+    diff_path = attempt_path / "task-diff.json"
+    if not diff_path.is_file():
+        return None
+    try:
+        payload = json.loads(diff_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Task diff evidence is unreadable: {diff_path.as_posix()}.") from exc
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != 1
+        or payload.get("task_id") != task_id
+    ):
+        raise ValueError(f"Task diff evidence has an invalid schema: {diff_path.as_posix()}.")
+    observed = payload.get("observed_touched_paths")
+    if not isinstance(observed, list) or not all(isinstance(path, str) for path in observed):
+        raise ValueError(f"Task diff evidence has invalid paths: {diff_path.as_posix()}.")
+    return tuple(dict.fromkeys(path for path in observed if path))
+
+
+def _task_touched_file_entries(
+    *, report: str, attempt_path: Path, task_id: str
+) -> tuple[tuple[str, str], ...]:
+    """Return canonical aggregate entries without promoting prose to file paths."""
+
+    lines = [line.strip() for line in extract_h2_section(report, "Touched files").splitlines()]
+    canonical_lines: dict[str, str] = {}
+    for line in lines:
+        match = _TOUCHED_FILE_PATH_PATTERN.match(line)
+        if match is not None:
+            canonical_lines.setdefault(match.group(1).strip(), line)
+
+    observed_paths = _observed_task_paths(attempt_path=attempt_path, task_id=task_id)
+    if observed_paths is None:
+        return tuple(canonical_lines.items())
+
+    entries: list[tuple[str, str]] = []
+    for path in observed_paths:
+        entry = canonical_lines.get(path)
+        if entry is None:
+            entry = f"- `{path}` - see task `{task_id}` evidence."
+        entries.append((path, entry))
+    return tuple(entries)
+
+
 def render_aggregate_implementation_report(
     *,
     plan: TaskPlan,
@@ -332,6 +385,7 @@ def render_aggregate_implementation_report(
         raise ValueError("Cannot aggregate implementation evidence before every task succeeds.")
     summaries: list[str] = []
     touched: list[str] = []
+    touched_paths: set[str] = set()
     verification: list[str] = []
     follow_up: list[str] = []
     for task in plan.tasks:
@@ -344,14 +398,14 @@ def render_aggregate_implementation_report(
             f"- `{task.id}`: {task.outcome} Evidence: "
             f"`{entry.latest_attempt_path}/implementation-report.md`."
         )
-        for line in extract_h2_section(report, "Touched files").splitlines():
-            normalized_line = line.strip()
-            if (
-                normalized_line.startswith("-")
-                and normalized_line.casefold() != "- none"
-                and normalized_line not in touched
-            ):
-                touched.append(normalized_line)
+        for path, touched_entry in _task_touched_file_entries(
+            report=report,
+            attempt_path=report_path.parent,
+            task_id=task.id,
+        ):
+            if path not in touched_paths:
+                touched_paths.add(path)
+                touched.append(touched_entry)
         verification_section = (
             "Verification" if extract_h2_section(report, "Verification") else "Verification notes"
         )

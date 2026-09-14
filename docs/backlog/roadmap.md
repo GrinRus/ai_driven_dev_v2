@@ -120,14 +120,30 @@ runtime semantics.
 
 - `W36-E7-S4-T4` (next) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
-  - Dependencies: `W36-E7-S4-T7` as the direct queue predecessor; `W36-E7-S4-T3` remains the
-    historical provider-setup predecessor.
+  - Dependencies: `W36-E7-S4-T8` as the direct queue predecessor; `W36-E7-S4-T7` and
+    `W36-E7-S4-T3` remain the provider-setup predecessors.
   - Scope: external Claude Code live execution and evidence only.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
     answers, attempts, patches, or provider evidence.
   - 2026-09-09 attempt `eval-live-007-claude-code-20260909T071417Z` reached `implement` but
     failed canonical task-diff validation after TL-1/TL-2/TL-3 implementation evidence; retain
-    the task as `next` for a fresh rerun. See `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
+    the task queued for a fresh rerun. See `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
+
+- `W36-E7-S4-T8` (done) Harden aggregate implementation evidence rendering for wrapped touched-file
+  entries.
+  - Dependencies: `W36-E7-S4-T7` and the existing implementation-finalization contract.
+  - Output: aggregate finalization publishes only canonical touched-file paths from task evidence;
+    wrapped or nested Markdown bullets cannot be promoted to phantom paths, while verification-only
+    tasks continue to publish `- none`.
+  - Scope: `src/aidd/core/implementation_finalization.py` and focused core finalization tests;
+    no UI-owned paths, provider adapters, or live target repositories.
+  - Verification: a multiline/continuation-bullet fixture produces only the observed file paths,
+    the aggregate implementation report passes semantic validation, and focused finalization plus
+    semantic implementation tests remain green.
+  - Completion evidence: aggregate finalization now filters rich task reports against
+    `task-diff.json` paths and retains a legacy canonical-bullet fallback. The regression and
+    neighboring core/application/validator checks passed (1549 tests), with Ruff and strict mypy
+    clean; no UI-owned paths or provider adapters changed.
 
 - `W36-E7-S4-T5` (parked) Record a final same-revision Codex and Claude acceptance pass after
   observed-session reconciliation.

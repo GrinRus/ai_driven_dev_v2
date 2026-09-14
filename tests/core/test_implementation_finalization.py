@@ -195,6 +195,145 @@ def test_aggregate_report_preserves_wrapped_verification_evidence(tmp_path: Path
     assert verification.count("Lint check:") == 1
 
 
+def test_aggregate_report_filters_wrapped_touched_file_prose(tmp_path: Path) -> None:
+    plan = _plan()
+    attempt = tmp_path / "task-attempt"
+    attempt.mkdir()
+    (attempt / "implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n"
+        "- `src/example.py` - update the implementation.\n"
+        "- Added helper `Object.create(null)` coverage.\n"
+        "- Added assertion at `src/example.py:42`.\n\n"
+        "## Verification\n\n- `pytest -q` -> pass.\n\n"
+        "## Follow-up notes\n\n- none\n",
+        encoding="utf-8",
+    )
+    (attempt / "task-diff.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-1",
+                "observed_touched_paths": ["src/example.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    ledger = (
+        TaskLedger.create(plan)
+        .transition(
+            "TL-1",
+            TaskExecutionStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path="task-attempt",
+        )
+        .transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    )
+
+    report = render_aggregate_implementation_report(
+        plan=plan,
+        ledger=ledger,
+        workspace_root=tmp_path,
+    )
+
+    touched_section = report.split("## Touched files", 1)[1].split("## Verification notes", 1)[0]
+    assert touched_section.count("- `src/example.py`") == 1
+    assert "Object.create(null)" not in touched_section
+    assert "src/example.py:42" not in touched_section
+
+
+def test_aggregate_report_falls_back_to_observed_path_evidence(tmp_path: Path) -> None:
+    plan = _plan()
+    attempt = tmp_path / "task-attempt"
+    attempt.mkdir()
+    (attempt / "implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `src/example.py`\n\n"
+        "## Verification\n\n- `pytest -q` -> pass.\n\n"
+        "## Follow-up notes\n\n- none\n",
+        encoding="utf-8",
+    )
+    (attempt / "task-diff.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-1",
+                "observed_touched_paths": ["src/missing.py", "src/missing.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    ledger = (
+        TaskLedger.create(plan)
+        .transition(
+            "TL-1",
+            TaskExecutionStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path="task-attempt",
+        )
+        .transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    )
+
+    report = render_aggregate_implementation_report(
+        plan=plan,
+        ledger=ledger,
+        workspace_root=tmp_path,
+    )
+
+    touched_section = report.split("## Touched files", 1)[1].split("## Verification notes", 1)[0]
+    assert touched_section.count("- `src/missing.py`") == 1
+    assert "see task `TL-1` evidence" in touched_section
+    assert "src/example.py" not in touched_section
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        ("{", "unreadable"),
+        ({"schema_version": 2, "task_id": "TL-1", "observed_touched_paths": []}, "invalid schema"),
+        (
+            {"schema_version": 1, "task_id": "TL-1", "observed_touched_paths": "src/example.py"},
+            "invalid paths",
+        ),
+    ],
+)
+def test_aggregate_report_rejects_malformed_task_diff(
+    tmp_path: Path, payload: object, match: str
+) -> None:
+    plan = _plan()
+    attempt = tmp_path / "task-attempt"
+    attempt.mkdir()
+    (attempt / "implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `src/example.py`\n\n"
+        "## Verification\n\n- `pytest -q` -> pass.\n\n"
+        "## Follow-up notes\n\n- none\n",
+        encoding="utf-8",
+    )
+    task_diff = attempt / "task-diff.json"
+    task_diff.write_text(
+        payload if isinstance(payload, str) else json.dumps(payload),
+        encoding="utf-8",
+    )
+    ledger = (
+        TaskLedger.create(plan)
+        .transition(
+            "TL-1",
+            TaskExecutionStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path="task-attempt",
+        )
+        .transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    )
+
+    with pytest.raises(ValueError, match=match):
+        render_aggregate_implementation_report(
+            plan=plan,
+            ledger=ledger,
+            workspace_root=tmp_path,
+        )
+
+
 def test_mixed_mode_aggregate_omits_verification_only_none_entry(tmp_path: Path) -> None:
     plan = parse_task_plan(
         """# Tasklist
