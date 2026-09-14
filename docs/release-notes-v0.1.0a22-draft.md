@@ -1,9 +1,9 @@
 # Release Notes: v0.1.0a22
 
-Status: draft, not tagged or published.
+Status: published prerelease; package-channel verification passed.
 
-Current release-candidate package version: `0.1.0a22`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a21`.
+Published package version: `0.1.0a22`.
+Previous accepted published prerelease: `0.1.0a21`.
 
 ## Summary
 
@@ -25,10 +25,11 @@ reproducibility work, and the latest Claude Code live-flow hardening.
 
 ## Quality and evidence
 
-- The candidate must pass the deterministic CI quality, coverage, adapter, browser, build, and
-  security lanes before publication.
+- The candidate passed deterministic CI quality, coverage, adapter, browser, build, and security
+  lanes before publication.
 - Manual external E2E remains local operator-audit evidence and is not a release gate.
-- Package publication is accepted only after PyPI, `pipx`, and `uv tool` verification jobs pass.
+- The release workflow published to PyPI and passed both `pipx` and `uv tool` installation
+  verification jobs.
 
 ## Compatibility and limitations
 
@@ -40,8 +41,8 @@ reproducibility work, and the latest Claude Code live-flow hardening.
 ## Publication checklist
 
 - Release branch: `release/v0.1.0a22`.
-- Publish only through the GitHub Release `published` event after deterministic release-branch
-  checks pass.
-- Accept the release only after PyPI, `pipx`, and `uv tool` verification jobs pass.
-- Replace this draft status with observed publication and install-verification results after the
-  release workflow reaches a terminal state.
+- Published through the GitHub Release `published` event after deterministic release-branch
+  checks passed.
+- Accepted after `publish-pypi`, `verify-pypi-install`, and `verify-uv-tool-install` all passed.
+- Release workflow: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/34874926414`.
+- PyPI package: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a22/`.

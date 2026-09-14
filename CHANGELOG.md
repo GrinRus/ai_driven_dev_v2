@@ -7,7 +7,8 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No changes yet.
+- The development tree now targets `0.1.0a23.dev0` after the accepted `v0.1.0a22`
+  prerelease publication.
 
 ## 0.1.0a22 - 2026-09-14
 
