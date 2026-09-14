@@ -43,6 +43,7 @@ from aidd.core.task_ledger import (
     persist_task_ledger,
 )
 from aidd.core.task_plan import parse_task_plan
+from aidd.core.task_repository_evidence import repository_snapshot_payload
 
 
 def _tasklist(*, second_dependency: str = "TL-1") -> str:
@@ -310,6 +311,129 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
         StageState.EXECUTING.value,
         StageState.FAILED.value,
     ]
+
+
+def test_repair_reuses_first_task_baseline_after_partial_edit(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
+    source_path = tmp_path / "contracts" / "example.md"
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_text("before\n", encoding="utf-8")
+    provider_calls = 0
+
+    def baseline_provider(*, project_root: Path, task_id: str) -> dict[str, object]:
+        nonlocal provider_calls
+        provider_calls += 1
+        return repository_snapshot_payload(project_root=project_root, task_id=task_id)
+
+    first = prepare_task_attempt(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+        repository_baseline=baseline_provider,
+    )
+    source_path.write_text("after\n", encoding="utf-8")
+    report_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "implement" / "implementation-report.md"
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `contracts/example.md` - updated contract.\n",
+        encoding="utf-8",
+    )
+    complete_task_execution(
+        context=first,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        project_root=tmp_path,
+        succeeded=False,
+        blocker="validator repair",
+    )
+
+    second = prepare_task_attempt(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+        repository_baseline=baseline_provider,
+    )
+    assert provider_calls == 1
+    assert json.loads(
+        (first.task_attempt_path / "repository-baseline.json").read_text(encoding="utf-8")
+    ) == json.loads(
+        (second.task_attempt_path / "repository-baseline.json").read_text(encoding="utf-8")
+    )
+
+    report_path.write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `contracts/example.md` - repaired contract.\n",
+        encoding="utf-8",
+    )
+    ledger = complete_task_execution(
+        context=second,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        project_root=tmp_path,
+        succeeded=True,
+    )
+    assert ledger.entry("TL-1").status is TaskExecutionStatus.SUCCEEDED
+    second_diff = json.loads(
+        (second.task_attempt_path / "task-diff.json").read_text(encoding="utf-8")
+    )
+    assert second_diff["observed_touched_paths"] == ["contracts/example.md"]
+    assert second_diff["issues"] == []
+
+
+def test_corrupt_retained_task_baseline_fails_closed(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
+    first = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+    (first.task_attempt_path / "repository-baseline.json").write_text(
+        "{not-json\n", encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="Retained task baseline is unreadable"):
+        prepare_task_execution(
+            workspace_root=workspace_root,
+            work_item="WI-1",
+            run_id="run-1",
+            task_id="TL-1",
+            project_root=tmp_path,
+        )
 
 
 def test_attempt_state_writer_rejects_corrupt_existing_state(tmp_path: Path) -> None:

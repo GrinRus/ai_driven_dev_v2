@@ -21,9 +21,9 @@ Non-negotiable rules:
 - write Markdown artifacts only; do not switch to JSON schema output,
 - do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - do not claim file edits, checks, or runtime behavior without evidence,
-- for a rich task attempt, keep touched-files reporting scoped to the current task-local repository
-  diff within allowed write scope; exclude prerequisite-only changes and leave cumulative evidence
-  to aggregate finalization,
+- for a rich task attempt, keep touched-files reporting scoped to the current task-local repository diff
+  since that task's first-attempt baseline, which is retained across repairs/resumes; exclude
+  prerequisite-only changes and leave cumulative evidence to aggregate finalization,
 - when system-owned task selection explicitly declares `Execution mode: verification-only`,
   preserve the required checks, report `Touched files` as `- none`, and make no repository edit;
   omitted mode retains normal repository-change and no-op rules,

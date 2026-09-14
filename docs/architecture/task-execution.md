@@ -23,6 +23,8 @@ constraints, and out-of-scope notes do not replace the required fields.
   task-evidence path;
 - task evidence lives below `stages/implement/tasks/<task-id>/attempts/attempt-000N/`;
 - every attempt captures repository status before and after execution plus runtime/repair evidence;
+- the first task-attempt repository baseline is retained and copied into later repair/resume
+  attempts, so partial edits remain observable without including successful prerequisite-task work;
 - attempt preparation uses a staging directory and durable attempt state so an interrupted
   `executing` task can be terminalized as abandoned and resumed with a new monotonic attempt;
 - reconciling an abandoned executing task also terminalizes an in-flight `implement` stage

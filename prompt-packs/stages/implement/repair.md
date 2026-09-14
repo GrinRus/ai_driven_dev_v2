@@ -71,9 +71,9 @@ For each finding:
    top-level bullet per id; descriptive paraphrases do not satisfy the finding.
 3. re-check touched-files entries against observable repository changes and allowed write scope;
    each top-level entry needs a backticked file path plus short intent, while nested bullets may hold
-   line-level details. For a rich task attempt, compare against the current task-local baseline/final
-   diff rather than the cumulative workspace: remove prerequisite-only claims unless the current
-   task changed those paths again, and do not revert successful prior-task changes;
+   line-level details. For a rich task attempt, compare against the task's retained first-attempt
+   baseline and latest final snapshot rather than the cumulative workspace: remove prerequisite-only
+   claims unless the current task changed those paths again, and do not revert successful prior-task changes;
 4. re-check verification entries for concrete command/check evidence plus observed outcome
    (`-> pass`, `exit 0`, `exit code 0`, or captured tool summary);
    any pass/fail/success outcome claim without executable/check evidence in the same bullet is still
@@ -110,9 +110,9 @@ For each finding:
 Use concrete repair actions:
 
 - `missing diffs`: remove unsupported touched-files claims or add missing concrete entries that match
-  observed current task-local edits; for `SEM-TASK-DIFF-MISMATCH`, exclude prerequisite-only paths
-  without reverting prior task results, while aggregate finalization retains ownership of cumulative
-  touched-file evidence;
+  observed task-local edits since the retained first-attempt baseline; for `SEM-TASK-DIFF-MISMATCH`,
+  exclude prerequisite-only paths without reverting prior task results, while aggregate finalization
+  retains ownership of cumulative touched-file evidence;
 - `incomplete touched-files intent`: rewrite each top-level touched-files bullet in the exact shape
   ``- `path/to/file.ext` - changed <short intent>`` so the path, separator, and intent are on the
   same line;

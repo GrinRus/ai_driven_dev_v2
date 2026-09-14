@@ -7,8 +7,12 @@ slice, and local task.
 
 ## Next
 
+- `W36-E7-S4-T9` — Preserve the task-local repository baseline across implementation repairs.
+
+## Soon
+
 - `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
-  AIDD revision and target pin.
+  AIDD revision and target pin after T9 is merged.
 
 ## Parking lot
 
@@ -39,9 +43,9 @@ slice, and local task.
   preserves the configured endpoint/model in isolation (PR #651). A fresh independent-root
   `AIDD-LIVE-007` run reached all four implementation tasks and their authored checks, but
   aggregate finalization rejected malformed `Touched files` entries generated from wrapped model
-  bullets. `W36-E7-S4-T8` is now done locally with focused regression evidence; T4 is restored to
-  `Next` for a fresh provider run. The adjacent UI refactor remains outside this worktree and
-  read-only.
+  bullets. `W36-E7-S4-T8` is now done locally with focused regression evidence; a second blocker
+  showed that task retries recaptured the baseline after partial edits, so T9 is `Next` and T4 is
+  `Soon` for a fresh provider run after the lifecycle fix. The adjacent UI refactor remains outside this worktree and read-only.
 - W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
   projected through reports, graders, harness metadata, operator summaries, dashboard views, and
   terminal handoffs; required lanes passed.

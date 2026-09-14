@@ -118,9 +118,21 @@ Goal: prove the installed Studio and governed full flow against one pinned mediu
 task through both maintained native providers without coupling live-evaluation behavior to product
 runtime semantics.
 
-- `W36-E7-S4-T4` (next) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T9` (next) Preserve the task-local repository baseline across implementation repairs.
+  - Dependencies: `W36-E7-S4-T8` and the existing task-attempt lifecycle contract.
+  - Output: retries and resumes of one rich implementation task compare repository evidence with
+    that task's first-attempt baseline, so partial edits from a failed attempt remain observable
+    without folding in successful prerequisite-task changes.
+  - Scope: `src/aidd/core/task_attempt_lifecycle.py`, task repository evidence tests, and the
+    implementation/task-attempt contracts and prompts; no UI-owned paths, provider adapters, or
+    live target repositories.
+  - Verification: a partial first task attempt followed by a repair reports the original changed
+    path and succeeds when the final report matches it; malformed retained baseline evidence fails
+    closed; focused lifecycle/evidence, validator, prompt-quality, and planning checks pass.
+
+- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
-  - Dependencies: `W36-E7-S4-T8` as the direct queue predecessor; `W36-E7-S4-T7` and
+  - Dependencies: `W36-E7-S4-T9` as the direct queue predecessor; `W36-E7-S4-T7` and
     `W36-E7-S4-T3` remain the provider-setup predecessors.
   - Scope: external Claude Code live execution and evidence only.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
