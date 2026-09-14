@@ -7,9 +7,13 @@ stable compatibility window exists.
 
 ## Unreleased
 
+- No changes yet.
+
+## 0.1.0a22 - 2026-09-14
+
 - Remove unused internal APIs, duplicate implementations, dormant UI components, and historical
-  documentation from the active repository tree. Completed planning and old release/audit records
-  remain in Git history.
+  documentation from the active repository tree while preserving current workflow and evidence
+  contracts.
 - Align repair/intervention prompts and stage briefs with canonical AIDD-owned workflow records.
 - Remove backward compatibility for retired configuration and artifact formats. Recreate old
   workspaces with the current CLI. Remove the obsolete `[logging]` configuration section;
@@ -17,6 +21,12 @@ stable compatibility window exists.
 - Require current run/stage/repair-grant/snapshot/remediation schema 1 and task-ledger schema 2
   when reading persisted execution state. Reject incomplete records before lifecycle mutations;
   do not upgrade old ledgers or reconstruct missing history, finalization, or stale-stage state.
+- Add immutable sanitized evidence archives, exact candidate manifests, readiness records, installed
+  scenario matrices, and package-channel verification for reproducible alpha releases.
+- Harden isolated Claude Code execution and live evidence retention, including private provider
+  state, task-local baselines across repairs, and disposition-aware QA verdicts.
+- Add critical-module coverage and JavaScript security ratchets, formatter/type/test gates, and
+  deterministic packaged-browser/build verification for the maintained release surface.
 
 ## 0.1.0a21 - 2026-09-01
 
