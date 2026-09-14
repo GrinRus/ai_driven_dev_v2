@@ -875,7 +875,7 @@ item is `W49-E2-S2-T1` for server-side UI job lifecycle extraction.
     characterization, Ruff, strict mypy, and all required CI/security lanes passed. No frontend,
     runtime, or UI-owned files changed.
 
-#### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization (`planned`)
+#### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization (`done`)
 
 Primary output: server-side UI orchestration is decomposed without revisiting W47 presentation or
 changing its public behavior.
