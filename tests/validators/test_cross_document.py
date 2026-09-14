@@ -1580,8 +1580,14 @@ def test_qa_cross_validation_ignores_must_fix_wording_in_follow_up_rationale(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_qa_upstream_bundle(workspace_root)
-    review_path = workspace_root / "workitems" / "WI-001" / "stages" / "review" / "output" / (
-        "review-report.md"
+    review_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "stages"
+        / "review"
+        / "output"
+        / ("review-report.md")
     )
     review_path.write_text(
         "# Review Report\n\n"
