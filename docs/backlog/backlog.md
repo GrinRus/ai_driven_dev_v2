@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T9` — Preserve the task-local repository baseline across implementation repairs.
+- `W36-E7-S4-T10` — Make QA upstream-verdict validation honor review finding dispositions.
 
 ## Soon
 
 - `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
-  AIDD revision and target pin after T9 is merged.
+  AIDD revision and target pin after T10 is merged.
 
 ## Parking lot
 
@@ -41,41 +41,9 @@ slice, and local task.
 
 - `2026-09-14` DeepSeek-backed Claude Code is authenticated through `ANTHROPIC_API_KEY` and
   preserves the configured endpoint/model in isolation (PR #651). A fresh independent-root
-  `AIDD-LIVE-007` run reached all four implementation tasks and their authored checks, but
-  aggregate finalization rejected malformed `Touched files` entries generated from wrapped model
-  bullets. `W36-E7-S4-T8` is now done locally with focused regression evidence; a second blocker
-  showed that task retries recaptured the baseline after partial edits, so T9 is `Next` and T4 is
-  `Soon` for a fresh provider run after the lifecycle fix. The adjacent UI refactor remains outside this worktree and read-only.
-- W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
-  projected through reports, graders, harness metadata, operator summaries, dashboard views, and
-  terminal handoffs; required lanes passed.
-- W50-E1-S2-T1/T2 completed in PRs #633/#634 (`dd557a75`/`7dab7e0d`): schema-1 retention metadata
-  and deterministic sanitized archive export/read/extract fail closed on missing provenance,
-  tampering, or mutable `.aidd` deletion; focused/full, security, packaged-browser, and build lanes
-  passed. No UI-owned paths changed; neighbor remains at `4c1356bc`.
-- `W50-E2-S1-T1` completed in PR #636 at `88ac8a1d`: the candidate manifest freezes clean-worktree
-  Git SHA/tree, package version, wheel digest/size, CI scenario inventory, and reproducible
-  verification commands; fail-closed validation rejects drift and non-wheel artifacts. Focused
-  candidate/release tests, full `make check`, Python matrix, critical coverage, adapter,
-  deterministic, packaged-browser, build, and security lanes passed. No UI-owned paths changed;
-  neighbor remains at `4c1356bc`.
-- `W50-E2-S1-T2` completed in PR #638 at `1abd1291`: the hashed readiness contract binds all
-  required Python, coverage, conformance, deterministic, packaged-browser, build, CodeQL,
-  dependency-review, and Scorecard results to the exact candidate manifest identity, rejecting
-  incomplete or mismatched evidence. Focused/full local checks and all required lanes passed; no
-  UI-owned paths changed and neighbor remains at `4c1356bc`.
-- `W50-E2-S1-T3` completed in PR #640 at `add04c05`: the exact manifest-bound wheel installs in
-  an isolated environment, every CI-marked deterministic scenario runs through installed `aidd`,
-  and a hashed fail-closed matrix preserves bundle paths plus stdout/stderr digests. Focused
-  tests and all required CI/security/browser/build lanes passed. A review regression fixed
-  manifest-relative scenario paths before merge. No UI-owned paths changed; neighbor remains at
-  `4c1356bc`.
-- `W50-E2-S1-T4` completed in PR #642 at `c9127799`: the exact candidate wheel is clean-installed
-  and replaced through both `pipx` and `uv tool`, with installed version, doctor, and PEP 610
-  wheel-hash checks captured in a canonical fail-closed report. Focused release/docs/planning
-  tests (98) and all required CI/security/browser/build lanes passed; one unrelated UI-baseline
-  browser HTTP-400 flake was cleared by rerun. No UI-owned paths changed; neighbor remains at
-  `4c1356bc`.
-- W50-E2/S1 remains complete. Provider/human acceptance continues to reuse the parked IDs after
-  this isolation fix, once the required credentials and eligible participants/environments are
-  available.
+  `AIDD-LIVE-007` run reached implementation, review, and QA, but QA exposed a validator false
+  blocker: approved `follow-up` findings mentioning `not must-fix` were treated as unresolved.
+  T9 is done locally; T10 is `Next` for disposition-aware validation, then T4 is `Soon` for a
+  fresh provider run. The adjacent UI refactor remains outside this worktree and read-only.
+- Earlier W50 release and acceptance evidence remains recorded in roadmap/Git history; this
+  bounded note tracks only the active T10 → T4 live-acceptance sequence.

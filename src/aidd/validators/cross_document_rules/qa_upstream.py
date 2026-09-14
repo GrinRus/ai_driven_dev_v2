@@ -12,6 +12,7 @@ from aidd.validators.semantic_rules.common import (
     REVIEW_FINDING_ID_PATTERN,
     extract_qa_release_recommendation,
     extract_qa_verdict,
+    extract_review_disposition,
     extract_review_finding_blocks,
     extract_risk_blocks,
     is_empty_risk_entry,
@@ -189,7 +190,7 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
     )
     review_rejected = status_match is not None and status_match.group(1).lower() == "rejected"
     unresolved_must_fix = any(
-        "must-fix" in block.casefold()
+        extract_review_disposition(block) == "must-fix"
         for block in extract_review_finding_blocks(
             level_two_section_text(context.upstream_review_text, "Findings")
         )

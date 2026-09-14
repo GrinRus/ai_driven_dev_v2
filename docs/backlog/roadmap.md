@@ -118,7 +118,7 @@ Goal: prove the installed Studio and governed full flow against one pinned mediu
 task through both maintained native providers without coupling live-evaluation behavior to product
 runtime semantics.
 
-- `W36-E7-S4-T9` (next) Preserve the task-local repository baseline across implementation repairs.
+- `W36-E7-S4-T9` (done) Preserve the task-local repository baseline across implementation repairs.
   - Dependencies: `W36-E7-S4-T8` and the existing task-attempt lifecycle contract.
   - Output: retries and resumes of one rich implementation task compare repository evidence with
     that task's first-attempt baseline, so partial edits from a failed attempt remain observable
@@ -129,10 +129,27 @@ runtime semantics.
   - Verification: a partial first task attempt followed by a repair reports the original changed
     path and succeeds when the final report matches it; malformed retained baseline evidence fails
     closed; focused lifecycle/evidence, validator, prompt-quality, and planning checks pass.
+  - Completion evidence: retained first-attempt baselines now survive task repairs/resumes and fail
+    closed when corrupt or missing. Focused lifecycle/evidence tests, full `make check` (3,292
+    Python tests plus JS/type/instruction lanes), and commit `617b31c9` passed; no UI-owned paths
+    changed.
+
+- `W36-E7-S4-T10` (next) Make QA upstream-verdict validation honor review finding dispositions.
+  - Dependencies: `W36-E7-S4-T9` and the existing QA cross-document contract.
+  - Output: QA blocks only rejected reviews or review findings whose parsed disposition is
+    `must-fix`; explanatory mentions of `must-fix` inside approved `follow-up` findings do not
+    produce a false critical blocker.
+  - Scope: `src/aidd/validators/cross_document_rules/qa_upstream.py`, validator regression tests,
+    and the owning QA validation contract/prompt references if required; no UI, provider adapter,
+    or live target repository changes.
+  - Verification: an approved review with a `follow-up` finding that explains it is not must-fix
+    passes QA upstream validation; a rejected review or actual `must-fix` disposition still
+    requires `not-ready`/`hold`; focused cross-document, semantic, prompt, contract, and planning
+    checks pass.
 
 - `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
-  - Dependencies: `W36-E7-S4-T9` as the direct queue predecessor; `W36-E7-S4-T7` and
+  - Dependencies: `W36-E7-S4-T10` as the direct queue predecessor; `W36-E7-S4-T7` and
     `W36-E7-S4-T3` remain the provider-setup predecessors.
   - Scope: external Claude Code live execution and evidence only.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,

@@ -1575,6 +1575,32 @@ def test_qa_cross_validation_accepts_exact_upstream_traceability(tmp_path: Path)
     assert findings == ()
 
 
+def test_qa_cross_validation_ignores_must_fix_wording_in_follow_up_rationale(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    review_path = workspace_root / "workitems" / "WI-001" / "stages" / "review" / "output" / (
+        "review-report.md"
+    )
+    review_path.write_text(
+        "# Review Report\n\n"
+        "## Findings\n\n"
+        "### RV-1\n\n"
+        "- Severity: low\n"
+        "- Disposition: follow-up\n"
+        "- Rationale: this is not a must-fix; retain it as a documented follow-up.\n\n"
+        "## Approval status\n\nReview status: approved\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
 def test_qa_cross_validation_accepts_work_item_relative_upstream_path(
     tmp_path: Path,
 ) -> None:
