@@ -30,6 +30,7 @@ from aidd.core.state_machine import StageState
 from aidd.core.task_attempt_lifecycle import (
     TaskExecutionContext,
     TaskResumeBlockedError,
+    _retained_task_baseline,
     _write_attempt_state,
     prepare_task_attempt,
     reconcile_task_execution_state,
@@ -434,6 +435,38 @@ def test_corrupt_retained_task_baseline_fails_closed(tmp_path: Path) -> None:
             task_id="TL-1",
             project_root=tmp_path,
         )
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_message"),
+    (
+        (None, "Retained task baseline is missing"),
+        ({"schema_version": 2, "task_id": "TL-1", "status": [], "files": {}}, "invalid schema"),
+        ({"schema_version": 1, "task_id": "TL-2", "status": [], "files": {}}, "wrong task id"),
+        (
+            {"schema_version": 1, "task_id": "TL-1", "status": "invalid", "files": {}},
+            "invalid status",
+        ),
+        (
+            {"schema_version": 1, "task_id": "TL-1", "status": [], "files": {"file": 1}},
+            "invalid file",
+        ),
+    ),
+)
+def test_retained_task_baseline_validation_fails_closed(
+    tmp_path: Path,
+    payload: dict[str, object] | None,
+    expected_message: str,
+) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    attempt_path.mkdir()
+    if payload is not None:
+        (attempt_path / "repository-baseline.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+
+    with pytest.raises(ValueError, match=expected_message):
+        _retained_task_baseline(attempts=((1, attempt_path),), task_id="TL-1")
 
 
 def test_attempt_state_writer_rejects_corrupt_existing_state(tmp_path: Path) -> None:
