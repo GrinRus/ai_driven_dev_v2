@@ -134,7 +134,7 @@ runtime semantics.
     Python tests plus JS/type/instruction lanes), and commit `617b31c9` passed; no UI-owned paths
     changed.
 
-- `W36-E7-S4-T10` (next) Make QA upstream-verdict validation honor review finding dispositions.
+- `W36-E7-S4-T10` (done) Make QA upstream-verdict validation honor review finding dispositions.
   - Dependencies: `W36-E7-S4-T9` and the existing QA cross-document contract.
   - Output: QA blocks only rejected reviews or review findings whose parsed disposition is
     `must-fix`; explanatory mentions of `must-fix` inside approved `follow-up` findings do not
@@ -146,8 +146,12 @@ runtime semantics.
     passes QA upstream validation; a rejected review or actual `must-fix` disposition still
     requires `not-ready`/`hold`; focused cross-document, semantic, prompt, contract, and planning
     checks pass.
+  - Completion evidence: `extract_review_disposition` now drives unresolved-finding detection,
+    preventing explanatory `not must-fix` wording in approved follow-ups from becoming a blocker;
+    focused validator/prompt/contract/docs/planning checks (282 tests) and full `make check`
+    (3,293 Python tests plus JS/type/instruction lanes) passed in commit `68f7a9fe`.
 
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (done) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T10` as the direct queue predecessor; `W36-E7-S4-T7` and
     `W36-E7-S4-T3` remain the provider-setup predecessors.
@@ -155,8 +159,14 @@ runtime semantics.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
     answers, attempts, patches, or provider evidence.
   - 2026-09-09 attempt `eval-live-007-claude-code-20260909T071417Z` reached `implement` but
-    failed canonical task-diff validation after TL-1/TL-2/TL-3 implementation evidence; retain
-    the task queued for a fresh rerun. See `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
+    failed canonical task-diff validation after TL-1/TL-2/TL-3 implementation evidence; this
+    historical failure was superseded by the fresh run below. See
+    `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
+  - Completion evidence: fresh independent-root run `eval-live-007-claude-code-20260914T112909Z`
+    passed all stages and verify/finish with macOS Seatbelt isolation, source pre/postflight
+    integrity, and `deepseek-flash` provider auth probe passing. Eight manual stage-quality audits,
+    review approval, QA `ready-with-risks`/`proceed-with-conditions`, and final manual reports are
+    retained in `/tmp/aidd-live-acceptance-20260914-r5`; no UI-owned paths were changed.
 
 - `W36-E7-S4-T8` (done) Harden aggregate implementation evidence rendering for wrapped touched-file
   entries.

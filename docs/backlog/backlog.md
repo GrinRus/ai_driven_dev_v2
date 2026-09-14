@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T10` — Make QA upstream-verdict validation honor review finding dispositions.
+- None; T10 and its dependent live acceptance T4 are complete.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Run `AIDD-LIVE-007` through Claude Code from an independent root on the same
-  AIDD revision and target pin after T10 is merged.
+- None; the next accepted work is intentionally parked pending operator/product evidence.
 
 ## Parking lot
 
@@ -39,11 +38,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-14` DeepSeek-backed Claude Code is authenticated through `ANTHROPIC_API_KEY` and
-  preserves the configured endpoint/model in isolation (PR #651). A fresh independent-root
-  `AIDD-LIVE-007` run reached implementation, review, and QA, but QA exposed a validator false
-  blocker: approved `follow-up` findings mentioning `not must-fix` were treated as unresolved.
-  T9 is done locally; T10 is `Next` for disposition-aware validation, then T4 is `Soon` for a
-  fresh provider run. The adjacent UI refactor remains outside this worktree and read-only.
+- `2026-09-14` T10 is complete in `68f7a9fe`: QA upstream verdicts now use parsed review
+  dispositions, and focused/full checks pass. T4 is complete in live run
+  `eval-live-007-claude-code-20260914T112909Z` on `deepseek-flash` from an independent root;
+  all stages, validator reports, Seatbelt/session integrity, and final manual quality reports
+  pass. The adjacent UI refactor remains outside this worktree and read-only.
 - Earlier W50 release and acceptance evidence remains recorded in roadmap/Git history; this
-  bounded note tracks only the active T10 → T4 live-acceptance sequence.
+  bounded note tracks the completed T10 → T4 sequence and parked follow-ups.
