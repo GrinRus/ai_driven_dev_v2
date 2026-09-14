@@ -79,8 +79,10 @@ provider subtree. The launcher rejects a sibling provider tool root.
 
 For Claude Code installations routed through an Anthropic-compatible endpoint, the isolation
 environment preserves the non-secret `ANTHROPIC_BASE_URL` and `ANTHROPIC_MODEL` settings from the
-launching environment. Pass the actual secret explicitly, for example
-`--credential-environment-key ANTHROPIC_AUTH_TOKEN`, and retain
+launching environment. Pass the actual secret explicitly using the credential variable configured
+for the selected provider. For the current DeepSeek-backed setup, for example, use
+`--credential-environment-key ANTHROPIC_API_KEY`; another compatible setup may use a different
+credential variable such as `ANTHROPIC_AUTH_TOKEN`. Retain
 `--seed-provider-auth-from-home` so the session guard recognises the seeded private auth state.
 Do not pass model or endpoint settings as credential keys, and do not put credentials in the
 endpoint URL. The resulting evidence records only the runtime and probe status, never the token.
