@@ -118,16 +118,55 @@ Goal: prove the installed Studio and governed full flow against one pinned mediu
 task through both maintained native providers without coupling live-evaluation behavior to product
 runtime semantics.
 
-- `W36-E7-S4-T4` (next) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T9` (done) Preserve the task-local repository baseline across implementation repairs.
+  - Dependencies: `W36-E7-S4-T8` and the existing task-attempt lifecycle contract.
+  - Output: retries and resumes of one rich implementation task compare repository evidence with
+    that task's first-attempt baseline, so partial edits from a failed attempt remain observable
+    without folding in successful prerequisite-task changes.
+  - Scope: `src/aidd/core/task_attempt_lifecycle.py`, task repository evidence tests, and the
+    implementation/task-attempt contracts and prompts; no UI-owned paths, provider adapters, or
+    live target repositories.
+  - Verification: a partial first task attempt followed by a repair reports the original changed
+    path and succeeds when the final report matches it; malformed retained baseline evidence fails
+    closed; focused lifecycle/evidence, validator, prompt-quality, and planning checks pass.
+  - Completion evidence: retained first-attempt baselines now survive task repairs/resumes and fail
+    closed when corrupt or missing. Focused lifecycle/evidence tests, full `make check` (3,292
+    Python tests plus JS/type/instruction lanes), and commit `617b31c9` passed; no UI-owned paths
+    changed.
+
+- `W36-E7-S4-T10` (done) Make QA upstream-verdict validation honor review finding dispositions.
+  - Dependencies: `W36-E7-S4-T9` and the existing QA cross-document contract.
+  - Output: QA blocks only rejected reviews or review findings whose parsed disposition is
+    `must-fix`; explanatory mentions of `must-fix` inside approved `follow-up` findings do not
+    produce a false critical blocker.
+  - Scope: `src/aidd/validators/cross_document_rules/qa_upstream.py`, validator regression tests,
+    and the owning QA validation contract/prompt references if required; no UI, provider adapter,
+    or live target repository changes.
+  - Verification: an approved review with a `follow-up` finding that explains it is not must-fix
+    passes QA upstream validation; a rejected review or actual `must-fix` disposition still
+    requires `not-ready`/`hold`; focused cross-document, semantic, prompt, contract, and planning
+    checks pass.
+  - Completion evidence: `extract_review_disposition` now drives unresolved-finding detection,
+    preventing explanatory `not must-fix` wording in approved follow-ups from becoming a blocker;
+    focused validator/prompt/contract/docs/planning checks (282 tests) and full `make check`
+    (3,293 Python tests plus JS/type/instruction lanes) passed in commit `68f7a9fe`.
+
+- `W36-E7-S4-T4` (done) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
-  - Dependencies: `W36-E7-S4-T8` as the direct queue predecessor; `W36-E7-S4-T7` and
+  - Dependencies: `W36-E7-S4-T10` as the direct queue predecessor; `W36-E7-S4-T7` and
     `W36-E7-S4-T3` remain the provider-setup predecessors.
   - Scope: external Claude Code live execution and evidence only.
   - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
     answers, attempts, patches, or provider evidence.
   - 2026-09-09 attempt `eval-live-007-claude-code-20260909T071417Z` reached `implement` but
-    failed canonical task-diff validation after TL-1/TL-2/TL-3 implementation evidence; retain
-    the task queued for a fresh rerun. See `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
+    failed canonical task-diff validation after TL-1/TL-2/TL-3 implementation evidence; this
+    historical failure was superseded by the fresh run below. See
+    `docs/e2e/aidd-live-007-claude-2026-09-09.md`.
+  - Completion evidence: fresh independent-root run `eval-live-007-claude-code-20260914T112909Z`
+    passed all stages and verify/finish with macOS Seatbelt isolation, source pre/postflight
+    integrity, and `deepseek-flash` provider auth probe passing. Eight manual stage-quality audits,
+    review approval, QA `ready-with-risks`/`proceed-with-conditions`, and final manual reports are
+    retained in `/tmp/aidd-live-acceptance-20260914-r5`; no UI-owned paths were changed.
 
 - `W36-E7-S4-T8` (done) Harden aggregate implementation evidence rendering for wrapped touched-file
   entries.

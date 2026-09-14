@@ -207,6 +207,51 @@ def existing_attempts(attempts_root: Path) -> tuple[tuple[int, Path], ...]:
     return tuple(sorted(attempts))
 
 
+def _retained_task_baseline(
+    *, attempts: tuple[tuple[int, Path], ...], task_id: str
+) -> dict[str, object] | None:
+    """Return the first task baseline so repairs retain partial task edits.
+
+    A failed task attempt may leave valid, scoped edits in the checkout.  Reusing the
+    first baseline makes those edits remain observable on a repair instead of turning
+    the next attempt into a misleading empty diff.  Corrupt retained evidence is a
+    hard error; silently recapturing it would erase the task's audit boundary.
+    """
+
+    if not attempts:
+        return None
+    baseline_path = attempts[0][1] / "repository-baseline.json"
+    try:
+        payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"Retained task baseline is missing: {baseline_path.as_posix()}.") from exc
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            f"Retained task baseline is unreadable: {baseline_path.as_posix()}."
+        ) from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError(
+            f"Retained task baseline has an invalid schema: {baseline_path.as_posix()}."
+        )
+    if payload.get("task_id") != task_id:
+        raise ValueError(
+            f"Retained task baseline has the wrong task id: {baseline_path.as_posix()}."
+        )
+    status = payload.get("status")
+    files = payload.get("files")
+    if not isinstance(status, list) or not all(isinstance(item, str) for item in status):
+        raise ValueError(
+            f"Retained task baseline has invalid status evidence: {baseline_path.as_posix()}."
+        )
+    if not isinstance(files, dict) or not all(
+        isinstance(path, str) and isinstance(digest, str) for path, digest in files.items()
+    ):
+        raise ValueError(
+            f"Retained task baseline has invalid file evidence: {baseline_path.as_posix()}."
+        )
+    return payload
+
+
 def reconcile_staging_attempts(
     attempts_root: Path,
     *,
@@ -378,13 +423,16 @@ def prepare_task_attempt(
         task_id=task_id,
     )
     reconcile_staging_attempts(attempts_root, task_id=task_id)
-    task_attempt_number = (
-        max((entry.attempt_count, *(number for number, _ in existing_attempts(attempts_root)))) + 1
-    )
+    prior_attempts = existing_attempts(attempts_root)
+    if entry.attempt_count > 0 and not prior_attempts:
+        raise ValueError(f"Retained task baseline is missing for task `{task_id}`.")
+    task_attempt_number = max((entry.attempt_count, *(number for number, _ in prior_attempts))) + 1
+    baseline = _retained_task_baseline(attempts=prior_attempts, task_id=task_id)
+    if baseline is None:
+        baseline = repository_baseline(project_root=project_root, task_id=task_id)
     attempts_root.mkdir(parents=True, exist_ok=True)
     staging_path = attempts_root / f".attempt-{task_attempt_number:04d}-{uuid4().hex}.staging"
     staging_path.mkdir()
-    baseline = repository_baseline(project_root=project_root, task_id=task_id)
     (staging_path / "repository-baseline.json").write_text(
         json.dumps(baseline, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

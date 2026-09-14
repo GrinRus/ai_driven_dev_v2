@@ -30,6 +30,7 @@ from aidd.core.state_machine import StageState
 from aidd.core.task_attempt_lifecycle import (
     TaskExecutionContext,
     TaskResumeBlockedError,
+    _retained_task_baseline,
     _write_attempt_state,
     prepare_task_attempt,
     reconcile_task_execution_state,
@@ -43,6 +44,7 @@ from aidd.core.task_ledger import (
     persist_task_ledger,
 )
 from aidd.core.task_plan import parse_task_plan
+from aidd.core.task_repository_evidence import repository_snapshot_payload
 
 
 def _tasklist(*, second_dependency: str = "TL-1") -> str:
@@ -310,6 +312,161 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
         StageState.EXECUTING.value,
         StageState.FAILED.value,
     ]
+
+
+def test_repair_reuses_first_task_baseline_after_partial_edit(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
+    source_path = tmp_path / "contracts" / "example.md"
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_text("before\n", encoding="utf-8")
+    provider_calls = 0
+
+    def baseline_provider(*, project_root: Path, task_id: str) -> dict[str, object]:
+        nonlocal provider_calls
+        provider_calls += 1
+        return repository_snapshot_payload(project_root=project_root, task_id=task_id)
+
+    first = prepare_task_attempt(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+        repository_baseline=baseline_provider,
+    )
+    source_path.write_text("after\n", encoding="utf-8")
+    report_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "implement" / "implementation-report.md"
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `contracts/example.md` - updated contract.\n",
+        encoding="utf-8",
+    )
+    complete_task_execution(
+        context=first,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        project_root=tmp_path,
+        succeeded=False,
+        blocker="validator repair",
+    )
+
+    second = prepare_task_attempt(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+        repository_baseline=baseline_provider,
+    )
+    assert provider_calls == 1
+    assert json.loads(
+        (first.task_attempt_path / "repository-baseline.json").read_text(encoding="utf-8")
+    ) == json.loads(
+        (second.task_attempt_path / "repository-baseline.json").read_text(encoding="utf-8")
+    )
+
+    report_path.write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `contracts/example.md` - repaired contract.\n",
+        encoding="utf-8",
+    )
+    ledger = complete_task_execution(
+        context=second,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        project_root=tmp_path,
+        succeeded=True,
+    )
+    assert ledger.entry("TL-1").status is TaskExecutionStatus.SUCCEEDED
+    second_diff = json.loads(
+        (second.task_attempt_path / "task-diff.json").read_text(encoding="utf-8")
+    )
+    assert second_diff["observed_touched_paths"] == ["contracts/example.md"]
+    assert second_diff["issues"] == []
+
+
+def test_corrupt_retained_task_baseline_fails_closed(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
+    first = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+    (first.task_attempt_path / "repository-baseline.json").write_text(
+        "{not-json\n", encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="Retained task baseline is unreadable"):
+        prepare_task_execution(
+            workspace_root=workspace_root,
+            work_item="WI-1",
+            run_id="run-1",
+            task_id="TL-1",
+            project_root=tmp_path,
+        )
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_message"),
+    (
+        (None, "Retained task baseline is missing"),
+        ({"schema_version": 2, "task_id": "TL-1", "status": [], "files": {}}, "invalid schema"),
+        ({"schema_version": 1, "task_id": "TL-2", "status": [], "files": {}}, "wrong task id"),
+        (
+            {"schema_version": 1, "task_id": "TL-1", "status": "invalid", "files": {}},
+            "invalid status",
+        ),
+        (
+            {"schema_version": 1, "task_id": "TL-1", "status": [], "files": {"file": 1}},
+            "invalid file",
+        ),
+    ),
+)
+def test_retained_task_baseline_validation_fails_closed(
+    tmp_path: Path,
+    payload: dict[str, object] | None,
+    expected_message: str,
+) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    attempt_path.mkdir()
+    if payload is not None:
+        (attempt_path / "repository-baseline.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+
+    with pytest.raises(ValueError, match=expected_message):
+        _retained_task_baseline(attempts=((1, attempt_path),), task_id="TL-1")
 
 
 def test_attempt_state_writer_rejects_corrupt_existing_state(tmp_path: Path) -> None:

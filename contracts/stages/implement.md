@@ -92,11 +92,14 @@ Optional context documents may improve implementation quality, but they must not
   observed outcome on that same bullet; do not split the command and outcome across separate prose
   paragraphs.
 - touched-files entries must stay within `context/allowed-write-scope.md`.
-- For a rich task attempt, touched-files evidence is task-local: it is the exact path set changed
-  between the current task's repository baseline and final snapshot. Exclude files changed only by
-  successful prerequisite tasks unless the current task changes those files again. Prerequisite or
-  cumulative workspace state may be described in `Summary` or `Risks`; aggregate finalization owns
-  the cumulative touched-file evidence across successful tasks.
+- For a rich task attempt, touched-files evidence is the current task-local diff: it is the exact
+  path set changed between that task's first-attempt repository baseline and the latest final
+  snapshot. The first
+  baseline is retained across repair and resume attempts, so partial edits from a failed attempt
+  remain observable. Exclude files changed only by successful prerequisite tasks unless the current
+  task changes those files again. Prerequisite or cumulative workspace state may be described in
+  `Summary` or `Risks`; aggregate finalization owns the cumulative touched-file evidence across
+  successful tasks.
 - When system-owned `context/task-selection.md` declares `Execution mode: verification-only`, the
   rich attempt must preserve required command/check outcomes and report `- none` in `Touched files`.
   Such an attempt is valid only with no observed task-local repository change. An omitted mode or
@@ -137,8 +140,8 @@ Validators for `implement` should check:
 - required output existence and heading coverage for `implementation-report.md`, `stage-result.md`, and `validator-report.md`,
 - consistency with selected task id, task intent, and allowed write scope from inputs,
 - missing diffs:
-  - touched-files entries are non-empty for non-no-op runs and map to actual current task-local
-    modified paths for rich task attempts,
+  - touched-files entries are non-empty for non-no-op runs and map to actual task-local modified
+    paths since the task's retained first-attempt baseline for rich task attempts,
   - cumulative prerequisite-only paths are rejected from a rich task attempt's touched-files list,
   - claimed modifications without observable file-level change evidence are rejected,
 - unverifiable claims:
@@ -171,7 +174,8 @@ optional when a destructive or policy-sensitive choice must be confirmed
   - when validation fails, repair must target the root cause class (`missing diffs`, `unverifiable claims`, or `incomplete summary`) before adding new content,
   - for `SEM-TASK-DIFF-MISMATCH`, repair removes prerequisite-only or otherwise unsupported
     touched-file claims without reverting successful prior-task changes; current task-local changes
-    remain reported and cumulative evidence remains owned by aggregate finalization,
+    remain reported against the retained first-attempt baseline and cumulative evidence remains
+    owned by aggregate finalization,
   - repaired outputs must keep previously valid sections unless they conflict with root-cause fixes.
 - no-op handling:
   - no-op output is allowed only when selected task is already satisfied or blocked by explicit external constraints,

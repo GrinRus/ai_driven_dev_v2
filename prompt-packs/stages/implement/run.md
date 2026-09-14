@@ -80,8 +80,8 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    dependency-ready card in the same attempt.
 5. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
 6. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
-   For a rich task attempt, report only the current task-local repository diff between that task's
-   baseline and final snapshot. Exclude prerequisite changes unless the current task changes them again.
+   For a rich task attempt, report only the current task-local repository diff between that task's retained
+   first-attempt baseline and latest final snapshot. Exclude prerequisite changes unless the current task changes them again.
    Do not use the cumulative workspace or cumulative `git diff`
    as the touched-files list. You may mention prerequisite state in `Summary` or `Risks`; aggregate
    finalization owns cumulative touched-file evidence across successful tasks. Include
@@ -269,8 +269,9 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 - edits stay within allowed write scope when provided,
 - touched-files list is concrete and evidence-backed, with path + same-line intent for every
   top-level file entry,
-- for a rich task attempt, touched-files entries match only the current task-local diff, exclude
-  prerequisite-only paths, and leave cumulative touched-file evidence to aggregate finalization,
+- for a rich task attempt, touched-files entries match only the task-local diff since the retained
+  first-attempt baseline, exclude prerequisite-only paths, and leave cumulative touched-file
+  evidence to aggregate finalization,
 - verification notes are factual and command-specific,
 - every verification bullet with a pass/fail/success claim has the command/check and observed
   outcome on the same bullet,
