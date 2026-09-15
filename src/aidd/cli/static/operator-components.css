@@ -1242,6 +1242,13 @@
   margin: 5px 0 8px;
   text-transform: uppercase;
 }
+.question-card-prompt {
+  color: var(--color-text-primary);
+  font-size: var(--type-body-size);
+  font-weight: 700;
+  line-height: var(--type-body-line);
+  margin: 0;
+}
 .question-actions {
   align-items: center;
   display: flex;

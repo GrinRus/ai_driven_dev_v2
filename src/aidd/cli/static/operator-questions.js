@@ -356,7 +356,7 @@ function renderQuestionCards({showResume}) {
       && !questionDraft(question.question_id)
     ))?.question_id || ""
     : "";
-  const renderCards = (items) => items.map((question, index) => {
+  const renderCards = (items, {showPrompts = false} = {}) => items.map((question, index) => {
         const questionLabel = question.question_id || `question ${index + 1}`;
         const questionTextId = questionControlId("question-text", question.question_id, index);
         const answerId = questionControlId("answer", question.question_id, index);
@@ -405,7 +405,7 @@ function renderQuestionCards({showResume}) {
               <span>QID ${escapeHtml(question.question_id)}</span>
               <span>${escapeHtml(question.policy || "blocking")}</span>
             </div>
-            <p class="question-card-prompt sr-only" id="${questionTextId}">${escapeHtml(question.text || "Decision required")}</p>
+            <p class="question-card-prompt${showPrompts ? "" : " sr-only"}" id="${questionTextId}" data-question-prompt="${escapeHtml(question.question_id)}">${escapeHtml(question.text || "Decision required")}</p>
             ${savedAnswer}
             ${draft ? `<p class="muted question-draft-status" data-question-draft-restored="${escapeHtml(question.question_id)}">Restored unsent session draft.</p>` : ""}
             <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
@@ -455,7 +455,7 @@ function renderQuestionCards({showResume}) {
       }).join("");
   return `
     <div class="question-list">
-      ${activeQuestions.length ? renderCards(activeQuestions) : `<div class="empty-state compact">No unresolved blocking questions.</div>`}
+      ${activeQuestions.length ? renderCards(activeQuestions, {showPrompts: activeQuestions.length > 1}) : `<div class="empty-state compact">No unresolved blocking questions.</div>`}
       <details class="question-history" ${activeQuestions.length ? "" : "open"}>
         <summary>Answered and non-blocking questions (${escapeHtml(historyQuestions.length)})</summary>
         <div class="question-list compact">

@@ -870,6 +870,39 @@ test("question answer cards expose structured context and preview destination", 
   assert.match(html, /data-answer-preview-panel="Q1"/);
 });
 
+test("multi-question recovery exposes each prompt and uniquely labelled answer field", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.dashboard = {
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q1", "Q2", "Q3"],
+      questions: [
+        {question_id: "Q1", text: "Preserve the acceptance boundary?", policy: "blocking"},
+        {question_id: "Q2", text: "Which evidence proves it?", policy: "blocking"},
+        {question_id: "Q3", text: "What remains reversible?", policy: "blocking"}
+      ]
+    }}
+  }`, context);
+  const html = vm.runInContext("renderQuestionCards({showResume: true})", context);
+  for (const [questionId, prompt] of [
+    ["Q1", "Preserve the acceptance boundary?"],
+    ["Q2", "Which evidence proves it?"],
+    ["Q3", "What remains reversible?"]
+  ]) {
+    assert.match(html, new RegExp(`data-question-prompt="${questionId}"`));
+    assert.ok(html.includes(prompt));
+    assert.match(html, new RegExp(`data-question-text="${questionId}"`));
+    assert.match(html, new RegExp(`data-question-resolution="${questionId}"`));
+  }
+  assert.doesNotMatch(html, /question-card-prompt sr-only/);
+  assert.equal((html.match(/data-question-id=/g) || []).length, 3);
+  assert.equal((html.match(/data-save-answer=/g) || []).length, 3);
+  assert.equal((html.match(/data-answer-resume=/g) || []).length, 3);
+  assert.equal((html.match(/data-primary-action/g) || []).length, 1);
+});
+
 test("Decision Workbench renders bounded rejected interview recovery without repair", async () => {
   const {context} = domContext();
   context.readOperatorDraft = () => null;
