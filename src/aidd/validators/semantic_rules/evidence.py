@@ -242,9 +242,8 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
     # pipefail; uv run pytest ...``) are executable evidence when any command
     # in the chain is known. Keep the check token-based so arbitrary prose or
     # unknown wrappers remain fail-closed.
-    if (
-        not re.match(r"^(?:if|for|while|until|case)\b", normalized_candidate, re.IGNORECASE)
-        and any(operator in normalized_candidate for operator in (";", "&&", "||", "|"))
+    if not re.match(r"^(?:if|for|while|until|case)\b", normalized_candidate, re.IGNORECASE) and any(
+        operator in normalized_candidate for operator in (";", "&&", "||", "|")
     ):
         return any(token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES for token in tokens)
     if explicit_container:
