@@ -225,6 +225,49 @@ def test_verification_only_task_requires_empty_task_local_diff(tmp_path: Path) -
     assert any("Verification-only task changed" in issue for issue in changed_issues)
 
 
+def test_verification_only_report_allows_explanatory_touched_files_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    plan = parse_task_plan(
+        _tasklist().replace(
+            "- In scope: `contracts/example.md` and `tests/test_contract.py`.",
+            "- In scope: `contracts/example.md` and `tests/test_contract.py`.\n"
+            "- Execution mode: verification-only",
+        )
+    )
+    attempt = tmp_path / "attempt"
+    attempt.mkdir()
+    (attempt / "repository-baseline.json").write_text(
+        json.dumps({"schema_version": 1, "task_id": "TL-1", "status": [], "files": {}}),
+        encoding="utf-8",
+    )
+    context = TaskExecutionContext(
+        plan=plan,
+        ledger=TaskLedger.create(plan),
+        task=plan.tasks[0],
+        global_attempt_start=1,
+        task_attempt_number=1,
+        task_attempt_path=attempt,
+    )
+
+    payload, issues = task_diff_evidence(
+        context=context,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        final_snapshot=RepositorySnapshot(task_id="TL-1", status=(), files=()),
+        report=(
+            "## Touched files\n\n"
+            "- none\n\n"
+            "- `git diff --name-only` -> pass (no task-local changes).\n"
+            "- `tests/test_contract.py` remains a prerequisite audit subject.\n"
+        ),
+    )
+
+    assert issues == ()
+    assert payload["reported_touched_paths"] == []
+
+
 def test_task_attempt_records_diff_relative_to_its_own_baseline(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist_path = (

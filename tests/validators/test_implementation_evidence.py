@@ -19,6 +19,7 @@ from aidd.validators.semantic_rules.evidence import (
         "`sha256sum /tmp/evidence.log` -> pass",
         "`shasum uv.lock` -> pass",
         "`ls -d workitems` -> pass",
+        "`set -o pipefail; uv run pytest -q tests/test_cli.py` -> pass",
         (
             "`mkdir -p /tmp/pristine && git archive HEAD | tar -x -C /tmp/pristine && "
             "cp tests/test_cli.py /tmp/pristine/tests/test_cli.py && grep -n 'guard' "
