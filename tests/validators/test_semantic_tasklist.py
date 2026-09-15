@@ -13,7 +13,10 @@ from aidd.validators.semantic import (
     INCOMPLETE_SECTION_CODE,
     validate_semantic_outputs,
 )
-from aidd.validators.semantic_rules.tasklist import _task_plan_issue_severity
+from aidd.validators.semantic_rules.tasklist import (
+    _render_task_plan_issue_group,
+    _task_plan_issue_severity,
+)
 
 
 def test_validate_semantic_outputs_accepts_valid_tasklist_fixture_bundle() -> None:
@@ -445,6 +448,23 @@ def test_tasklist_validator_keeps_independent_dependency_findings_separate(
     assert len(findings) == 2
     assert any("Task-card grammar has one shared root issue" in message for message in messages)
     assert any("unknown dependencies: TL-99" in message for message in messages)
+
+
+def test_tasklist_repair_message_explains_card_scaffold_when_no_field_is_named() -> None:
+    issues = tuple(
+        TaskPlanParseIssue(
+            kind=TaskPlanIssueKind.MISSING_ACCEPTANCE,
+            message=f"Task `{task_id}` must declare at least one acceptance criterion.",
+            task_id=task_id,
+        )
+        for task_id in ("TL-1", "TL-2")
+    )
+
+    message = _render_task_plan_issue_group(issues)
+
+    assert "missing required card grammar" in message
+    assert "`Outcome`, `Dominant deliverable`, `In scope`" in message
+    assert "nested `<task-id>-AC<n>` acceptance criteria" in message
 
 
 @pytest.mark.parametrize(
