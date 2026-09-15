@@ -32,4 +32,7 @@ Non-negotiable rules:
   preserve the required checks, report `Touched files` as `- none`, and make no repository edit;
   omitted mode retains normal repository-change and no-op rules,
 - keep verification notes limited to checks that were actually executed,
+- do not write blanket meta-claims such as `Every command cited below was executed` or
+  `all checks were run` without a command and terminal outcome on that same bullet; establish
+  verification evidence item by item,
 - keep `implementation-report.md` evidence truthful; AIDD derives canonical workflow records from it.

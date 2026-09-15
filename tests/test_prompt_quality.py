@@ -1143,6 +1143,7 @@ def test_review_spec_prompts_require_direct_evidence_and_reconciliation() -> Non
 
 def test_implement_prompts_require_executable_verification_evidence() -> None:
     run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(encoding="utf-8")
     repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(encoding="utf-8")
 
     assert "outcome claim is invalid unless the same bullet" in run_prompt
@@ -1167,6 +1168,9 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "Do not add standalone caveats such as `neither command failed`" in run_prompt
     assert "put resolver/tool warnings and other explanatory" in run_prompt
     assert "A command-free outcome claim remains invalid" in run_prompt
+    assert "Do not add blanket meta-claims such as" in run_prompt
+    assert "Every command cited below was executed" in run_prompt
+    assert "all checks were run" in system_prompt
     assert "one bullet per command/check" in repair_prompt
     assert "short intent on the same line" in run_prompt
     assert "copy this exact shape for every file" in run_prompt
