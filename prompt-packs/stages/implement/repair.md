@@ -82,6 +82,8 @@ For each finding:
    evidence or `not-run: <reason>`. Use one bullet per command/check with this exact shape:
    ``- `command goes here` -> pass (observed summary)`` or
    ``- `command goes here` -> fail (exit code N; observed summary)``.
+   Do not use ellipses (`...`) or another placeholder token when reproducing command output;
+   include the relevant observed lines or summarize them as observed facts outside a verbatim block.
    Do not preserve mutation-only cleanup bullets such as `rm -rf ... -> pass` as verification
    evidence; keep cleanup prose brief and cite a separate check command such as `find ...`,
    `git status --ignored ...`, or `test ! -e ...` that proves residue is absent.
