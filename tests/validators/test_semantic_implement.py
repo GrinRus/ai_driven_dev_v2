@@ -1689,6 +1689,42 @@ def test_validate_semantic_outputs_accepts_hyphenated_negative_residue_outcome(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_prefix_count_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-PREFIX-COUNTS"
+    _write_workspace_baseline(workspace_root, work_item)
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-EXAMPLE-RESIDUE`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected residue check with bounded verification evidence.\n\n"
+            "## Touched files\n\n"
+            "- `src/residue.py` - add residue check.\n\n"
+            "## Verification\n\n"
+            "- `git status --ignored --short --untracked-files=all` -> per-prefix counts "
+            "`src/` 1, `tests/` 2.\n\n"
+            "## Risks\n\n"
+            "- None observed.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_rejects_ambiguous_arrow_outcome(
     tmp_path: Path,
 ) -> None:
