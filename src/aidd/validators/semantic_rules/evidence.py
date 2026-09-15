@@ -14,13 +14,14 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"`[^`\n]*\b("
     r"aidd|ast-index|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|"
     r"go test|cargo test|"
-    r"make|git|grep|rg|sed|nl|echo|printf|diff|wc|od|sha256sum|flake8|black|prettier|ty check|"
+    r"make|git|grep|rg|sed|nl|echo|printf|diff|wc|od|sha256sum|shasum|ls|"
+    r"flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc|perl"
     r")\b[^`\n]*`|" + GENERIC_BACKTICKED_COMMAND_FRAGMENT + r"|"
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
     r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check)\b|"
-    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|nl|echo|printf|diff|wc|od|sha256sum|flake8|black)\b|"
+    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|nl|echo|printf|diff|wc|od|sha256sum|shasum|ls|flake8|black)\b|"
     r"`test\s+[^`\n]+`)",
     flags=re.IGNORECASE,
 )
@@ -109,6 +110,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "git",
         "go",
         "grep",
+        "ls",
         "make",
         "mypy",
         "node",
@@ -127,6 +129,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "ruff",
         "sha256sum",
         "sed",
+        "shasum",
         "sh",
         "sphinx-build",
         "test",
