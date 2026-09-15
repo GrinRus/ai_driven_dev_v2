@@ -154,6 +154,42 @@ def test_validate_semantic_outputs_rejects_unresolved_verification_command_place
     assert "concrete executable value" in finding.message
 
 
+def test_validate_semantic_outputs_accepts_explicitly_bound_verification_placeholder(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_document(
+        workspace_root,
+        "WI-SEM-TASKLIST-BOUND-COMMAND-PLACEHOLDER",
+        (
+            "# Tasklist\n\n"
+            "## Task summary\n\n"
+            "Run the authored regression command with concrete scratch paths.\n\n"
+            "## Ordered tasks\n\n"
+            "### TL-1 — Run regression\n\n"
+            "- Outcome: The regression command is recorded for implementation.\n"
+            "- Dominant deliverable: `tests/test_responses.py` verification evidence.\n"
+            "- In scope: `tests/test_responses.py`.\n"
+            "- Acceptance criteria:\n"
+            "  - TL-1-AC1: The concrete regression command is executable.\n\n"
+            "## Dependencies\n\n"
+            "- TL-1: none\n\n"
+            "## Verification notes\n\n"
+            "- TL-1: `uv run tool <scratch-db> <header-only-csv>` -> pass; "
+            "bindings: `<scratch-db>` = `/tmp/scratch.db`, "
+            "`<header-only-csv>` = `/tmp/headers.csv`.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-BOUND-COMMAND-PLACEHOLDER",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_concrete_command_and_process_substitution(
     tmp_path: Path,
 ) -> None:

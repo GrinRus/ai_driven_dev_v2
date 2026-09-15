@@ -25,6 +25,10 @@ def _compact_text(text: str) -> str:
 
 _INLINE_CODE_PATTERN = re.compile(r"(?<!`)`(?!`)(.*?)(?<!`)`(?!`)", flags=re.DOTALL)
 _UNRESOLVED_COMMAND_PLACEHOLDER_PATTERN = re.compile(r"<[A-Za-z][^>\n]*>")
+_BOUND_COMMAND_PLACEHOLDER_PATTERN = re.compile(
+    r"(?P<placeholder><[A-Za-z][^>\n]*>)\s*`?\s*=\s*`?"
+    r"(?P<value>(?!<)[^\s,;`]+)"
+)
 
 
 def _unresolved_verification_placeholder_findings(
@@ -37,11 +41,21 @@ def _unresolved_verification_placeholder_findings(
         code_spans = _INLINE_CODE_PATTERN.findall(line)
         if not code_spans:
             continue
+        # A tasklist may preserve an authored command with readable tokens while
+        # binding those tokens to concrete scratch paths in the same note.  Treat
+        # only explicitly bound placeholders as resolved; all other placeholders
+        # remain blocking so vague commands cannot pass validation.
+        bound_placeholders = {
+            match.group("placeholder")
+            for match in _BOUND_COMMAND_PLACEHOLDER_PATTERN.finditer(line)
+        }
         task_ids = extract_tasklist_task_ids(line)
         task_label = ", ".join(sorted(task_ids)) if task_ids else "the task"
         for code_span in code_spans:
             for match in _UNRESOLVED_COMMAND_PLACEHOLDER_PATTERN.finditer(code_span):
                 placeholder = match.group(0)
+                if placeholder in bound_placeholders:
+                    continue
                 key = (task_label, placeholder)
                 if key in seen:
                     continue
