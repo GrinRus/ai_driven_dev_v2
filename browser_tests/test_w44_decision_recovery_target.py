@@ -118,6 +118,59 @@ def test_question_recovery_renders_the_decision_before_shared_chrome(
         browser_page.diagnostics.assert_clean()
 
 
+def test_multi_question_recovery_keeps_each_prompt_and_answer_action_unambiguous(
+    tmp_path: Path,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / "multi-question",
+        "multi-blocking-question",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        response = page.goto(
+            _route(harness.url, fixture, "idea"),
+            wait_until="networkidle",
+        )
+        assert response is not None and response.ok
+        surface = page.locator('[data-human-decision-surface="question"]')
+        surface.wait_for(state="visible")
+
+        cards = surface.locator('[data-question-id]')
+        assert cards.count() == 3
+        assert "3 blocking" in surface.locator("[data-decision-impact]").inner_text()
+        for question_id, prompt in (
+            ("Q1", "Which acceptance boundary should the run preserve?"),
+            ("Q2", "Which evidence source should prove the boundary?"),
+            ("Q3", "What must remain reversible after the decision?"),
+        ):
+            card = surface.locator(f'[data-question-id="{question_id}"]')
+            card.wait_for(state="visible")
+            prompt_locator = card.locator(f'[data-question-prompt="{question_id}"]')
+            assert prompt_locator.is_visible()
+            assert prompt in prompt_locator.inner_text()
+            assert card.locator(f'[data-question-text="{question_id}"]').count() == 1
+            assert card.get_by_label(f"Answer for {question_id}").count() == 1
+            assert card.locator(f'[data-question-resolution="{question_id}"]').count() == 1
+            assert card.locator(f'[data-save-answer="{question_id}"]').count() == 1
+            assert card.locator(f'[data-answer-resume="{question_id}"]').count() == 1
+
+        answer_ids = surface.locator('[data-question-text]').evaluate_all(
+            "elements => elements.map(element => element.id)"
+        )
+        assert len(answer_ids) == 3
+        assert len(set(answer_ids)) == 3
+        assert surface.locator('[data-primary-action]:visible').count() == 1
+        assert_accessible_render(page, target_size=32)
+        assert page.evaluate(
+            "() => document.documentElement.scrollWidth <= window.innerWidth"
+        )
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
 def test_validation_and_review_recovery_routes_land_on_authoritative_surfaces(
     tmp_path: Path,

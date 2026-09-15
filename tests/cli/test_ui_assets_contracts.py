@@ -1258,7 +1258,8 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             ),
             'const answerId = questionControlId("answer", question.question_id, index);',
             'const resolutionId = questionControlId("resolution", question.question_id, index);',
-            '<p class="question-card-prompt sr-only" id="${questionTextId}">',
+            'class="question-card-prompt${showPrompts ? "" : " sr-only"}"',
+            'data-question-prompt="${escapeHtml(question.question_id)}"',
             (
                 '<label class="sr-only" for="${answerId}">Answer for '
                 "${escapeHtml(questionLabel)}</label>"

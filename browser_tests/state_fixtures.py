@@ -706,6 +706,42 @@ def build_browser_state_fixture(
             work_item=work_item,
             run_id=run_id,
         )
+    if state == "multi-blocking-question":
+        _attempt(workspace_root, "idea", work_item=work_item, run_id=run_id)
+        persist_stage_status(workspace_root, work_item, run_id, "idea", "blocked")
+        persist_questions_document(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage="idea",
+            adapter_question_events=(
+                AdapterQuestionEvent(
+                    question_id="Q1",
+                    policy=QuestionPolicy.BLOCKING,
+                    text="Which acceptance boundary should the run preserve?",
+                ),
+                AdapterQuestionEvent(
+                    question_id="Q2",
+                    policy=QuestionPolicy.BLOCKING,
+                    text="Which evidence source should prove the boundary?",
+                ),
+                AdapterQuestionEvent(
+                    question_id="Q3",
+                    policy=QuestionPolicy.BLOCKING,
+                    text="What must remain reversible after the decision?",
+                ),
+            ),
+        )
+        return _descriptor(
+            name=state,
+            project_root=project_root,
+            route="studio",
+            context_keys=("project", "work_item", "run", "stage", "recovery_target"),
+            surface="Question Recovery",
+            action="Answer required questions",
+            marker="answer-questions",
+            work_item=work_item,
+            run_id=run_id,
+        )
     if state == "rejected-interview-candidate":
         attempt_root = _attempt(workspace_root, "idea", work_item=work_item, run_id=run_id)
         persist_stage_status(workspace_root, work_item, run_id, "idea", "blocked")
@@ -1104,6 +1140,7 @@ BROWSER_FIXTURE_STATES = (
     "no-run",
     "running",
     "blocking-question",
+    "multi-blocking-question",
     "rejected-interview-candidate",
     "runtime-failure",
     "runtime-launch-failure",
