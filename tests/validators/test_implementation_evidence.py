@@ -19,6 +19,7 @@ from aidd.validators.semantic_rules.evidence import (
         "`sha256sum /tmp/evidence.log` -> pass",
         "`shasum uv.lock` -> pass",
         "`ls -d workitems` -> pass",
+        "`mkdir -p /tmp/pristine && git archive HEAD | tar -x -C /tmp/pristine && cp tests/test_cli.py /tmp/pristine/tests/test_cli.py && grep -n 'guard' /tmp/pristine/src/cli.py` -> pass",
         "$ custom-check --verify\nObserved: passed",
         "Command: custom-check --verify\nObserved: passed",
         "```sh\ncustom-check --verify\n```\nObserved: passed",
