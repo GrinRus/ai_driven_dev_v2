@@ -196,7 +196,12 @@ def _render_task_plan_issue_group(group: tuple[TaskPlanParseIssue, ...]) -> str:
         fields_text = (
             f"missing required field(s) {', '.join(f'`{field}`' for field in missing_fields)}"
             if missing_fields
-            else "missing required card grammar"
+            else (
+                "missing required card grammar (each affected card must use "
+                "`### <task-id> — <imperative title>` followed by non-empty "
+                "`Outcome`, `Dominant deliverable`, `In scope`, and nested "
+                "`<task-id>-AC<n>` acceptance criteria)"
+            )
         )
         return (
             "Task-card grammar has one shared root issue for task ids "
