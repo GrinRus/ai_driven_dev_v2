@@ -13,6 +13,10 @@ from aidd.validators.semantic_rules.evidence import (
     "evidence",
     (
         "`uv run pytest tests/test_example.py -q` -> pass",
+        "`wc -l /tmp/headers_only.csv` -> pass",
+        "`od -c /tmp/headers_only.csv` -> pass",
+        "`diff /tmp/expected /tmp/actual` -> pass",
+        "`sha256sum /tmp/evidence.log` -> pass",
         "$ custom-check --verify\nObserved: passed",
         "Command: custom-check --verify\nObserved: passed",
         "```sh\ncustom-check --verify\n```\nObserved: passed",
@@ -36,6 +40,23 @@ from aidd.validators.semantic_rules.evidence import (
 )
 def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) -> None:
     assert has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        "`click.testing.CliRunner` invocation of `insert /tmp/t.db t "
+        "/tmp/headers.csv --csv --detect-types` -> `AssertionError`, "
+        "exit code 1 -> fail",
+        "`CliRunner().invoke(...)` -> `exit_code == 0`",
+    ),
+)
+def test_command_evidence_accepts_explicit_cli_runner_invocations(evidence: str) -> None:
+    assert has_implementation_command_evidence(evidence)
+
+
+def test_command_evidence_rejects_generic_cli_runner_prose() -> None:
+    assert not has_implementation_command_evidence("The CliRunner check passed.")
 
 
 @pytest.mark.parametrize(

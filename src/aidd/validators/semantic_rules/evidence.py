@@ -14,13 +14,13 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"`[^`\n]*\b("
     r"aidd|ast-index|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|"
     r"go test|cargo test|"
-    r"make|git|grep|rg|sed|nl|echo|printf|flake8|black|prettier|ty check|"
+    r"make|git|grep|rg|sed|nl|echo|printf|diff|wc|od|sha256sum|flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc|perl"
     r")\b[^`\n]*`|" + GENERIC_BACKTICKED_COMMAND_FRAGMENT + r"|"
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
     r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check)\b|"
-    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|nl|echo|printf|flake8|black)\b|"
+    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|nl|echo|printf|diff|wc|od|sha256sum|flake8|black)\b|"
     r"`test\s+[^`\n]+`)",
     flags=re.IGNORECASE,
 )
@@ -102,6 +102,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "bun",
         "bunx",
         "cargo",
+        "diff",
         "echo",
         "find",
         "flake8",
@@ -113,6 +114,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "node",
         "npm",
         "nl",
+        "od",
         "npx",
         "pnpm",
         "perl",
@@ -123,6 +125,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "python3",
         "rg",
         "ruff",
+        "sha256sum",
         "sed",
         "sh",
         "sphinx-build",
@@ -131,6 +134,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "ty",
         "uv",
         "vitest",
+        "wc",
         "yarn",
         "zsh",
     }
@@ -143,6 +147,11 @@ _PROMPT_COMMAND_PATTERN = re.compile(r"^\s*\$\s+(.+?)\s*$", re.MULTILINE)
 _COMMAND_FIELD_PATTERN = re.compile(
     r"^\s*(?:-\s*)?Command\s*:\s*(.+?)\s*$",
     flags=re.IGNORECASE | re.MULTILINE,
+)
+_CLI_RUNNER_INVOCATION_PATTERN = re.compile(
+    r"\b(?:click\.)?testing\.CliRunner\b[^\n]*(?:invocation\s+of|\.invoke\b)|"
+    r"\bCliRunner\(\)\.invoke\b",
+    flags=re.IGNORECASE | re.DOTALL,
 )
 _FENCED_COMMAND_PATTERN = re.compile(
     r"```(?:bash|console|sh|shell|zsh)?\s*\n(?P<body>.*?)```",
@@ -281,6 +290,12 @@ def _command_starts_with_known_executable(candidate: str) -> bool:
 
 
 def has_implementation_command_evidence(verification_item: str) -> bool:
+    # Authored verification context may describe a concrete Click invocation as
+    # ``click.testing.CliRunner`` invocation of ``insert ...`` instead of emitting
+    # a shell executable. Treat that explicit runner + invocation shape as command
+    # evidence while keeping generic prose (for example, "CliRunner passed") invalid.
+    if _CLI_RUNNER_INVOCATION_PATTERN.search(verification_item) is not None:
+        return True
     command_candidate = _without_non_command_artifact_text_outside_code(verification_item)
     if IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate) is not None:
         return True
