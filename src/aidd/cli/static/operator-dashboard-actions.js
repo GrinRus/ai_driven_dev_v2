@@ -1,7 +1,7 @@
-function dashboardUrl() {
+function dashboardUrl({includeRunId = true} = {}) {
   const params = new URLSearchParams();
   if (state.activeStageExplicit) params.set("stage", state.activeStage);
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
+  if (includeRunId && state.activeRunId) params.set("run_id", state.activeRunId);
   return `/api/dashboard?${params.toString()}`;
 }
 
@@ -22,7 +22,25 @@ async function fetchInbox() {
 
 async function fetchDashboard() {
   const requestGeneration = ++state.dashboardRequestGeneration;
-  const payload = await api(dashboardUrl());
+  state.dashboardAbortController?.abort();
+  const controller = new AbortController();
+  state.dashboardAbortController = controller;
+  const requestedRunId = state.activeRunId;
+  let recoveredFromStaleRun = false;
+  let payload;
+  try {
+    payload = await api(dashboardUrl(), {signal: controller.signal});
+  } catch (error) {
+    if (controller.signal.aborted || error?.name === "AbortError") return false;
+    if (error?.status !== 400 || !requestedRunId) throw error;
+    state.activeRunId = "";
+    recoveredFromStaleRun = true;
+    payload = await api(dashboardUrl({includeRunId: false}), {signal: controller.signal});
+  } finally {
+    if (state.dashboardAbortController === controller) {
+      state.dashboardAbortController = null;
+    }
+  }
   if (requestGeneration !== state.dashboardRequestGeneration) return false;
   state.dashboard = payload.dashboard;
   state.dashboardActiveJob = payload.active_job || null;
@@ -89,7 +107,16 @@ async function fetchDashboard() {
     state.recoveryDetail = "summary";
     requestCockpitReveal();
   }
+  if (recoveredFromStaleRun && typeof syncLocationState === "function") {
+    syncLocationState({historyMode: "replace"});
+  }
   return true;
+}
+
+function cancelDashboardRequest() {
+  state.dashboardRequestGeneration += 1;
+  state.dashboardAbortController?.abort();
+  state.dashboardAbortController = null;
 }
 
 async function fetchProjectHome(workItem = "") {

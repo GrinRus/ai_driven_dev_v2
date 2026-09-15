@@ -2592,20 +2592,33 @@ class OperatorUiService:
     def _get_dashboard(self, params: dict[str, list[str]]) -> UiResponse:
         requested_stage = _first_param(params, "stage")
         stage = requested_stage or STAGES[0]
-        return _json_response(
-            {
-                "app_version": __version__,
-                "active_job": self._jobs.active_job_for_context(
-                    project_root=self.project_root,
-                    workspace_root=self.workspace_root,
-                ),
-                "dashboard": self._dashboard_view(
-                    stage=stage,
-                    run_id=_first_param(params, "run_id"),
-                    use_terminal_default=requested_stage is None,
-                ),
-            }
-        )
+        run_id = _first_param(params, "run_id")
+        payload: dict[str, object] = {
+            "app_version": __version__,
+            "active_job": self._jobs.active_job_for_context(
+                project_root=self.project_root,
+                workspace_root=self.workspace_root,
+            ),
+        }
+        try:
+            dashboard = self._dashboard_view(
+                stage=stage,
+                run_id=run_id,
+                use_terminal_default=requested_stage is None,
+            )
+        except ValueError:
+            # Navigation may still carry a run id from the previous work-item
+            # context for one polling tick. Resolve the current context instead
+            # of surfacing a transient 400 to the operator/browser.
+            if not run_id:
+                raise
+            dashboard = self._dashboard_view(
+                stage=stage,
+                run_id=None,
+                use_terminal_default=requested_stage is None,
+            )
+        payload["dashboard"] = dashboard
+        return _json_response(payload)
 
     def _get_next_flow_source_findings(
         self,
@@ -2766,24 +2779,40 @@ class OperatorUiService:
 
     def _get_stage_workbench(self, params: dict[str, list[str]]) -> UiResponse:
         stage = _first_param(params, "stage") or STAGES[0]
-        return _json_response(
-            resolve_operator_stage_document_workbench(
+        key = _first_param(params, "key")
+        run_id = _first_param(params, "run_id")
+        attempt_number = _optional_attempt(params)
+        preview_limit_bytes = _optional_positive_int_param(params, "preview_limit")
+        source_limit_bytes = _optional_positive_int_param(params, "source_limit")
+        try:
+            workbench = resolve_operator_stage_document_workbench(
                 workspace_root=self.workspace_root,
                 work_item=self.work_item,
                 stage=stage,
-                key=_first_param(params, "key"),
-                run_id=_first_param(params, "run_id"),
-                attempt_number=_optional_attempt(params),
-                preview_limit_bytes=_optional_positive_int_param(
-                    params,
-                    "preview_limit",
-                ),
-                source_limit_bytes=_optional_positive_int_param(
-                    params,
-                    "source_limit",
-                ),
+                key=key,
+                run_id=run_id,
+                attempt_number=attempt_number,
+                preview_limit_bytes=preview_limit_bytes,
+                source_limit_bytes=source_limit_bytes,
             )
-        )
+        except ValueError:
+            # A context switch can race an in-flight reader request. If the old
+            # run no longer belongs to the active work item, resolve the same
+            # document against the current run so the UI recovers without a
+            # transient HTTP 400. Invalid document keys still fail normally.
+            if not run_id:
+                raise
+            workbench = resolve_operator_stage_document_workbench(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                key=key,
+                run_id=None,
+                attempt_number=attempt_number,
+                preview_limit_bytes=preview_limit_bytes,
+                source_limit_bytes=source_limit_bytes,
+            )
+        return _json_response(workbench)
 
     def _get_evidence_graph(self, params: dict[str, list[str]]) -> UiResponse:
         stage = _first_param(params, "stage") or STAGES[0]

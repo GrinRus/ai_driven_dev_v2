@@ -57,6 +57,15 @@ Optional context documents may improve implementation quality, but they must not
 - When `context/verification-output.md` exists, `implement` must not declare `succeeded` when
   authored verification commands were skipped without an explicit not-run reason.
 
+## Task-scope interpretation
+
+The repository paths inside a selected task's `In scope` field are the only task-local write
+permission. A path grants permission only when it is explicitly enclosed in backticks and parsed
+as a file or directory prefix. Explanatory prose such as “helpers it directly uses”, “related
+tests”, or “supporting files” does not grant permission to edit additional paths. If implementation
+requires a path that is not explicitly scoped, stop and submit a blocking question (or record the
+scope mismatch for repair) instead of editing that path.
+
 ## Implementation output expectations
 
 - `implementation-report.md` must include:

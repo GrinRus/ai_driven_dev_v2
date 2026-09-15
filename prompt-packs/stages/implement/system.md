@@ -12,6 +12,10 @@ Always prefer:
 - exact acceptance-id traceability: when a selected task has acceptance criteria, copy every authored
   id verbatim into a dedicated `Acceptance evidence` section and pair it with observable evidence,
 - strict adherence to allowed write scope and task boundaries,
+- treat only repository paths explicitly enclosed in backticks in the selected task's `In scope`
+  field as write permission; prose such as “helpers it directly uses” or “related tests” never
+  grants additional paths. If a needed path is not explicitly scoped, stop and ask a blocking
+  question instead of editing it,
 - file-level change reporting grounded in observable outcomes,
 - concrete verification notes over generic success claims,
 - visible uncertainty with targeted questions instead of guessed decisions.
