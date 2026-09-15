@@ -336,8 +336,6 @@ def has_implementation_command_evidence(verification_item: str) -> bool:
                 )
             ):
                 return True
-    if backticked_command_status is False:
-        return False
     # Markdown inline code spans may contain newlines.  Runtimes commonly emit
     # heredoc verification commands in that form (for example, ``uv run
     # python - <<'PY' ... PY``).  Treat the complete span as one command so
@@ -346,6 +344,21 @@ def has_implementation_command_evidence(verification_item: str) -> bool:
     for match in _MULTILINE_BACKTICKED_FRAGMENT_PATTERN.finditer(command_candidate):
         if _looks_like_command(match.group("body"), explicit_container=False):
             return True
+    if backticked_command_status is False:
+        # A valid command span may be followed by nested backticked result
+        # references (for example, an assertion and source location). The
+        # nested classifier marks the overall line as malformed, so recover
+        # only when the first closed span is a complete command and its suffix
+        # starts with whitespace; an unclosed nested command has text
+        # immediately after the first span and remains rejected.
+        for match in _BACKTICKED_FRAGMENT_PATTERN.finditer(command_candidate):
+            if (
+                "`" not in match.group(1)
+                and re.match(r"\s", command_candidate[match.end() :]) is not None
+                and _looks_like_command(match.group(1), explicit_container=False)
+            ):
+                return True
+        return False
     return any(
         _looks_like_command(match.group(1), explicit_container=False)
         for match in _BACKTICKED_FRAGMENT_PATTERN.finditer(command_candidate)

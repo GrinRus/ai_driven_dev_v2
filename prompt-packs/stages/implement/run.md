@@ -116,6 +116,9 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    must remain in `Verification`, pair it with the exact command and its terminal marker on that
    same evidence item. A command-free outcome claim remains invalid even when another bullet nearby
    contains the command it refers to.
+   Never abbreviate captured command output with an ellipsis (`...`) or another placeholder token
+   inside `Verification`; record the observed lines needed to support the claim, or summarize the
+   result without presenting the text as verbatim output.
    Do not add blanket meta-claims such as `Every command cited below was executed` or
    `all checks were run` unless that same bullet contains an executable command and terminal outcome;
    the report must establish evidence item by item, and a summary sentence cannot stand in for it.

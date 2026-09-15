@@ -104,6 +104,15 @@ def test_command_evidence_accepts_nested_backtick_payloads(evidence: str) -> Non
     assert has_implementation_command_evidence(evidence)
 
 
+def test_command_evidence_accepts_command_with_nested_result_references() -> None:
+    evidence = (
+        "`uv run sqlite-utils insert /tmp/insert.db mytable /tmp/header.csv --csv --detect-types` "
+        "-> fail (exit code 1; `AssertionError: Cannot transform a table that doesn't exist yet` "
+        "at `sqlite_utils/db.py:1888` )"
+    )
+    assert has_implementation_command_evidence(evidence)
+
+
 @pytest.mark.parametrize(
     "evidence",
     (
