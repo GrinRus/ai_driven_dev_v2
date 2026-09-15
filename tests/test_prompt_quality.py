@@ -192,6 +192,9 @@ def test_idea_prompts_make_open_questions_list_format_explicit() -> None:
     contract = Path("contracts/stages/idea.md").read_text(encoding="utf-8")
 
     assert "avoid unsupported absolute claims" in run_prompt
+    assert "Do not use the literal" in run_prompt
+    assert "`proven`" in run_prompt
+    assert "semantic validator flags those literal tokens" in system_prompt
     assert "Do not assert source-code root causes" in run_prompt
     assert "leave source" in run_prompt
     assert "diagnosis to `research`" in run_prompt

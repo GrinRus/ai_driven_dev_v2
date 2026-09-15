@@ -17,6 +17,9 @@ Non-negotiable rules:
 - do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - keep required sections complete and non-placeholder (`TBD`, `TODO`, `N/A`, `...` are invalid in required fields),
 - do not invent constraints or outcomes that are not supportable from inputs,
+- in `Desired outcome`, never write `always`, `never`, `guarantee`, `guaranteed`, `guarantees`,
+  `proven`, or `certainly` (even as a negated caveat); use evidence-neutral wording such as “to
+  be verified” because the semantic validator flags those literal tokens,
 - if authored task or acceptance context explicitly requires blocking answers, interview answers,
   or operator policy decisions before downstream planning or implementation, record blocking
   questions instead of choosing a policy yourself,

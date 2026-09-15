@@ -72,7 +72,11 @@ question state is visible.
    In `Desired outcome`, avoid unsupported absolute claims such as guaranteed compatibility,
    complete elimination of risk, or proof that all downstream behavior is preserved unless the
    provided inputs already contain that evidence. Phrase outcomes as target goals and explicitly
-   tie them to the selected request, constraints, and acceptance context.
+   tie them to the selected request, constraints, and acceptance context. Do not use the literal
+   tokens `always`, `never`, `guarantee`, `guaranteed`, `guarantees`, `proven`, or `certainly` in
+   that section, including in a negated caveat such as “not proven”; write “to be verified” or
+   another evidence-neutral formulation instead. The validator treats those tokens as unsupported
+   claims even when the surrounding sentence intends to disclaim them.
    In `Constraints` and `Open questions`, prose-only text is invalid; write one
    top-level bullet per item, and when there are no items write exactly `- none`.
 3. Replace ambiguity with durable questions in `questions.md` using stable ids and
