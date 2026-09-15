@@ -232,7 +232,11 @@ def _validate_touched_files(
             ),
         )
 
-    has_real_touched_file_entries = any(item.lower() != "none" for item in touched_file_items)
+    # Verification-only reports may include explanatory evidence below an
+    # explicit ``- none`` marker. Treat the marker as authoritative while the
+    # task snapshot validator independently detects any actual repository edit.
+    has_explicit_noop_marker = any(item.casefold() == "none" for item in touched_file_items)
+    has_real_touched_file_entries = not has_explicit_noop_marker and bool(touched_file_items)
     if has_real_touched_file_entries:
         if verification_only:
             return (

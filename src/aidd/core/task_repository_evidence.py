@@ -164,8 +164,20 @@ def write_repository_snapshot(path: Path, snapshot: RepositorySnapshot) -> None:
 
 
 def _reported_touched_paths(report: str) -> tuple[str, ...]:
+    section_lines = extract_h2_section(report, "Touched files").splitlines()
+    bullets: list[str] = []
+    for line in section_lines:
+        bullet = _TOP_LEVEL_BULLET_PATTERN.match(line)
+        if bullet is not None:
+            bullets.append(line[bullet.end() :].strip())
+    # Verification-only reports may keep explanatory diff/status evidence below an
+    # explicit ``- none`` marker. That marker is authoritative for task-local
+    # ownership; actual edits are still detected from the baseline/final snapshot.
+    if any(item.casefold() == "none" for item in bullets):
+        return ()
+
     paths: list[str] = []
-    for line in extract_h2_section(report, "Touched files").splitlines():
+    for line in section_lines:
         bullet = _TOP_LEVEL_BULLET_PATTERN.match(line)
         if bullet is None:
             continue
