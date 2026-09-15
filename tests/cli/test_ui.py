@@ -1161,6 +1161,45 @@ def test_ui_stage_workbench_endpoint_returns_document_state_and_sidebars(
     assert versions[0]["label"] == "Attempt 1"  # type: ignore[index]
 
 
+def test_ui_dashboard_recovers_when_route_run_belongs_to_previous_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get(
+            "/api/dashboard",
+            {"stage": ["plan"], "run_id": ["run-from-previous-work-item"]},
+        )
+    )
+
+    assert payload["dashboard"]["run"]["run_id"] == "run-ui"  # type: ignore[index]
+
+
+def test_ui_stage_workbench_recovers_when_route_run_belongs_to_previous_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get(
+            "/api/stage/workbench",
+            {
+                "stage": ["plan"],
+                "key": ["plan"],
+                "run_id": ["run-from-previous-work-item"],
+            },
+        )
+    )
+
+    assert payload["run_id"] == "run-ui"
+    assert payload["selected_key"] == "plan"
+
+
 def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     tmp_path: Path,
 ) -> None:

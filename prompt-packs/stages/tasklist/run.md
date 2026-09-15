@@ -79,7 +79,9 @@ notes, and a concrete verification signal.
    for example `<task-id>-AC1` and `<task-id>-AC2`. Acceptance ids must be unique
    across the document.
    `In scope` must name at least one backticked repository-relative file or directory prefix.
-   Do not use absolute paths, `..` traversal, or glob syntax. Explanatory prose does not replace
+   Enclose every intended file or directory prefix in backticks; explanatory prose such as
+   “helpers it directly uses”, “related tests”, or “supporting files” does not grant scope to
+   those paths during implement. Do not use absolute paths, `..` traversal, or glob syntax. Explanatory prose does not replace
    concrete path prefixes.
    When `context/allowed-write-scope.md` exists, read it before decomposition and keep every
    task-local prefix equal to or beneath one listed canonical prefix on a component boundary.

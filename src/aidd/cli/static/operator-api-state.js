@@ -96,6 +96,7 @@ const state = {
   dashboard: null,
   dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
+  dashboardAbortController: null,
   projectHome: null,
   projectHomeRequestGeneration: 0,
   requestContext: null,
@@ -176,6 +177,8 @@ const state = {
   remediationFindingFilter: "all",
   activeArtifactKey: "",
   activeArtifactWorkbench: null,
+  artifactWorkbenchRequestGeneration: 0,
+  artifactWorkbenchAbortController: null,
   activeArtifactComparison: null,
   activeStudioWorkbench: null,
   activeStudioWorkbenchError: "",
@@ -832,6 +835,8 @@ async function restoreOperatorRouteFromLocation() {
 
 async function navigateOperatorRouteIntent(intent, context) {
   const resolved = resolveOperatorRouteIntent(intent, context);
+  if (typeof cancelDashboardRequest === "function") cancelDashboardRequest();
+  if (typeof cancelArtifactWorkbenchRequest === "function") cancelArtifactWorkbenchRequest();
   const next = `${window.location.pathname}${encodeCurrentOperatorRoute(resolved.route)}`;
   restoringOperatorRoute = true;
   try {

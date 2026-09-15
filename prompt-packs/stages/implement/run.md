@@ -70,6 +70,11 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    criterion, copying each id verbatim (for example `- T4-AC1: ...`). A descriptive claim without
    the exact authored id is incomplete, even when the command passed.
 2. When `context/allowed-write-scope.md` is provided, it is a hard boundary for touched files.
+   Within the selected task card, only repository paths explicitly enclosed in backticks in
+   `In scope` grant task-local write permission. Descriptive prose (for example, “helpers it
+   directly uses”, “related tests”, or “supporting files”) is explanatory context, not permission;
+   do not edit an unlisted path. If a necessary path is missing, stop and submit a blocking
+   question or let AIDD record the scope mismatch for repair.
 3. When provided, `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored acceptance and verification baseline for the implementation.
 4. Execute exactly the selected task card from `context/task-selection.md` as one bounded

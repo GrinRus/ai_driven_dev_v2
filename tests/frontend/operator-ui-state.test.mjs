@@ -989,9 +989,9 @@ test("resolved rejected candidate offers resume without changing repair accounti
 test("late dashboard response cannot overwrite a newer request", async () => {
   const {context} = domContext();
   const requests = [];
-  context.fetch = (url) => {
+  context.fetch = (url, options = {}) => {
     const pending = deferred();
-    requests.push({url, pending});
+    requests.push({url, options, pending});
     return pending.promise;
   };
   await load(context, "operator-api-state.js");
@@ -1000,6 +1000,7 @@ test("late dashboard response cannot overwrite a newer request", async () => {
   const first = vm.runInContext("fetchDashboard()", context);
   const second = vm.runInContext("fetchDashboard()", context);
   assert.equal(requests.length, 2);
+  assert.equal(requests[0].options.signal.aborted, true);
 
   requests[1].pending.resolve(response({
     app_version: "new",

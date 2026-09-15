@@ -887,6 +887,8 @@ async function resumeProjectHomeWorkItem(workItem, options = {}) {
 }
 
 async function activateInboxWorkItemRoute(context) {
+  if (typeof cancelDashboardRequest === "function") cancelDashboardRequest();
+  if (typeof cancelArtifactWorkbenchRequest === "function") cancelArtifactWorkbenchRequest();
   const selectedProjectRoot = String(
     state.projectHome?.project_root || state.onboarding.projectRootInput || ""
   ).trim();

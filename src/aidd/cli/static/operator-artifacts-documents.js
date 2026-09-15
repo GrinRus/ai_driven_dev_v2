@@ -1238,10 +1238,10 @@ function renderDocumentContextInspector(workbench = {}) {
   `;
 }
 
-function workbenchRequestPath(key, attemptNumber = null) {
+function workbenchRequestPath(key, attemptNumber = null, {includeRunId = true} = {}) {
   const params = new URLSearchParams({stage: state.activeStage});
   if (key) params.set("key", key);
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
+  if (includeRunId && state.activeRunId) params.set("run_id", state.activeRunId);
   if (attemptNumber) params.set("attempt_number", String(attemptNumber));
   params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));
   return `/api/stage/workbench?${params.toString()}`;
@@ -1284,22 +1284,51 @@ async function loadArtifactDocument(key) {
   const tree = document.getElementById("workbenchTree");
   const viewer = activeReaderViewer();
   if (!viewer) return;
+  const requestGeneration = ++state.artifactWorkbenchRequestGeneration;
+  state.artifactWorkbenchAbortController?.abort();
+  const controller = new AbortController();
+  state.artifactWorkbenchAbortController = controller;
+  const requestedRunId = state.activeRunId;
   const studioCanvas = viewer.id === "studioDocumentCanvas";
   if (key && key !== state.activeArtifactKey) state.activeArtifactComparison = null;
   viewer.innerHTML = `<div class="reader-state loading-state" role="status">Loading retained document evidence…</div>`;
   try {
-    const workbench = await api(workbenchRequestPath(key));
+    let workbench;
+    try {
+      workbench = await api(workbenchRequestPath(key), {signal: controller.signal});
+    } catch (error) {
+      if (controller.signal.aborted || error?.name === "AbortError") return;
+      if (error?.status !== 400 || !requestedRunId) throw error;
+      state.activeRunId = "";
+      workbench = await api(
+        workbenchRequestPath(key, null, {includeRunId: false}),
+        {signal: controller.signal},
+      );
+    }
+    if (requestGeneration !== state.artifactWorkbenchRequestGeneration) return;
     const comparisonKey = state.activeArtifactComparison?.workbench?.selected_key;
     if (comparisonKey && comparisonKey !== workbench.selected_key) state.activeArtifactComparison = null;
     renderLoadedArtifactDocument(workbench, {tree, viewer, studioCanvas});
   } catch (error) {
+    if (controller.signal.aborted || error?.name === "AbortError") return;
+    if (requestGeneration !== state.artifactWorkbenchRequestGeneration) return;
     if (studioCanvas) {
       state.activeStudioWorkbench = null;
       state.activeStudioWorkbenchError = error.message || "Document Canvas unavailable";
       updateStudioEvidenceInspector({});
     }
     viewer.innerHTML = renderDocumentReaderFailure(error);
+  } finally {
+    if (state.artifactWorkbenchAbortController === controller) {
+      state.artifactWorkbenchAbortController = null;
+    }
   }
+}
+
+function cancelArtifactWorkbenchRequest() {
+  state.artifactWorkbenchRequestGeneration += 1;
+  state.artifactWorkbenchAbortController?.abort();
+  state.artifactWorkbenchAbortController = null;
 }
 
 async function loadArtifactComparison(attemptNumber) {
