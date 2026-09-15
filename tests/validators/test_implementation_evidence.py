@@ -17,6 +17,8 @@ from aidd.validators.semantic_rules.evidence import (
         "`od -c /tmp/headers_only.csv` -> pass",
         "`diff /tmp/expected /tmp/actual` -> pass",
         "`sha256sum /tmp/evidence.log` -> pass",
+        "`shasum uv.lock` -> pass",
+        "`ls -d workitems` -> pass",
         "$ custom-check --verify\nObserved: passed",
         "Command: custom-check --verify\nObserved: passed",
         "```sh\ncustom-check --verify\n```\nObserved: passed",
