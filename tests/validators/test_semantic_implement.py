@@ -31,6 +31,31 @@ def test_validate_semantic_outputs_accepts_valid_implement_fixture_bundle() -> N
     assert findings == ()
 
 
+def test_implementation_report_accepts_repository_prefixed_interpreter_command(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-PREFIXED-COMMAND",
+        _compatibility_report(
+            summary="Implemented a bounded fix with focused regression coverage.",
+            touched_files="- `src/example.py` - preserve the shared behavior.",
+            verification=(
+                "- `<repo>/.venv/bin/python -m pytest -q tests/test_example.py` -> pass (4 passed)."
+            ),
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-PREFIXED-COMMAND",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def _compatibility_report(
     *,
     summary: str,

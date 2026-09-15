@@ -257,6 +257,12 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
         )
     if executable in _KNOWN_COMMAND_EXECUTABLES:
         return len(tokens) > 1
+    # Commands are often recorded with an absolute or repository-prefixed
+    # interpreter path (for example ``<repo>/.venv/bin/python -m ...``).
+    # Treat the basename as the executable while retaining the argument
+    # requirement so ordinary prose containing a path is not accepted.
+    if executable.rsplit("/", 1)[-1] in _KNOWN_COMMAND_EXECUTABLES:
+        return len(tokens) > 1
     return executable.startswith(("./", "../", "/", ".venv/bin/", "node_modules/.bin/"))
 
 
