@@ -49,7 +49,9 @@ def test_shared_control_states_cover_pointer_keyboard_and_durable_state(tmp_path
 
         page.locator("#primary").hover()
         page.wait_for_timeout(200)
-        assert _style(page, "#primary")["background"] == "rgb(11, 94, 96)"
+        # The semantic action token currently maps to cobalt-dark on hover;
+        # the former deep-teal migration value is no longer shipped.
+        assert _style(page, "#primary")["background"] == "rgb(11, 70, 181)"
 
         page.keyboard.press("Tab")
         assert _style(page, "#primary")["outline"] == "solid"
@@ -67,7 +69,7 @@ def test_shared_control_states_cover_pointer_keyboard_and_durable_state(tmp_path
         assert _style(page, "#invalid")["border"] == "rgb(180, 35, 42)"
         assert _style(page, "#loading")["cursor"] == "progress"
         assert float(_style(page, "#loading")["opacity"]) < 1
-        assert _style(page, "#selected")["background"] == "rgb(234, 245, 243)"
+        assert _style(page, "#selected")["background"] == "rgb(237, 243, 255)"
         browser_page.diagnostics.assert_clean()
 
 
