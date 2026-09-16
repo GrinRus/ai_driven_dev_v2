@@ -999,8 +999,8 @@ Further requirements:
 
 ### 8.12 Visual system
 
-The visual language is editorial, calm, and evidence-first. It uses the existing light
-foundation and deep-teal product identity, but removes the equal-weight card wall. White space,
+The visual language is editorial, calm, and evidence-first. It uses the warm light foundation
+and navy/cobalt product identity, but removes the equal-weight card wall. White space,
 typographic hierarchy, dividers, and a single decision color carry structure. Status colors are
 signals, not section backgrounds.
 
@@ -1008,19 +1008,19 @@ Semantic token direction:
 
 | Token | Reference value | Use |
 | --- | --- | --- |
-| `--bg` | `#f6f7f5` | Application canvas. |
+| `--bg` | `#f7f5ef` | Application canvas. |
 | `--surface` | `#ffffff` | Document, drawer, and primary working surface. |
-| `--surface-soft` | `#f0f3f0` | Grouped navigation and secondary evidence. |
-| `--surface-inverse` | `#073b3c` | Compact brand/context chrome only. |
-| `--text` | `#14201b` | Primary text. |
-| `--muted` | `#5e6a63` | Secondary text that still meets body contrast. |
-| `--line` | `#d7ddd8` | Dividers and low-emphasis boundaries. |
-| `--action-primary` | `#0b696b` | The single primary action and selected navigation. |
-| `--action-primary-hover` | `#084f51` | Primary hover/active state. |
-| `--status-success` | `#16784a` | Success signal with text/icon reinforcement. |
-| `--status-warning` | `#8b5d08` | Waiting, stale, or repair signal. |
-| `--status-danger` | `#a52a31` | Failed, rejected, and destructive signal. |
-| `--status-info` | `#1f5e98` | Running and informational signal. |
+| `--surface-soft` | `#f1f3f1` | Grouped navigation and secondary evidence. |
+| `--surface-inverse` | `#061a33` | Compact brand/context chrome only. |
+| `--text` | `#111827` | Primary text. |
+| `--muted` | `#526071` | Secondary text that still meets body contrast. |
+| `--line` | `#d9dee6` | Dividers and low-emphasis boundaries. |
+| `--action-primary` | `#155eef` | The single primary action and selected navigation. |
+| `--action-primary-hover` | `#0b46b5` | Primary hover/active state. |
+| `--status-success` | `#087f5b` | Success signal with text/icon reinforcement. |
+| `--status-warning` | `#a56600` | Waiting, stale, or repair signal. |
+| `--status-danger` | `#b4232a` | Failed, rejected, and destructive signal. |
+| `--status-info` | `#2563c7` | Running and informational signal. |
 | `--focus` | `#245fb3` | High-contrast focus ring independent of status. |
 
 Use semantic role tokens for actions, status, and focus, with palette mappings maintained in

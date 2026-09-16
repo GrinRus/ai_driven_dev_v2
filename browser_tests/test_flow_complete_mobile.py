@@ -24,7 +24,11 @@ def test_flow_complete_keeps_terminal_decision_in_first_mobile_viewport(
         page.goto(
             f"{harness.url}?work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
-            wait_until="networkidle",
+            # The operator shell performs durable-context reads after the
+            # document is loaded. Waiting for network idle makes this
+            # terminal surface flaky on slower machines even though the
+            # rendered handoff is ready and its locator below is authoritative.
+            wait_until="domcontentloaded",
         )
         flow = page.locator("[data-studio-flow-complete]")
         flow.wait_for(state="visible")
