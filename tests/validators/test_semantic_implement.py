@@ -56,6 +56,32 @@ def test_implementation_report_accepts_repository_prefixed_interpreter_command(
     assert findings == ()
 
 
+def test_implementation_report_accepts_observed_command_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-OBSERVED-OUTCOME",
+        _compatibility_report(
+            summary="No-op verification-only check; no repository change was made.",
+            touched_files="- none",
+            verification=(
+                "- `git status --short` -> observed only the expected setup files; "
+                "the tracked diff is unchanged."
+            ),
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-OBSERVED-OUTCOME",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def _compatibility_report(
     *,
     summary: str,
