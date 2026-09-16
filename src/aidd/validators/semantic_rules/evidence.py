@@ -45,6 +45,7 @@ IMPLEMENT_RESULT_PATTERN = re.compile(
     r"\b\d+\s+files?\s+changed\b|"
     r"\bzero\s+differences\b|"
     r"\bper-prefix\s+counts\b|"
+    r"->\s*observed\b|"
     r"\bobserved\s*:|"
     r"\b(?:does|do)\s+not\s+exist\b|"
     r"\bexists\(\)\s+is\s+(?:true|false)\b|"
