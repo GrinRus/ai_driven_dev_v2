@@ -255,19 +255,19 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a23.dev0`.
+Current release-candidate package version: `0.1.0a23`.
 Latest accepted published prerelease evidence: `0.1.0a22`.
-No current release candidate is accepted from this development version.
+That accepted release is the prior version before this candidate.
+The accepted `v0.1.0a23` evidence log entry will be added after publication and verification.
 
 Future beta readiness is not implied by alpha package publication. Beta claims require the
 provider, browser, onboarding, project-set, provenance, approval, and install evidence defined
 in `docs/product/user-stories.md`.
 
-README install instructions resolve the latest published package from PyPI. An isolated
-post-release check confirmed that `pipx` and `uv tool` installs both selected `0.1.0a22`.
-The source development tree has moved to `0.1.0a23.dev0`; it is not a published release.
-Keep only the latest accepted package evidence below; previous release notes and verification
-records remain in Git history and GitHub Releases.
+README install instructions resolve the latest published package from PyPI. The release branch
+carries `0.1.0a23`; `main` returns to a `.dev0` version in the post-release follow-up. Keep only
+the latest accepted package evidence below; previous release notes and verification records remain
+in Git history and GitHub Releases.
 
 A beta-oriented claim requires fresh evidence for the exact candidate.
 
