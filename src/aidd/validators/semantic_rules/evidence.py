@@ -87,6 +87,10 @@ IMPLEMENT_DEFERRED_VERIFICATION_PATTERN = re.compile(
     r"\b(?:not[-\s]+(?:run|executed)|skipped|deferred|hand[- ]off)\b",
     flags=re.IGNORECASE,
 )
+IMPLEMENT_CONTEXT_NOTE_PATTERN = re.compile(
+    r"\bnot\s+(?:itself\s+)?a\s+check\b",
+    flags=re.IGNORECASE,
+)
 IMPLEMENT_COMPLETION_CLAIM_PATTERN = re.compile(
     r"\b(completed|fully|done|implemented|finished)\b",
     flags=re.IGNORECASE,
@@ -184,7 +188,10 @@ _INLINE_SHELL_RESULT_SUFFIX_PATTERN = re.compile(
 
 
 def is_deferred_implementation_verification(verification_item: str) -> bool:
-    return IMPLEMENT_DEFERRED_VERIFICATION_PATTERN.search(verification_item) is not None
+    return (
+        IMPLEMENT_DEFERRED_VERIFICATION_PATTERN.search(verification_item) is not None
+        or IMPLEMENT_CONTEXT_NOTE_PATTERN.search(verification_item) is not None
+    )
 
 
 def _without_non_command_artifact_text_outside_code(text: str) -> str:
