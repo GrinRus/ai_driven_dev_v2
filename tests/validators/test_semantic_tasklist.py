@@ -193,6 +193,41 @@ def test_validate_semantic_outputs_accepts_explicitly_bound_verification_placeho
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_task_summary_placeholder_bindings(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_document(
+        workspace_root,
+        "WI-SEM-TASKLIST-SUMMARY-BOUND-COMMAND-PLACEHOLDER",
+        (
+            "# Tasklist\n\n"
+            "## Task summary\n\n"
+            "Authored command bindings: `<tmp>` -> `/tmp/probe/`, "
+            "`<db>` -> `/tmp/probe/out.db`.\n\n"
+            "## Ordered tasks\n\n"
+            "### TL-1 — Run regression\n\n"
+            "- Outcome: The regression command is recorded for implementation.\n"
+            "- Dominant deliverable: `tests/test_responses.py` verification evidence.\n"
+            "- In scope: `tests/test_responses.py`.\n"
+            "- Acceptance criteria:\n"
+            "  - TL-1-AC1: The concrete regression command is executable.\n\n"
+            "## Dependencies\n\n"
+            "- TL-1: none\n\n"
+            "## Verification notes\n\n"
+            "- TL-1: `uv run tool <tmp>/out.db <db>` -> pass.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-SUMMARY-BOUND-COMMAND-PLACEHOLDER",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_concrete_command_and_process_substitution(
     tmp_path: Path,
 ) -> None:
