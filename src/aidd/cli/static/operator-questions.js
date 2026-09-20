@@ -470,7 +470,15 @@ function renderQuestions() {
   const view = activeStageView()?.questions;
   const candidate = activeStageView()?.diagnostics?.interview_candidate;
   const questions = view?.questions || [];
-  const question = questions[0] || null;
+  const unresolved = new Set(view?.unresolved_blocking_question_ids || []);
+  // The workbench header and impact panel must describe the decision that is
+  // currently blocking the stage. The durable ledger is ordered by history,
+  // so its first item can already be resolved while a later question remains
+  // open. Falling back to the first ledger item is only correct once no
+  // blocking question remains (for the answer-history view).
+  const question = questions.find((item) => unresolved.has(item.question_id))
+    || questions[0]
+    || null;
   return `
     <div class="interview-loop-screen focus-canvas" data-human-decision-surface="question" data-focus-canvas="true" data-recovery-summary="question" data-decision-workbench="question" data-decision-item-count="${escapeHtml(questions.length)}">
       <section class="surface decision-question-main">

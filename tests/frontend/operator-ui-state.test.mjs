@@ -903,6 +903,30 @@ test("multi-question recovery exposes each prompt and uniquely labelled answer f
   assert.equal((html.match(/data-primary-action/g) || []).length, 1);
 });
 
+test("question workbench focuses the first unresolved question, not stale history", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  context.stageTitle = (stage) => stage === "plan" ? "Plan" : stage;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.activeStage = "plan"; state.dashboard = {
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q2", "Q3"],
+      questions: [
+        {question_id: "Q1", text: "Already answered?", policy: "blocking", status: "resolved", answer_resolution: "resolved", answer_text: "Yes"},
+        {question_id: "Q2", text: "Which evidence proves it?", policy: "blocking", status: "pending-blocking"},
+        {question_id: "Q3", text: "What remains reversible?", policy: "blocking", status: "pending-blocking"}
+      ]
+    }}
+  }`, context);
+
+  const html = vm.runInContext("renderQuestions()", context);
+  assert.match(html, /data-decision-question-context[\s\S]*Q2/);
+  assert.match(html, /id="decision-question-title">Which evidence proves it\?</);
+  assert.match(html, /data-decision-impact[\s\S]*Questions remaining<\/dt><dd>2 blocking/);
+  assert.doesNotMatch(html, /id="decision-question-title">Already answered\?</);
+});
+
 test("Decision Workbench renders bounded rejected interview recovery without repair", async () => {
   const {context} = domContext();
   context.readOperatorDraft = () => null;
