@@ -26,9 +26,25 @@ def _compact_text(text: str) -> str:
 _INLINE_CODE_PATTERN = re.compile(r"(?<!`)`(?!`)(.*?)(?<!`)`(?!`)", flags=re.DOTALL)
 _UNRESOLVED_COMMAND_PLACEHOLDER_PATTERN = re.compile(r"<[A-Za-z][^>\n]*>")
 _BOUND_COMMAND_PLACEHOLDER_PATTERN = re.compile(
-    r"(?P<placeholder><[A-Za-z][^>\n]*>)\s*`?\s*=\s*`?"
+    r"(?P<placeholder><[A-Za-z][^>\n]*>)\s*`?\s*(?P<operator>=|->)\s*`?"
     r"(?P<value>(?!<)[^\s,;`]+)"
 )
+_BINDING_CONTEXT_PATTERN = re.compile(
+    r"\b(bind(?:ing|ings)?|bound|placeholder)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _bound_command_placeholders(text: str) -> frozenset[str]:
+    """Return placeholders explicitly bound to concrete values in the tasklist."""
+
+    placeholders: set[str] = set()
+    for line in text.splitlines():
+        for match in _BOUND_COMMAND_PLACEHOLDER_PATTERN.finditer(line):
+            if match.group("operator") == "->" and not _BINDING_CONTEXT_PATTERN.search(line):
+                continue
+            placeholders.add(match.group("placeholder"))
+    return frozenset(placeholders)
 
 
 def _unresolved_verification_placeholder_findings(
@@ -37,6 +53,7 @@ def _unresolved_verification_placeholder_findings(
 ) -> tuple[ValidationFinding, ...]:
     findings: list[ValidationFinding] = []
     seen: set[tuple[str, str]] = set()
+    document_bound_placeholders = _bound_command_placeholders("\n".join(context.markdown_lines))
     for line in section.content.splitlines():
         code_spans = _INLINE_CODE_PATTERN.findall(line)
         if not code_spans:
@@ -45,10 +62,8 @@ def _unresolved_verification_placeholder_findings(
         # binding those tokens to concrete scratch paths in the same note.  Treat
         # only explicitly bound placeholders as resolved; all other placeholders
         # remain blocking so vague commands cannot pass validation.
-        bound_placeholders = {
-            match.group("placeholder")
-            for match in _BOUND_COMMAND_PLACEHOLDER_PATTERN.finditer(line)
-        }
+        bound_placeholders = set(_bound_command_placeholders(line))
+        bound_placeholders.update(document_bound_placeholders)
         task_ids = extract_tasklist_task_ids(line)
         task_label = ", ".join(sorted(task_ids)) if task_ids else "the task"
         for code_span in code_spans:
