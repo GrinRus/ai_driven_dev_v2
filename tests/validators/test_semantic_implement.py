@@ -67,7 +67,7 @@ def test_implementation_report_accepts_python_c_command_with_quoted_semicolons(
             summary="Implemented a bounded fix with focused regression coverage.",
             touched_files="- `src/example.py` - preserve the shared behavior.",
             verification=(
-                '- `/tmp/work/.venv/bin/python -c "import example; print(\'ok\'); '
+                "- `/tmp/work/.venv/bin/python -c \"import example; print('ok'); "
                 'print(example.VALUE)"` -> pass (observed the expected output).'
             ),
         ),
