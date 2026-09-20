@@ -76,6 +76,18 @@ def test_parse_task_plan_accepts_safe_presentation_variants_without_inference() 
     assert variant.tasks == canonical.tasks
 
 
+def test_parse_task_plan_preserves_acceptance_ids_with_milestone_annotations() -> None:
+    markdown = _tasklist().replace(
+        "  - TL-1-AC1: The required field is documented.",
+        "  - TL-1-AC1 (M1): The required field is documented.",
+    )
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[0].acceptance_criteria[0].id == "TL-1-AC1"
+    assert plan.tasks[0].acceptance_criteria[0].text == "The required field is documented."
+
+
 def test_parse_task_plan_reports_structured_missing_field_at_card_heading() -> None:
     markdown = _tasklist().replace("- Outcome: The contract is explicit.\n", "")
 
