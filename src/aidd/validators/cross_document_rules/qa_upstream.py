@@ -42,6 +42,41 @@ def _contains_path_traversal(reference: str) -> bool:
     return ".." in normalized.split("/")
 
 
+def _available_upstream_paths(context: CrossDocumentContext) -> set[str]:
+    work_item_root = context.workspace_root / "workitems" / context.work_item
+    upstream_artifact_roots = (
+        work_item_root / "context",
+        *(
+            work_item_root / "stages" / stage
+            for stage in (
+                "idea",
+                "research",
+                "plan",
+                "review-spec",
+                "tasklist",
+                "implement",
+                "review",
+            )
+        ),
+        context.workspace_root / "reports" / "runs" / context.work_item,
+    )
+    available_paths: set[str] = set()
+    for root in upstream_artifact_roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            available_paths.add(workspace_relative(path, context.workspace_root))
+            try:
+                available_paths.add(path.relative_to(work_item_root).as_posix())
+            except ValueError:
+                # Retained run evidence lives outside the work-item directory,
+                # so it only has a workspace-relative spelling.
+                pass
+    return available_paths
+
+
 def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFinding, ...]:
     if (
         context.stage != "qa"
@@ -61,33 +96,7 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
         )
         for match in pattern.finditer(text)
     }
-    work_item_root = context.workspace_root / "workitems" / context.work_item
-    upstream_artifact_roots = (
-        work_item_root / "context",
-        *(
-            work_item_root / "stages" / stage / "output"
-            for stage in (
-                "idea",
-                "research",
-                "plan",
-                "review-spec",
-                "tasklist",
-                "implement",
-                "review",
-            )
-        ),
-    )
-    available_paths = {
-        reference
-        for root in upstream_artifact_roots
-        if root.is_dir()
-        for path in root.rglob("*")
-        if path.is_file()
-        for reference in (
-            workspace_relative(path, context.workspace_root),
-            path.relative_to(work_item_root).as_posix(),
-        )
-    }
+    available_paths = _available_upstream_paths(context)
 
     def resolved_upstream_reference(text: str) -> bool:
         if any(

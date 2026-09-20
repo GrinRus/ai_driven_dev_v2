@@ -1634,6 +1634,51 @@ def test_qa_cross_validation_accepts_work_item_relative_upstream_path(
     assert findings == ()
 
 
+def test_qa_cross_validation_accepts_attempt_stage_and_run_artifact_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "implement"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "implementation-report.md").write_text(
+        "# Implementation Report\n", encoding="utf-8"
+    )
+    run_artifact = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-001"
+        / "stages"
+        / "implement"
+        / "attempts"
+        / "attempt-0001"
+        / "implementation-report.md"
+    )
+    run_artifact.parent.mkdir(parents=True, exist_ok=True)
+    run_artifact.write_text("# Attempt implementation report\n", encoding="utf-8")
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\nQA verdict: ready-with-risks\n\n"
+        "## Residual risks\n\n"
+        "- QR-1 (`medium`, Evidence: EV-1): bounded residual risk.\n\n"
+        "## Release recommendation\n\n- proceed-with-conditions\n\n"
+        "## Evidence references\n\n"
+        "- EV-99: `workitems/WI-001/stages/implement/implementation-report.md` passed.\n"
+        "- EV-100: `reports/runs/WI-001/run-001/stages/implement/attempts/"
+        "attempt-0001/implementation-report.md` passed.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
 @pytest.mark.parametrize(
     "reference",
     (
