@@ -108,6 +108,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "black",
         "bun",
         "bunx",
+        "cat",
         "cargo",
         "cd",
         "cp",

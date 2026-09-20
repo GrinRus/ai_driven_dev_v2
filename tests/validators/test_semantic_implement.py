@@ -1285,6 +1285,40 @@ def test_validate_semantic_outputs_accepts_shell_compound_command_evidence(
     assert not any(finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings)
 
 
+def test_validate_semantic_outputs_accepts_cat_pipeline_command_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-CAT-PIPELINE",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `cat fixture.csv | .venv/bin/python -m example --csv` -> pass "
+            "(exit code 0).\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-CAT-PIPELINE",
+        workspace_root=workspace_root,
+    )
+
+    assert not any(finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings)
+
+
 def test_validate_semantic_outputs_accepts_assignment_before_shell_compound(
     tmp_path: Path,
 ) -> None:
