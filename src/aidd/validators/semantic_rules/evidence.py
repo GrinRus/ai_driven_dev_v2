@@ -235,6 +235,19 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
         if substitution.group(1).lower() in _KNOWN_COMMAND_EXECUTABLES:
             return True
 
+    # Check a direct executable before looking for shell compounds.  Arguments
+    # such as ``python -c \"...; ...\"`` legitimately contain semicolons, but
+    # those separators belong to the quoted program rather than to the shell
+    # command.  Classifying the direct executable first keeps valid evidence
+    # from being mistaken for an unsupported command chain.
+    if not explicit_container:
+        executable_name = executable.rsplit("/", 1)[-1]
+        if (
+            executable in _KNOWN_COMMAND_EXECUTABLES
+            or executable_name in _KNOWN_COMMAND_EXECUTABLES
+        ):
+            return len(tokens) > 1
+
     shell_compound_candidate = normalized_candidate
     if _SHELL_COMPOUND_PATTERN.fullmatch(shell_compound_candidate) is None:
         inline_result = _INLINE_SHELL_RESULT_SUFFIX_PATTERN.search(shell_compound_candidate)

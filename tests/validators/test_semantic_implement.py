@@ -56,6 +56,32 @@ def test_implementation_report_accepts_repository_prefixed_interpreter_command(
     assert findings == ()
 
 
+def test_implementation_report_accepts_python_c_command_with_quoted_semicolons(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-PYTHON-C-COMMAND",
+        _compatibility_report(
+            summary="Implemented a bounded fix with focused regression coverage.",
+            touched_files="- `src/example.py` - preserve the shared behavior.",
+            verification=(
+                "- `/tmp/work/.venv/bin/python -c \"import example; print('ok'); "
+                'print(example.VALUE)"` -> pass (observed the expected output).'
+            ),
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-PYTHON-C-COMMAND",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_implementation_report_accepts_observed_command_outcome(
     tmp_path: Path,
 ) -> None:
