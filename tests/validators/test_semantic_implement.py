@@ -82,6 +82,31 @@ def test_implementation_report_accepts_observed_command_outcome(
     assert findings == ()
 
 
+def test_implementation_report_accepts_noop_marker_with_following_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-NOOP-EVIDENCE",
+        _compatibility_report(
+            summary="No-op verification-only check; no repository change was made.",
+            touched_files=(
+                "- none\nRepository evidence confirms that prerequisite changes are unchanged."
+            ),
+            verification="- `git status --short` -> observed no task-local repository change.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-NOOP-EVIDENCE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def _compatibility_report(
     *,
     summary: str,
