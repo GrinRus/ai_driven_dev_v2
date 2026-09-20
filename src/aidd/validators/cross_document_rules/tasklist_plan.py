@@ -24,6 +24,11 @@ _DEPENDENCY_RELATION_PATTERN = re.compile(
     r"\b(?P<relation>depends?\s+on|requires?|after|before)\b",
     re.IGNORECASE,
 )
+_INLINE_DEPENDENCY_CHAIN_PATTERN = re.compile(
+    r"\b(?:depends?\s+on|requires?)\s+M[1-9]\d*"
+    r"(?:\s+before\s+M[1-9]\d*)+",
+    re.IGNORECASE,
+)
 _COMMAND_PREFIXES = (
     "uv ",
     "pytest ",
@@ -176,6 +181,7 @@ def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
         )
         clauses = re.split(r"\s*,\s*but\s+|\s*;\s*", authored, flags=re.IGNORECASE)
         for clause in clauses:
+            inline_dependency_chain = _INLINE_DEPENDENCY_CHAIN_PATTERN.search(clause) is not None
             explicit_subjects = re.match(
                 r"^(?P<subjects>M[1-9]\d*(?:\s*(?:,|\band\b)\s*M[1-9]\d*)*)\b",
                 clause,
@@ -194,13 +200,46 @@ def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
                 object_end = (
                     relations[index + 1].start() if index + 1 < len(relations) else len(clause)
                 )
+                relation_name = relation.group("relation").casefold()
+                if (
+                    relation_name in {"depends on", "requires", "require"}
+                    and inline_dependency_chain
+                ):
+                    # In ``M4 depends on M1 before M2 before M3``, the
+                    # ``before`` clauses qualify the complete prerequisite
+                    # list for M4; they do not introduce reverse edges from
+                    # M2/M3 back to M4.
+                    object_end = len(clause)
                 object_text = clause[relation.end() : object_end]
                 objects = tuple(
                     match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(object_text)
                 )
-                if relation.group("relation").casefold() == "before":
+                if relation_name in {"depends on", "requires", "require"} and re.match(
+                    r"\s*no\b", object_text, re.IGNORECASE
+                ):
+                    # Phrases such as ``depends on no M1 code change`` are
+                    # scope statements, not milestone dependency edges.
+                    objects = ()
+                if relation_name == "before":
+                    if inline_dependency_chain:
+                        continue
+                    # In a chained expression such as ``M4 depends on M1
+                    # before M2 before M3``, each ``before`` relation is
+                    # anchored to the milestone immediately preceding it.
+                    # Falling back to the clause subjects is still necessary
+                    # for prose such as ``both must complete before M4``,
+                    # where no milestone appears before the relation.
+                    preceding_milestones = tuple(
+                        match.group(1).upper()
+                        for match in _MILESTONE_ID_PATTERN.finditer(clause[: relation.start()])
+                    )
+                    before_subjects = (
+                        preceding_milestones[-1:] if preceding_milestones else subjects
+                    )
                     edges.extend(
-                        (target, prerequisite) for target in objects for prerequisite in subjects
+                        (target, prerequisite)
+                        for target in objects
+                        for prerequisite in before_subjects
                     )
                 else:
                     edges.extend(

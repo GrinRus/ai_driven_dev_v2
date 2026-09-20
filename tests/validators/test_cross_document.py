@@ -586,6 +586,29 @@ def test_tasklist_plan_cross_validation_preserves_authored_dependency_direction(
     assert findings == ()
 
 
+def test_tasklist_plan_cross_validation_accepts_chained_before_after_dependency(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_live_shaped_plan_tasklist_pair(workspace_root)
+    plan_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
+    plan_path.write_text(
+        plan_path.read_text(encoding="utf-8").replace(
+            "- M4 depends on M2 and M3.\n",
+            "- M4 depends on M1 before M2 before M3 all being complete.\n",
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_tasklist_plan_allows_secondary_milestone_evidence_on_a_task(
     tmp_path: Path,
 ) -> None:
