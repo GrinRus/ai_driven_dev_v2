@@ -381,7 +381,7 @@ def _parse_card_fields(
     for line_number, line in lines:
         if in_acceptance:
             criterion_match = re.match(
-                r"^\s{2,}[-*]\s+([^:\s]+)\s*:\s*(.+?)\s*$",
+                r"^\s{2,}[-*]\s+([^:\s]+)(?:\s+\([^\)\n]+\))*\s*:\s*(.+?)\s*$",
                 line,
             )
             if criterion_match is not None:
