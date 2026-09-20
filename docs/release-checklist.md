@@ -255,8 +255,8 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a23.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a22`.
+Maintainer source development package version: `0.1.0a24.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a23`.
 No current release candidate is accepted from this development version.
 
 Future beta readiness is not implied by alpha package publication. Beta claims require the
@@ -264,8 +264,8 @@ provider, browser, onboarding, project-set, provenance, approval, and install ev
 in `docs/product/user-stories.md`.
 
 README install instructions resolve the latest published package from PyPI. An isolated
-post-release check confirmed that `pipx` and `uv tool` installs both selected `0.1.0a22`.
-The source development tree has moved to `0.1.0a23.dev0`; it is not a published release.
+post-release check confirmed that `pipx` and `uv tool` installs both selected `0.1.0a23`.
+The source development tree has moved to `0.1.0a24.dev0`; it is not a published release.
 Keep only the latest accepted package evidence below; previous release notes and verification
 records remain in Git history and GitHub Releases.
 
@@ -312,6 +312,26 @@ Beta-oriented release note criteria:
 - [ ] Announce release with links to package and notes.
 
 ## Latest accepted release evidence
+
+### `v0.1.0a23` accepted evidence on 2026-09-20
+
+- Tag: `v0.1.0a23`
+- Release branch: `release/v0.1.0a23`
+- Commit: `44cde228ea319e0a9bce1c68aacc6fb9f4a4a5b6`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a23`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/35498549395`
+- Result: accepted published prerelease and package-channel evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: the release tag matched `project.version` `0.1.0a23`, and the tag commit
+  matched the remote `release/v0.1.0a23` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a23/`.
+- Independent local `pipx` verification used an isolated `uv tool run --from pipx` runner with
+  the `pip` backend and Python 3.13; the installed `aidd` binary returned `aidd 0.1.0a23` and
+  `aidd doctor` completed successfully.
+- Independent local `uv tool` verification installed `ai-driven-dev-v2==0.1.0a23`; the installed
+  `aidd` binary returned `aidd 0.1.0a23` and `aidd doctor` completed successfully.
+- No Docker/GHCR artifact was published.
 
 ### `v0.1.0a22` accepted evidence on 2026-09-14
 
