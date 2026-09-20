@@ -173,7 +173,9 @@ def _reported_touched_paths(report: str) -> tuple[str, ...]:
     # Verification-only reports may keep explanatory diff/status evidence below an
     # explicit ``- none`` marker. That marker is authoritative for task-local
     # ownership; actual edits are still detected from the baseline/final snapshot.
-    if any(item.casefold() == "none" for item in bullets):
+    if any(
+        item.splitlines()[0].strip().casefold() == "none" for item in bullets if item.splitlines()
+    ):
         return ()
 
     paths: list[str] = []
