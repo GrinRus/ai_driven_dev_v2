@@ -268,6 +268,54 @@ def test_verification_only_report_allows_explanatory_touched_files_evidence(
     assert payload["reported_touched_paths"] == []
 
 
+def test_task_diff_ignores_command_evidence_bullets_below_touched_files(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    plan = parse_task_plan(_tasklist())
+    attempt = tmp_path / "attempt"
+    attempt.mkdir()
+    (attempt / "repository-baseline.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-1",
+                "status": [],
+                "files": {"contracts/example.md": "before"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    context = TaskExecutionContext(
+        plan=plan,
+        ledger=TaskLedger.create(plan),
+        task=plan.tasks[0],
+        global_attempt_start=1,
+        task_attempt_number=1,
+        task_attempt_path=attempt,
+    )
+
+    payload, issues = task_diff_evidence(
+        context=context,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        final_snapshot=RepositorySnapshot(
+            task_id="TL-1",
+            status=(),
+            files=(("contracts/example.md", "after"),),
+        ),
+        report=(
+            "## Touched files\n\n"
+            "- `contracts/example.md` - updated contract.\n\n"
+            "- `git diff --stat` -> pass.\n"
+            "- `git status --short --untracked-files=all` -> pass.\n"
+        ),
+    )
+
+    assert issues == ()
+    assert payload["reported_touched_paths"] == ["contracts/example.md"]
+
+
 def test_task_attempt_records_diff_relative_to_its_own_baseline(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist_path = (
