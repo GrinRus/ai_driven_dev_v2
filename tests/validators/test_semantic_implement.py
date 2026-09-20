@@ -512,6 +512,40 @@ def test_validate_semantic_outputs_accepts_setup_ignored_residue_evidence_for_im
     assert findings == ()
 
 
+def test_validate_semantic_outputs_ignores_explicit_verification_context_note(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-CONTEXT-NOTE"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-EXAMPLE-RESIDUE-CLEANUP`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected example task and recorded cleanup evidence.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalize thrown non-Error values.\n\n"
+            "## Verification notes\n\n"
+            "- Cleanup description (not itself a check; the next three bullets are its evidence): "
+            "`.hypothesis/constants/example` was removed after the test run.\n"
+            "- `git status --ignored --short --untracked-files=all` -> pass.\n\n"
+            "## Follow-up notes\n\n"
+            "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_aidd_command_evidence_for_implement(
     tmp_path: Path,
 ) -> None:
