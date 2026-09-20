@@ -20,6 +20,7 @@ from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 _TOP_LEVEL_BULLET_PATTERN = re.compile(r"^[-*+]\s+")
+_REPORTED_PATH_PATTERN = re.compile(r"^(?:\./)?[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,7 +189,13 @@ def _reported_touched_paths(report: str) -> tuple[str, ...]:
             continue
         match = re.search(r"`([^`]+)`", item)
         if match is not None:
-            paths.append(match.group(1).strip().strip("/"))
+            candidate = match.group(1).strip().strip("/")
+            # Evidence bullets are sometimes placed below the touched-files
+            # heading (for example ``git diff --stat``).  Only accept a
+            # path-shaped code span as ownership evidence; command snippets
+            # and prose must not become phantom changed paths.
+            if _REPORTED_PATH_PATTERN.fullmatch(candidate) is not None:
+                paths.append(candidate.removeprefix("./"))
     return tuple(dict.fromkeys(paths))
 
 
