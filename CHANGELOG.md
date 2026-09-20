@@ -7,8 +7,21 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- The development tree now targets `0.1.0a23.dev0` after the accepted `v0.1.0a22`
-  prerelease publication.
+- No changes yet.
+
+## 0.1.0a23 - 2026-09-20
+
+- Improve Operator UI recovery for stale context and multi-question implementation flows while
+  preserving durable task scope and explicit question prompts.
+- Harden implementation and task-list evidence validation for nested results, repository-prefixed
+  commands, compound shell checks, checksums, listings, concrete CLI evidence, and bounded
+  placeholders.
+- Make repair prompts require itemized implementation evidence and keep verification-only evidence
+  separate from implementation claims.
+- Align the shipped UI palette, shared control-state coverage, responsive terminal handoff, and
+  operator visual-system documentation with the current cobalt semantic tokens.
+- Keep deterministic, adapter, coverage, security, and packaged-browser release gates green for
+  the maintained alpha surface.
 
 ## 0.1.0a22 - 2026-09-14
 
