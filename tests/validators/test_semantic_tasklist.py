@@ -263,6 +263,41 @@ def test_validate_semantic_outputs_accepts_concrete_command_and_process_substitu
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_multiple_verification_notes_per_task(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_document(
+        workspace_root,
+        "WI-SEM-TASKLIST-MULTI-VERIFICATION",
+        (
+            "# Tasklist\n\n"
+            "## Task summary\n\n"
+            "Run the regression and record each concrete verification check.\n\n"
+            "## Ordered tasks\n\n"
+            "### TL-1 — Run regression\n\n"
+            "- Outcome: The regression command is recorded for implementation.\n"
+            "- Dominant deliverable: `tests/test_responses.py` verification evidence.\n"
+            "- In scope: `tests/test_responses.py`.\n"
+            "- Acceptance criteria:\n"
+            "  - TL-1-AC1: The concrete regression command is executable.\n\n"
+            "## Dependencies\n\n"
+            "- TL-1: none\n\n"
+            "## Verification notes\n\n"
+            "- TL-1: `uv run pytest tests/test_responses.py -q` -> pass.\n"
+            "- TL-1: `git diff --check` -> pass.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-MULTI-VERIFICATION",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_ids(
     tmp_path: Path,
 ) -> None:

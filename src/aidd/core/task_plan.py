@@ -336,6 +336,8 @@ def _parse_mapped_section(
     markdown: str,
     heading: str,
     pattern: re.Pattern[str],
+    *,
+    merge_duplicates: bool = False,
 ) -> tuple[dict[str, tuple[str, int]], list[TaskPlanParseIssue]]:
     entries: dict[str, tuple[str, int]] = {}
     issues: list[TaskPlanParseIssue] = []
@@ -349,6 +351,13 @@ def _parse_mapped_section(
         if task_id is None:
             continue
         if task_id in entries:
+            if merge_duplicates:
+                previous_value, previous_line = entries[task_id]
+                entries[task_id] = (
+                    f"{previous_value}\n{match.group(2).strip()}",
+                    previous_line,
+                )
+                continue
             issues.append(
                 _issue(
                     TaskPlanIssueKind.DUPLICATE_MAPPED_ENTRY,
@@ -630,6 +639,7 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         markdown,
         "Verification notes",
         _VERIFICATION_ENTRY_PATTERN,
+        merge_duplicates=True,
     )
     issues.extend(dependency_issues)
     issues.extend(verification_issues)
