@@ -136,8 +136,12 @@ def _validate_git_object(value: str, *, label: str) -> str:
 
 
 def _extract_bundle_path(output: str) -> str:
-    match = re.search(r"(?m)^Evidence bundle:\s*(\S+)", output)
-    return "" if match is None else match.group(1)
+    marker = "Evidence bundle:"
+    marker_index = output.find(marker)
+    if marker_index < 0:
+        return ""
+    continuation = output[marker_index + len(marker) :].splitlines()
+    return "".join(line.strip() for line in continuation if line.strip())
 
 
 def _python_in_venv(venv_root: Path) -> Path:

@@ -135,11 +135,15 @@ def test_build_requires_manifest_path_shape(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "output",
+    ("output", "expected"),
     (
-        "Evidence bundle: /tmp/eval-bundle\n",
-        "Evidence bundle:\n/tmp/eval-bundle\n",
+        ("Evidence bundle: /tmp/eval-bundle\n", "/tmp/eval-bundle"),
+        ("Evidence bundle:\n/tmp/eval-bundle\n", "/tmp/eval-bundle"),
+        (
+            "Evidence bundle:\n/tmp/eval-bundle-\ngeneric-cli-20260921T231549Z\n",
+            "/tmp/eval-bundle-generic-cli-20260921T231549Z",
+        ),
     ),
 )
-def test_extract_bundle_path_accepts_wrapped_rich_output(output: str) -> None:
-    assert _extract_bundle_path(output) == "/tmp/eval-bundle"
+def test_extract_bundle_path_accepts_wrapped_rich_output(output: str, expected: str) -> None:
+    assert _extract_bundle_path(output) == expected
