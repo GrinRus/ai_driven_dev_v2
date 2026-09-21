@@ -1020,7 +1020,7 @@ def build_browser_state_fixture(
                 runtime_log_text="qa evidence collected\n",
             )
         )
-        persist_stage_status(workspace_root, work_item, run_id, "qa", "validating")
+        persist_stage_status(workspace_root, work_item, run_id, "qa", "succeeded")
         _write_qa_report(workspace_root, "not-ready", work_item=work_item)
         write_attempt_artifact_index(workspace_root, work_item, run_id, "qa", 1)
         return _descriptor(

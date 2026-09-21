@@ -1899,7 +1899,12 @@
 
 @media (max-width: 900px) {
   .studio-inbox .studio-inbox-layout {
+    display: flex;
+    flex-direction: column;
     grid-template-columns: minmax(0, 1fr);
+  }
+  .studio-inbox .inbox-selected-context {
+    order: -1;
   }
   .studio-inbox .inbox-filter-bar {
     align-items: stretch;

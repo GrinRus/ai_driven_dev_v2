@@ -140,7 +140,14 @@ test("Project Inbox renders empty groups and one selected Work Item inspector ac
         terminal_state: "blocked", blocker_count: 1
       }]
     };
-    state.inbox = {durable: {sections: [
+    state.inbox = {durable: {
+      entry_recommendation: {
+        action: "continue-existing-intent",
+        label: "Continue existing Work Item",
+        work_item: "WI-7",
+        route: {intent: "inbox-work-item", work_item: "WI-7", run_id: "run-7", stage: "plan"}
+      },
+      sections: [
       {key: "needs-input", label: "Needs input", items: [{
         item_id: "decision", state: "blocking", status_label: "Waiting for answer",
         title: "Answer question", summary: "A decision is required.",
@@ -157,6 +164,7 @@ test("Project Inbox renders empty groups and one selected Work Item inspector ac
   assert.match(html, /data-inbox-inspector/);
   assert.match(html, /data-inbox-selected-context="WI-7"/);
   assert.equal((html.match(/data-inbox-action="answer-questions"/g) || []).length, 1);
+  assert.doesNotMatch(html, /data-inbox-action="continue-existing-intent"/);
   assert.match(html, /data-selected-work-item="WI-7"/);
 });
 

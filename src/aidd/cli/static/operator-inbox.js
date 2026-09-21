@@ -334,7 +334,7 @@ function renderStudioInbox() {
           <button data-new-work-item aria-label="New Work Item" type="button">New Work Item</button>
         </div>
       </header>
-      ${renderStudioEntryRecommendation(state.inbox)}
+      ${selectedItem ? "" : renderStudioEntryRecommendation(state.inbox)}
       ${renderProjectWorkItemCreator()}
       <div class="inbox-filter-bar" data-inbox-filter-bar>
         <label class="inbox-filter-field" for="inboxWorkItemFilter">
