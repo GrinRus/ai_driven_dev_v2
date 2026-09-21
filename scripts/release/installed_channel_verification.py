@@ -195,8 +195,10 @@ def _python_path(root: Path) -> Path:
     return path
 
 
-def _aidd_path(root: Path) -> Path:
-    path = root / ("Scripts/aidd.exe" if os.name == "nt" else "bin/aidd")
+def _aidd_path(bin_dir: Path) -> Path:
+    """Return the launcher path in a tool channel's configured bin directory."""
+
+    path = bin_dir / ("aidd.exe" if os.name == "nt" else "aidd")
     return path
 
 
