@@ -46,6 +46,7 @@ def _available_upstream_paths(context: CrossDocumentContext) -> set[str]:
     work_item_root = context.workspace_root / "workitems" / context.work_item
     upstream_artifact_roots = (
         work_item_root / "context",
+        work_item_root / "evidence",
         *(
             work_item_root / "stages" / stage
             for stage in (

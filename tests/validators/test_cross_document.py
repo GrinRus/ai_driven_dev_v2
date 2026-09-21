@@ -1657,6 +1657,33 @@ def test_qa_cross_validation_accepts_work_item_relative_upstream_path(
     assert findings == ()
 
 
+def test_qa_cross_validation_accepts_work_item_evidence_path(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    evidence_root = workspace_root / "workitems" / "WI-001" / "evidence"
+    evidence_root.mkdir(parents=True, exist_ok=True)
+    (evidence_root / "final-evidence.md").write_text("# Final Evidence\n", encoding="utf-8")
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\nQA verdict: ready\n\n"
+        "## Verification summary\n\n- Evidence is current. Evidence: EV-11.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n"
+        "- EV-11: `evidence/final-evidence.md` -> pass.\n\n"
+        "## Known issues\n\n- Known issues: none.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
 def test_qa_cross_validation_accepts_attempt_stage_and_run_artifact_paths(
     tmp_path: Path,
 ) -> None:
