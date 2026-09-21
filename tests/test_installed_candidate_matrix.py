@@ -11,6 +11,7 @@ from scripts.release.candidate_manifest import freeze_candidate, write_candidate
 from scripts.release.installed_candidate_matrix import (
     CandidateMatrixError,
     ScenarioExecution,
+    _extract_bundle_path,
     build_installed_candidate_matrix,
     read_installed_candidate_matrix,
     write_installed_candidate_matrix,
@@ -131,3 +132,14 @@ def test_build_requires_manifest_path_shape(tmp_path: Path) -> None:
     )
     with pytest.raises(CandidateMatrixError, match="path mismatch"):
         build_installed_candidate_matrix(manifest_path, wheel, (absolute_path_execution,))
+
+
+@pytest.mark.parametrize(
+    "output",
+    (
+        "Evidence bundle: /tmp/eval-bundle\n",
+        "Evidence bundle:\n/tmp/eval-bundle\n",
+    ),
+)
+def test_extract_bundle_path_accepts_wrapped_rich_output(output: str) -> None:
+    assert _extract_bundle_path(output) == "/tmp/eval-bundle"
