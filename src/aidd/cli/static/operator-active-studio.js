@@ -499,7 +499,7 @@ function renderStudioDocumentRail(studioState) {
       </div>
       <div class="studio-document-list">
         ${refs.length ? refs.map((ref) => `
-          <button class="studio-document-item${ref.key === state.activeArtifactKey ? " active" : ""}" data-artifact-stage="${escapeHtml(ref.stage || state.activeStage)}" data-artifact-key="${escapeHtml(ref.key)}" data-artifact-kind="${escapeHtml(ref.kind || "document")}" type="button">
+          <button class="studio-document-item${ref.key === state.activeArtifactKey ? " active" : ""}" aria-label="${escapeHtml(`${ref.label || ref.key || "Document"}: ${ref.path || ref.kind || "stage document"}`)}" title="${escapeHtml(ref.path || ref.kind || "stage document")}" data-artifact-stage="${escapeHtml(ref.stage || state.activeStage)}" data-artifact-key="${escapeHtml(ref.key)}" data-artifact-kind="${escapeHtml(ref.kind || "document")}" type="button">
             <span class="studio-document-icon" aria-hidden="true">▤</span>
             <span><strong>${escapeHtml(ref.label || ref.key || "Document")}</strong><small>${escapeHtml(ref.path || ref.kind || "stage document")}</small></span>
           </button>

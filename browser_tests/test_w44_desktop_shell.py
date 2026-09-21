@@ -272,6 +272,19 @@ def test_detail_context_header_keeps_identity_in_compact_target_rhythm(
                 identity: box(
                     '.intent-context-region .studio-context-bar .studio-context-identity'
                 ),
+                identityValues: [...document.querySelectorAll(
+                  '.intent-context-region .studio-context-bar .studio-context-identity dd'
+                )].map((node) => {
+                  const style = getComputedStyle(node);
+                  return {
+                    text: node.textContent,
+                    clientWidth: node.clientWidth,
+                    scrollWidth: node.scrollWidth,
+                    overflow: style.overflow,
+                    textOverflow: style.textOverflow,
+                    whiteSpace: style.whiteSpace,
+                  };
+                }),
                 tabs: box('.work-item-tabs'),
                 stages: box('.intent-phase-region'),
                 scrollWidth: document.documentElement.scrollWidth,
@@ -293,6 +306,12 @@ def test_detail_context_header_keeps_identity_in_compact_target_rhythm(
         assert geometry["identity"]["display"] != "none"
         assert fixture.work_item in identity.inner_text()
         assert "Ready for first launch" in identity.inner_text()
+        assert len(geometry["identityValues"]) == 2
+        for value in geometry["identityValues"]:
+            assert value["overflow"] == "visible"
+            assert value["textOverflow"] == "clip"
+            assert value["whiteSpace"] == "normal"
+            assert value["scrollWidth"] <= value["clientWidth"]
         assert geometry["scrollWidth"] <= viewport[0]
         browser_page.diagnostics.assert_clean()
 
