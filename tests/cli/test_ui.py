@@ -4869,6 +4869,62 @@ def test_runtime_readiness_probe_collection_can_target_selected_runtime(
     assert probed == ["generic-cli"]
 
 
+def test_ui_runtime_readiness_endpoint_scopes_default_probe_to_requested_runtime(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    probed: list[str] = []
+
+    class _FakeAdapter:
+        def __init__(self, runtime_id: str) -> None:
+            self.runtime_id = runtime_id
+
+        def probe_configured_command(
+            self, *, configured_command: str, provider_command: str
+        ) -> SimpleNamespace:
+            probed.append(self.runtime_id)
+            return SimpleNamespace(
+                execution_command_available=True,
+                provider=SimpleNamespace(
+                    available=True,
+                    version_text="fixture",
+                    command=self.runtime_id,
+                    supports_raw_log_stream=True,
+                    supports_structured_log_stream=False,
+                    supports_questions=False,
+                    supports_resume=False,
+                    supports_subagents=False,
+                    supports_permission_policy=True,
+                    supports_live_decisions=False,
+                    preferred_transport="subprocess",
+                ),
+            )
+
+    monkeypatch.setattr(
+        ui_module,
+        "get_runtime_adapter_surface",
+        lambda runtime_id: _FakeAdapter(runtime_id),
+    )
+    service = _service(
+        tmp_path / ".aidd",
+        readiness_probe_provider=ui_module._collect_runtime_readiness_probe_reports,
+    )
+
+    payload = _payload(
+        service.handle_get(
+            "/api/runtime-readiness",
+            {"runtime": ["generic-cli"]},
+        )
+    )
+
+    assert probed == ["generic-cli"]
+    runtimes = {
+        str(runtime["runtime_id"]): runtime
+        for runtime in payload["runtimes"]
+        if isinstance(runtime, dict)
+    }
+    assert runtimes["generic-cli"]["eligible"] is True
+
+
 @pytest.mark.parametrize(
     ("command", "eligible"),
     (("generic-cli-live-conformance", True), ("generic-cli-live-conformance --unknown", False)),

@@ -249,8 +249,15 @@ async function startWorkflow() {
   });
 }
 
-async function startStage(stage = state.activeStage) {
-  if (!ensureRunnableRuntime()) return;
+async function startStage(
+  stage = state.activeStage,
+  {skipClientReadiness = false} = {}
+) {
+  // Resume-after-answer uses the server's authoritative, selected-Runner
+  // revalidation. The recovery surface may be rendered before the scoped
+  // readiness refresh completes, so a stale client snapshot must not hide the
+  // action; normal launches retain the immediate client guard.
+  if (!skipClientReadiness && !ensureRunnableRuntime()) return;
   const payload = {stage, runtime: state.selectedRuntime, log_follow: true, ...runtimeSelectorPayload()};
   if (state.activeRunId) payload.run_id = state.activeRunId;
   await guardedJobLaunch({

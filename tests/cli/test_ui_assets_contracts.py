@@ -690,7 +690,8 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             'state.recoveryDetail = "logs";',
             "requestCockpitReveal();",
             'version.startsWith("v") ? version : `v${version || "dev"}`',
-            'api("/api/runtime-readiness")',
+            "const path = runtime",
+            "`/api/runtime-readiness?runtime=${encodeURIComponent(runtime)}`",
             'if (element.textContent === message) element.textContent = "";',
             'button.setAttribute("aria-selected", isActive ? "true" : "false");',
             "content.dataset.operatorMode = state.activeTab;",
@@ -1300,7 +1301,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'option value="partial"',
             'option value="deferred"',
             "async function answerAndResume(questionId)",
-            "await fetchReadiness();",
+            "await startStage(state.activeStage, {skipClientReadiness: true});",
             "async function resumeAfterAnswers()",
         ),
     )
@@ -2065,7 +2066,7 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
         main,
         (
             "await fetchDashboard();",
-            "void fetchReadiness().then((accepted) => {",
+            "void fetchReadiness({runtimeOnly: recoveryDeepLink}).then((accepted) => {",
             "if (accepted) renderReadinessSurfaces();",
             "/api/open-folder",
             "/api/server/stop",

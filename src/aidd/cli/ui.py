@@ -2563,7 +2563,9 @@ class OperatorUiService:
                 self._remediation_status(params)
             ),
             "/api/next-flow/source-findings": self._get_next_flow_source_findings,
-            "/api/runtime-readiness": lambda params: _json_response(self._runtime_readiness()),
+            "/api/runtime-readiness": lambda params: _json_response(
+                self._runtime_readiness(params)
+            ),
             "/api/stage": self._get_stage,
             "/api/questions": self._get_questions,
             "/api/answers": self._get_answers,
@@ -4032,7 +4034,12 @@ class OperatorUiService:
             ),
         )
 
-    def _runtime_readiness_for_config(self, config_path: Path) -> RuntimeReadinessView:
+    def _runtime_readiness_for_config(
+        self,
+        config_path: Path,
+        *,
+        runtime_ids: tuple[str, ...] | None = None,
+    ) -> RuntimeReadinessView:
         cfg = load_config(config_path)
         launch_history = None
         if self._context is not None and self._context.work_item is not None:
@@ -4042,7 +4049,11 @@ class OperatorUiService:
             )
         return resolve_runtime_readiness(
             config=cfg,
-            probe_reports=self._readiness_probe_provider(cfg),
+            probe_reports=(
+                _collect_runtime_readiness_probe_reports(cfg, runtime_ids=runtime_ids)
+                if self._readiness_probe_provider is _collect_runtime_readiness_probe_reports
+                else self._readiness_probe_provider(cfg)
+            ),
             command_sources=_runtime_command_sources_from_config(config_path),
             launch_history=launch_history,
         )
@@ -4079,8 +4090,13 @@ class OperatorUiService:
             launch_history=None,
         )
 
-    def _runtime_readiness(self) -> object:
-        readiness = self._runtime_readiness_for_config(self.config_path)
+    def _runtime_readiness(self, params: dict[str, list[str]] | None = None) -> object:
+        requested_runtime = _first_param(params or {}, "runtime")
+        runtime_ids = (requested_runtime,) if requested_runtime else None
+        readiness = self._runtime_readiness_for_config(
+            self.config_path,
+            runtime_ids=runtime_ids,
+        )
         if self._context is None or self._context.work_item is None:
             return {
                 "runtimes": readiness.runtimes,

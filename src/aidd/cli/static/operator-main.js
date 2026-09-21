@@ -59,10 +59,17 @@ async function refresh() {
       setOperatorMode("work");
     }
     await fetchDashboard();
-    await fetchProjectHome(state.dashboard?.work_item || "");
-    await fetchInbox();
+    // Recovery deep links are a critical path: render the decision surface
+    // before secondary project/inbox projections can compete with an operator
+    // answer or resume request. Those projections are refreshed on the next
+    // navigation/refresh without delaying the recovery action.
+    const recoveryDeepLink = route.mode !== "inbox" && route.view === "recovery";
+    if (!recoveryDeepLink) {
+      await fetchProjectHome(state.dashboard?.work_item || "");
+      await fetchInbox();
+    }
     await renderAll();
-    void fetchReadiness().then((accepted) => {
+    void fetchReadiness({runtimeOnly: recoveryDeepLink}).then((accepted) => {
       if (accepted) renderReadinessSurfaces();
     });
   } catch (error) {
@@ -801,8 +808,10 @@ document.addEventListener("click", async (event) => {
       }
       requestCockpitReveal();
       await fetchDashboard();
-      await fetchProjectHome(state.dashboard?.work_item || "");
-      await fetchInbox();
+      if (action !== "answer-questions") {
+        await fetchProjectHome(state.dashboard?.work_item || "");
+        await fetchInbox();
+      }
       await renderAll();
       return;
     }

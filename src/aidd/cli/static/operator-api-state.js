@@ -898,14 +898,30 @@ async function fetchOnboardingState() {
   }
 }
 
-async function fetchReadiness() {
+async function fetchReadiness({runtimeOnly = false} = {}) {
   const requestGeneration = ++state.readinessRequestGeneration;
   state.readinessLoading = true;
   state.readinessError = "";
   try {
-    const readiness = await api("/api/runtime-readiness");
+    const runtime = runtimeOnly ? String(state.selectedRuntime || "").trim() : "";
+    const path = runtime
+      ? `/api/runtime-readiness?runtime=${encodeURIComponent(runtime)}`
+      : "/api/runtime-readiness";
+    const readiness = await api(path);
     if (requestGeneration !== state.readinessRequestGeneration) return false;
-    state.readiness = readiness;
+    if (runtimeOnly && runtime && state.readiness?.runtimes?.length) {
+      const scoped = readiness.runtimes?.find((item) => item.runtime_id === runtime);
+      if (scoped) {
+        state.readiness = {
+          ...state.readiness,
+          runtimes: state.readiness.runtimes.map((item) => (
+            item.runtime_id === runtime ? scoped : item
+          ))
+        };
+      }
+    } else {
+      state.readiness = readiness;
+    }
     state.readinessError = "";
   } catch (error) {
     if (requestGeneration !== state.readinessRequestGeneration) return false;
