@@ -651,6 +651,36 @@ def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None
     assert "do not edit, broaden, or reinterpret that context document" in repair_prompt
 
 
+def test_tasklist_scope_guidance_separates_verification_inputs_from_edit_scope() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        normalized = " ".join(Path(path).read_text(encoding="utf-8").split())
+        lowered = normalized.lower()
+        assert "shell fixture paths" in lowered
+        assert "/tmp/probe.csv" in normalized
+        assert "/tmp/probe.db" in normalized
+        assert (
+            "never in `in scope`" in lowered
+            or "not in `in scope`" in lowered
+            or "never in the `in scope` bullet" in lowered
+            or "not in the `in scope` bullet" in lowered
+            or "must never appear in `in scope`" in lowered
+        )
+        assert "acceptance criteria or `Verification notes`" in normalized
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
+    assert "even when an authored command uses them" in run_prompt
+    assert "must never appear in `In scope`" in repair_prompt
+
+
 def test_tasklist_contract_freezes_semantics_before_presentation_normalization() -> None:
     document_contract = Path("contracts/documents/tasklist.md").read_text(encoding="utf-8")
     stage_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")

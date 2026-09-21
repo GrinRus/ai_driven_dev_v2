@@ -25,6 +25,9 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
   declares `Execution mode: verification-only`; omitted mode means `repository-change`,
 - `In scope` contains at least one backticked repository-relative file or directory prefix;
   absolute paths, `..` traversal, and glob syntax are invalid,
+- shell fixture paths used only as verification inputs (for example `/tmp/probe.csv` or
+  `/tmp/probe.db`) belong in acceptance criteria or `Verification notes`, never in `In scope`;
+  `In scope` names only repository-relative paths that the task may change,
 - when the work item has `context/allowed-write-scope.md`, every `In scope` prefix is equal to an
   allowed prefix or is its descendant on a path-component boundary,
 - every task card contains at least one task-local acceptance criterion whose stable id
