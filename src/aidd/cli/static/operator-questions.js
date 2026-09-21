@@ -537,17 +537,29 @@ async function saveAnswer(questionId) {
   };
   if (evidenceLinks.length) answerPayload.evidence_links = evidenceLinks;
   if (unblockConsequence) answerPayload.unblock_consequence = unblockConsequence;
-  const durableQuestion = async () => {
-    await fetchDashboard();
-    return state.dashboard?.active_stage_view?.questions?.questions?.find(
-      (question) => question.question_id === questionId
-    ) || null;
-  };
   const guarded = await runGuardedMutation({
     key,
     execute: async () => {
-      await postJson("/api/answers", answerPayload);
-      const readback = await durableQuestion();
+      // The write endpoint returns the freshly persisted question view. Use
+      // that response as the normal durable readback instead of immediately
+      // rebuilding the full dashboard (which can block the resume action
+      // behind unrelated derived-surface work).
+      const persisted = await postJson("/api/answers", answerPayload);
+      let readback = persisted?.questions?.find(
+        (question) => question.question_id === questionId
+      ) || null;
+      // Keep a compatibility fallback for older/local API shims that only
+      // return the answers path. The production endpoint returns the canonical
+      // questions view, so this branch is not on the normal resume path.
+      if (!readback) {
+        await fetchDashboard();
+        readback = state.dashboard?.active_stage_view?.questions?.questions?.find(
+          (question) => question.question_id === questionId
+        ) || null;
+      }
+      if (state.dashboard?.active_stage_view && persisted?.stage === state.activeStage) {
+        state.dashboard.active_stage_view.questions = persisted;
+      }
       if (
         readback?.answer_text !== text
         || readback?.answer_resolution !== (resolution?.value || "resolved")
@@ -559,7 +571,12 @@ async function saveAnswer(questionId) {
       clearOperatorDraft(questionDraftIdentity(questionId));
       return readback;
     },
-    readWinner: durableQuestion,
+    readWinner: async () => {
+      await fetchDashboard();
+      return state.dashboard?.active_stage_view?.questions?.questions?.find(
+        (question) => question.question_id === questionId
+      ) || null;
+    },
     onState: (mutation) => setMutationControlsPending(controls, mutation.status === "pending")
   });
   if (guarded.status === "conflict") {
@@ -604,8 +621,11 @@ async function previewAnswer(questionId) {
 }
 
 async function answerAndResume(questionId) {
-  await fetchDashboard();
   let view = state.dashboard?.active_stage_view?.questions;
+  if (!view) {
+    await fetchDashboard();
+    view = state.dashboard?.active_stage_view?.questions;
+  }
   let unresolved = view?.unresolved_blocking_question_ids || [];
   let question = (view?.questions || []).find((item) => item.question_id === questionId);
   const draft = typeof readOperatorDraft === "function"
@@ -622,7 +642,6 @@ async function answerAndResume(questionId) {
       await renderAll();
       return false;
     }
-    await fetchDashboard();
     view = state.dashboard?.active_stage_view?.questions;
     unresolved = view?.unresolved_blocking_question_ids || [];
     question = (view?.questions || []).find((item) => item.question_id === questionId);
@@ -644,19 +663,7 @@ async function answerAndResume(questionId) {
     resumeButton.textContent = "Checking Runner…";
   }
   try {
-    const readinessAccepted = await fetchReadiness();
-    const runtimeReady = typeof selectedRuntimeReady === "function"
-      ? selectedRuntimeReady()
-      : true;
-    if (readinessAccepted === false || !runtimeReady) {
-      await renderAll();
-      const readinessMessage = typeof runtimeReadinessMessage === "function"
-        ? runtimeReadinessMessage()
-        : "";
-      toast(readinessMessage || "Runner is not ready to resume this stage.");
-      return false;
-    }
-    await startStage(state.activeStage);
+    await startStage(state.activeStage, {skipClientReadiness: true});
     return true;
   } finally {
     if (!state.activeJobId) {
@@ -668,14 +675,17 @@ async function answerAndResume(questionId) {
 }
 
 async function resumeAfterAnswers() {
-  await fetchDashboard();
-  const unresolved = state.dashboard?.active_stage_view?.questions?.unresolved_blocking_question_ids || [];
+  let view = state.dashboard?.active_stage_view?.questions;
+  if (!view) {
+    await fetchDashboard();
+    view = state.dashboard?.active_stage_view?.questions;
+  }
+  const unresolved = view?.unresolved_blocking_question_ids || [];
   if (unresolved.length) {
     await renderAll();
     toast("Resolve blocking questions before resume.");
     return false;
   }
-  await fetchReadiness();
-  await startStage(state.activeStage);
+  await startStage(state.activeStage, {skipClientReadiness: true});
   return true;
 }

@@ -499,7 +499,7 @@ test("question save confirms durable readback without starting the stage", async
 
   assert.equal(await vm.runInContext("answerAndResume('Q1')", context), true);
   assert.equal(stageStarts, 1);
-  assert.equal(readinessChecks, 1);
+  assert.equal(readinessChecks, 0);
 });
 
 test("question resume remains blocked until the durable answer is resolved", async () => {
