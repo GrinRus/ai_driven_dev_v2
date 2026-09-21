@@ -28,6 +28,9 @@ Non-negotiable rules:
 - keep shell fixture paths used only as verification inputs (for example `/tmp/probe.csv` or
   `/tmp/probe.db`) never in `In scope`; they belong in acceptance criteria or `Verification notes`,
   while `In scope` contains only backticked repository-relative paths that may be changed,
+- every executable verification command must be concrete as written: never use angle-bracket
+  placeholders such as `<tmp>`, `<db>`, `<csv>`, or `<path>`; copy an authored command exactly or
+  use an explicit scratch value such as `/tmp/aidd-probe.csv` in the command only,
 - include explicit dependencies (`none` or concrete upstream ids) and one primary verification signal per task;
   short rationale may follow the machine-readable dependency value without changing the graph,
 - map every task to an existing plan milestone by citing its exact `M<n>` id in `Outcome`,

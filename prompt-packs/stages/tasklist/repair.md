@@ -110,6 +110,10 @@ Use concrete repair actions:
   top-level mapping bullet, for example - TL-1: `uv run pytest -q tests/test_example.py -> pass`;
   never leave `- TL-1:` empty with the only commands in nested bullets, which the canonical
   parser treats as missing verification;
+- unresolved command placeholders: replace every angle-bracket token such as `<tmp>`, `<db>`,
+  `<csv>`, or `<path>` inside an executable command with a concrete value (for example
+  `/tmp/aidd-probe.csv`), or copy the authored command exactly. Do not repair a placeholder by
+  putting the scratch path in `In scope`; it remains a command-only verification input;
 - unclassified evidence-only task: add `Execution mode: verification-only` only when the task's
   dominant deliverable and acceptance criteria require command/check evidence without a
   task-local repository edit; otherwise keep the repository-change default,

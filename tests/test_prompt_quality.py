@@ -681,6 +681,31 @@ def test_tasklist_scope_guidance_separates_verification_inputs_from_edit_scope()
     assert "must never appear in `In scope`" in repair_prompt
 
 
+def test_tasklist_command_guidance_forbids_unresolved_scratch_placeholders() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        text = Path(path).read_text(encoding="utf-8")
+        normalized = " ".join(text.split())
+        assert "<tmp>" in text
+        assert "<db>" in text
+        assert "<csv>" in text
+        assert "concrete" in normalized.lower()
+        assert "/tmp/aidd-probe.csv" in text
+        assert "command only" in normalized.lower() or "command-only" in normalized.lower()
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
+    assert "never leave angle-" in run_prompt
+    assert "replace every angle-bracket token" in repair_prompt
+
+
 def test_tasklist_contract_freezes_semantics_before_presentation_normalization() -> None:
     document_contract = Path("contracts/documents/tasklist.md").read_text(encoding="utf-8")
     stage_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
