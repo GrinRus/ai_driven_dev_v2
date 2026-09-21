@@ -121,6 +121,9 @@ notes, and a concrete verification signal.
    Preserve flags, path lists, environment variables, and coverage/cache-disabling options such as
    `--coverage.enabled=false`; do not rewrite them as `npx`, package-manager aliases, or broader
    suite commands.
+   Every other executable command must also be runnable exactly as written: never leave angle-
+   bracket placeholders such as `<tmp>`, `<db>`, `<csv>`, or `<path>` in a command. Use a concrete
+   scratch value such as `/tmp/aidd-probe.csv` in the command only, never by widening `In scope`.
 9. Optional broad checks outside the authored verification boundary may be listed only as
    optional/non-blocking exploratory checks. Do not turn them into required task completion or final
    pass criteria unless the authored task or review-spec explicitly requires them.

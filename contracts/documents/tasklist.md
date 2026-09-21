@@ -38,6 +38,9 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
   machine-readable value is ignored for graph construction,
 - `Verification notes` uses bullet items that reference every task id from `Ordered tasks`,
   including command-only or verification-only tasks,
+- executable verification commands use concrete values; unresolved angle-bracket placeholders
+  such as `<tmp>`, `<db>`, or `<csv>` are invalid. A concrete scratch value such as
+  `/tmp/aidd-probe.csv` belongs in the command only and does not expand `In scope`,
 - checks embedded only inside `Ordered tasks` do not replace the dedicated per-task
   `Verification notes` entries,
 - every task cites at least one exact existing plan milestone id such as `M1` in its `Outcome`,

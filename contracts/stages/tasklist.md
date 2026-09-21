@@ -113,6 +113,9 @@ Optional context documents may improve task decomposition quality, but they must
   template placeholders such as `::<test_name>` or `<path>` inside a command. Shell syntax such as
   input redirection (`< file`) and process substitution (`<(command)`) remains valid when it is
   intentionally executable.
+- command placeholders such as `<tmp>`, `<db>`, or `<csv>` are also invalid; use a concrete
+  scratch value such as `/tmp/aidd-probe.csv` in the command only, or preserve the authored
+  command exactly,
 - Optional broad checks outside the authored verification boundary may be listed only as
   optional/non-blocking exploratory checks; they must not become required pass criteria when the
   authored verification boundary is narrower.
