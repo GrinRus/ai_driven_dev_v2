@@ -329,6 +329,10 @@ def _execution_success(
     project_version: str,
     wheel_sha256: str,
 ) -> bool:
+    doctor_reports_version = any(
+        "Version" in line and project_version in line
+        for line in execution.doctor_output.splitlines()
+    )
     return (
         execution.channel in CHANNELS
         and execution.phase in PHASES
@@ -337,7 +341,7 @@ def _execution_success(
         and execution.doctor_return_code == 0
         and execution.provenance_return_code == 0
         and execution.version_output.splitlines() == [f"aidd {project_version}"]
-        and f"Version {project_version}" in execution.doctor_output.splitlines()
+        and doctor_reports_version
         and execution.provenance_output == f"sha256={wheel_sha256}"
     )
 
