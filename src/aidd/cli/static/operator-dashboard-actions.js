@@ -87,6 +87,23 @@ async function fetchDashboard() {
     state.workDetail = "review-findings";
     state.workItemTab = "tasks";
     requestCockpitReveal();
+  } else if (
+    nextAction === "qa-verdict"
+    && state.dashboard?.terminal_handoff
+    && state.dashboard.terminal_handoff.status === "blocked"
+    && state.activeTab === "work"
+  ) {
+    // A terminal run with a non-ready QA report is a decision surface, not a
+    // completed-flow overview. Keep the operator on the QA verdict workbench
+    // so the recorded risks and remediation route are actionable.
+    if (state.dashboard.next_action?.stage && STAGES.includes(state.dashboard.next_action.stage)) {
+      state.activeStage = state.dashboard.next_action.stage;
+      state.activeStageExplicit = true;
+    }
+    state.activeTab = "work";
+    state.workDetail = "qa-verdict";
+    state.workItemTab = "tasks";
+    requestCockpitReveal();
   } else if (isRecoveryNextAction(nextAction) && (state.activeTab === "work" || explicitRecoveryRoute)) {
     state.activeTab = "recovery";
     if (state.dashboard.next_action?.stage && STAGES.includes(state.dashboard.next_action.stage)) {
@@ -97,6 +114,23 @@ async function fetchDashboard() {
     else if (nextAction === "inspect-validation" || nextAction === "review-intervention") {
       state.recoveryDetail = "validation";
     } else if (nextAction === "inspect-runtime-log") state.recoveryDetail = "logs";
+    requestCockpitReveal();
+  } else if (
+    nextAction === "resume-stage"
+    && state.dashboard?.terminal_handoff
+    && state.activeTab === "work"
+  ) {
+    // A blocked terminal handoff is not a completed handoff: keep the
+    // recovery action visible in the terminal Studio workspace instead of
+    // leaving the operator on a read-only Flow Complete overview. The
+    // workspace renders the same bounded Resume action without changing the
+    // operator's context to a separate recovery document.
+    state.activeTab = "work";
+    state.workDetail = "overview";
+    if (state.dashboard.next_action?.stage && STAGES.includes(state.dashboard.next_action.stage)) {
+      state.activeStage = state.dashboard.next_action.stage;
+      state.activeStageExplicit = true;
+    }
     requestCockpitReveal();
   } else if (
     state.activeTab === "work"

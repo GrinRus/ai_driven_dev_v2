@@ -1517,6 +1517,46 @@ def test_ui_dashboard_endpoint_defaults_completed_flow_to_qa_when_stage_is_omitt
     assert work_items[0]["active_stage"] == "qa"
 
 
+def test_ui_dashboard_endpoint_defaults_to_the_running_stage_when_stage_is_omitted(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "ui-running-stage-test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+    )
+    for stage in (*STAGES[:-1], "qa"):
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage=stage,
+            status="validating" if stage == "qa" else "succeeded",
+        )
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/dashboard", {"run_id": ["run-ui"]}))
+    dashboard = payload["dashboard"]  # type: ignore[index]
+
+    assert dashboard["active_stage"] == "qa"  # type: ignore[index]
+    assert dashboard["next_action"]["action"] == "wait-for-stage"  # type: ignore[index]
+    assert dashboard["next_action"]["stage"] == "qa"  # type: ignore[index]
+    assert dashboard["active_stage_view"] is None  # type: ignore[index]
+
+
 def test_ui_dashboard_endpoint_defaults_runtime_failure_to_failed_stage_when_stage_is_omitted(
     tmp_path: Path,
 ) -> None:

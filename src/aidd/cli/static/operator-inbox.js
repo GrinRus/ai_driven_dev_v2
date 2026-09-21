@@ -319,10 +319,15 @@ function renderStudioInbox() {
   }
   const sections = studioInboxSections(state.inbox);
   const count = sections.reduce((total, section) => total + section.items.length, 0);
+  const needsInputAction = Boolean(
+    sections.find((section) => section.key === "needs-input")?.items.some(
+      (item) => item.primary_action
+    )
+  );
   const selectedWorkItem = inboxSelectedWorkItem();
   const selectedItem = inboxSelectedItem(sections, selectedWorkItem);
   return `
-    <section class="studio-inbox" data-studio-surface="inbox" data-inbox-populated="${count ? "true" : "false"}" data-inbox-selected="${selectedWorkItem ? "true" : "false"}">
+    <section class="studio-inbox" data-studio-surface="inbox" data-inbox-populated="${count ? "true" : "false"}" data-inbox-selected="${selectedWorkItem ? "true" : "false"}" data-inbox-needs-input="${needsInputAction ? "true" : "false"}">
       <header class="surface studio-inbox-header">
         <div>
           <p class="eyebrow">Inbox</p>
@@ -334,7 +339,7 @@ function renderStudioInbox() {
           <button data-new-work-item aria-label="New Work Item" type="button">New Work Item</button>
         </div>
       </header>
-      ${renderStudioEntryRecommendation(state.inbox)}
+      ${selectedItem ? "" : renderStudioEntryRecommendation(state.inbox)}
       ${renderProjectWorkItemCreator()}
       <div class="inbox-filter-bar" data-inbox-filter-bar>
         <label class="inbox-filter-field" for="inboxWorkItemFilter">

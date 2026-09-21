@@ -122,6 +122,23 @@ function renderActiveStudioContextBar(studioState, item) {
   `;
 }
 
+function renderTerminalRecoveryAction() {
+  const handoff = state.dashboard?.terminal_handoff;
+  const action = state.dashboard?.next_action;
+  if (!handoff || handoff.status !== "blocked" || action?.action !== "resume-stage") return "";
+  const stage = action.stage || state.activeStage;
+  return `
+    <section class="surface terminal-recovery-action" data-terminal-recovery-action role="region" aria-label="Terminal recovery">
+      <div>
+        <p class="eyebrow">Terminal recovery</p>
+        <h3>${escapeHtml(action.label || "Resume stage")}</h3>
+        <p>${escapeHtml(action.detail || "Answers are present; rerun the blocked stage in the same run.")}</p>
+      </div>
+      <button class="primary" data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(stage)}" type="button">${escapeHtml(action.label || "Resume stage")}</button>
+    </section>
+  `;
+}
+
 function renderNoRunOverview() {
   const dashboard = state.dashboard || {};
   const workItem = dashboard.work_item || state.activeRouteWorkItem || "Work Item";
@@ -609,6 +626,7 @@ function renderActiveStudio() {
   return `
     <section class="active-studio" data-studio-surface="active-studio" data-state="${escapeHtml(studioState)}">
       ${renderActiveStudioContextBar(studioState, item)}
+      ${renderTerminalRecoveryAction()}
       ${renderIntentPhaseStepper()}
       ${typeof workflowProgressSummary === "function" ? workflowProgressSummary({collapsed: true}) : ""}
       <div class="active-studio-grid">

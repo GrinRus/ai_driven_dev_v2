@@ -818,6 +818,30 @@ test("resolved durable question exposes Resume separately from Save", async () =
   assert.equal((html.match(/data-primary-action/g) || []).length, 1);
 });
 
+test("resolved local draft exposes Save & resume with the durable save contract", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => ({
+    value: {
+      text: "Drafted acceptance boundary.",
+      resolution: "resolved",
+      evidence_links: [],
+      unblock_consequence: "Plan can resume after readback."
+    }
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.activeStage = "plan"; state.dashboard = {
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q1"],
+      questions: [{question_id: "Q1", policy: "blocking", status: "pending-blocking", answer_resolution: null}]
+    }}
+  }`, context);
+  const html = vm.runInContext("renderQuestionCards({showResume: true})", context);
+  assert.match(html, /data-answer-resume="Q1"[^>]*data-server-resolved="false"/);
+  assert.match(html, />Save &amp; resume</);
+  assert.doesNotMatch(html, /data-answer-resume="Q1"[^>]*disabled/);
+});
+
 test("question impact copy never claims that partial or deferred answers unblock the stage", async () => {
   const {context} = domContext();
   context.readOperatorDraft = () => null;
@@ -1040,6 +1064,103 @@ test("late dashboard response cannot overwrite a newer request", async () => {
   await first;
 
   assert.equal(vm.runInContext("state.dashboard.marker", context), "new");
+});
+
+test("non-ready terminal QA opens the QA verdict decision surface", async () => {
+  const {context} = domContext();
+  context.fetch = async () => response({
+    app_version: "test",
+    active_job: null,
+    dashboard: {
+      work_item: "WI-UI",
+      active_stage: "qa",
+      active_stage_view: null,
+      run: {run_id: "run-ui"},
+      stages: [{stage: "qa", status: "succeeded"}],
+      next_action: {
+        action: "qa-verdict",
+        label: "Resolve QA verdict",
+        stage: "qa",
+        enabled: true
+      },
+      terminal_handoff: {status: "blocked", final_qa_status: "not-ready"}
+    }
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+
+  await vm.runInContext("fetchDashboard()", context);
+
+  assert.equal(vm.runInContext("state.activeTab", context), "work");
+  assert.equal(vm.runInContext("state.workDetail", context), "qa-verdict");
+  assert.equal(vm.runInContext("state.workItemTab", context), "tasks");
+  assert.equal(vm.runInContext("state.activeStage", context), "qa");
+  assert.equal(vm.runInContext("state.activeStageExplicit", context), true);
+});
+
+test("warning terminal QA keeps Flow Complete available for follow-up", async () => {
+  const {context} = domContext();
+  context.fetch = async () => response({
+    app_version: "test",
+    active_job: null,
+    dashboard: {
+      work_item: "WI-UI",
+      active_stage: "qa",
+      active_stage_view: null,
+      run: {run_id: "run-ui"},
+      stages: [{stage: "qa", status: "succeeded"}],
+      next_action: {
+        action: "qa-verdict",
+        label: "Resolve QA verdict",
+        stage: "qa",
+        enabled: true
+      },
+      terminal_handoff: {
+        status: "completed-with-warning",
+        final_qa_status: "ready-with-risks",
+        recommended_outcome: "start-follow-up-flow"
+      }
+    }
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+
+  await vm.runInContext("fetchDashboard()", context);
+
+  assert.equal(vm.runInContext("state.activeTab", context), "work");
+  assert.equal(vm.runInContext("state.workDetail", context), "overview");
+});
+
+test("blocked terminal QA keeps Resume stage visible in the terminal workspace", async () => {
+  const {context} = domContext();
+  context.fetch = async () => response({
+    app_version: "test",
+    active_job: null,
+    dashboard: {
+      work_item: "WI-UI",
+      active_stage: "qa",
+      active_stage_view: null,
+      run: {run_id: "run-ui"},
+      stages: [{stage: "qa", status: "blocked"}],
+      next_action: {
+        action: "resume-stage",
+        label: "Resume stage",
+        stage: "qa",
+        enabled: true
+      },
+      recovery_actions: [{action: "resume-stage", label: "Resume stage", stage: "qa", enabled: true}],
+      terminal_handoff: {status: "blocked", final_qa_status: "evidence-incomplete"}
+    }
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+
+  await vm.runInContext("fetchDashboard()", context);
+
+  assert.equal(vm.runInContext("state.activeTab", context), "work");
+  assert.equal(vm.runInContext("state.workDetail", context), "overview");
+  assert.equal(vm.runInContext("state.activeStage", context), "qa");
+  assert.equal(vm.runInContext("state.activeStageExplicit", context), true);
 });
 
 test("shared dashboard actions preserve workflow and stage request payloads", async () => {

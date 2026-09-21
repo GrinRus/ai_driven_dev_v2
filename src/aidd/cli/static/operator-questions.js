@@ -110,33 +110,41 @@ function updateQuestionResumeButtonState(questionId) {
   if (!button || button.dataset.requiresResolvedResume !== "true") return;
   const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
   const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
-  const draft = questionDraft(questionId)?.value;
+  const draft = typeof readOperatorDraft === "function"
+    ? questionDraft(questionId)?.value || null
+    : null;
   const hasDraft = Boolean(draft && (
     String(draft.text || "").trim()
     || String(draft.resolution || "").trim()
     || (draft.evidence_links || []).length
     || String(draft.unblock_consequence || "").trim()
   ));
+  const draftResolution = String(draft?.resolution || resolution?.value || "resolved").trim();
+  const draftHasText = Boolean(String(draft?.text ?? textarea?.value ?? "").trim());
+  const draftCanResume = hasDraft && draftResolution === "resolved" && draftHasText;
   if (button.dataset.serverResolved === "true") {
-    button.disabled = hasDraft;
+    button.disabled = hasDraft && !draftCanResume;
     button.textContent = hasDraft
-      ? "Save answer before resume"
+      ? draftCanResume
+        ? "Save & resume"
+        : "Save answer before resume"
       : (button.dataset.resumeReadyLabel || "Resume stage");
     button.title = hasDraft
-      ? "Save the changed answer and confirm durable readback before resuming."
+      ? draftCanResume
+        ? "Save the resolved answer, confirm durable readback, and resume the stage."
+        : "Save the changed answer and confirm durable readback before resuming."
       : "";
     return;
   }
-  const resolved = (resolution?.value || "resolved") === "resolved";
-  const hasText = Boolean(textarea?.value?.trim());
-  button.disabled = true;
-  button.textContent = resolved && hasText
-    ? "Save answer before resume"
+  const hasText = draftHasText;
+  button.disabled = !draftCanResume;
+  button.textContent = draftCanResume
+    ? "Save & resume"
     : !hasText
       ? "Enter an answer to resume"
       : "Select resolved to resume";
-  button.title = resolved && hasText
-    ? "Save the resolved answer and confirm durable readback before resuming."
+  button.title = draftCanResume
+    ? "Save the resolved answer, confirm durable readback, and resume the stage."
     : !hasText
       ? "Blocking questions need an answer before the stage can resume."
       : "Blocking questions must be saved as resolved before resume.";
@@ -254,6 +262,7 @@ function questionSourcePath(view, question) {
 
 function renderQuestionDecisionContext(view, question) {
   const sourcePath = questionSourcePath(view, question);
+  const unresolved = view?.unresolved_blocking_question_ids || [];
   const evidenceLinks = (question?.answer_evidence_links || []).filter(Boolean);
   const snippets = [
     question?.source_snippet,
@@ -265,7 +274,7 @@ function renderQuestionDecisionContext(view, question) {
     <section class="decision-question-context" data-decision-question-context>
       <div class="decision-workbench-header" hidden aria-hidden="true"></div>
       <div class="decision-question-kicker">
-        <span class="status-marker" data-status="blocked"><span class="status-marker-symbol" aria-hidden="true"></span><span>Decision required</span></span>
+        <span class="status-marker" data-status="blocked"><span class="status-marker-symbol" aria-hidden="true"></span><span>${unresolved.length ? "Answer required questions" : "Decision history"}</span></span>
         <span class="small-badge bad">Blocking question · ${escapeHtml(stageTitle(state.activeStage))}</span>
       </div>
       <div class="decision-provenance-strip" data-decision-provenance>
@@ -377,7 +386,12 @@ function renderQuestionCards({showResume}) {
           && question.answer_resolution === "resolved"
           && !unresolved.has(question.question_id)
           && !draft;
-        const resumeDisabled = resumeNeedsResolved && !serverResolved;
+        const draftCanResume = resumeNeedsResolved
+          && Boolean(draft)
+          && resolutionValue === "resolved"
+          && Boolean(answerText.trim());
+        const resumeReady = serverResolved || draftCanResume;
+        const resumeDisabled = resumeNeedsResolved && !resumeReady;
         const resumeLabel = resumeDisabled
           ? resolutionValue !== "resolved"
             ? "Select resolved to resume"
@@ -386,6 +400,8 @@ function renderQuestionCards({showResume}) {
               : !answerText.trim()
                 ? "Enter an answer to resume"
                 : "Save answer before resume"
+          : draftCanResume
+            ? "Save & resume"
           : `Resume ${stageTitle(state.activeStage)}`;
         const answerLabel = resolutionValue === "resolved"
           ? "Save resolved answer"
@@ -589,9 +605,28 @@ async function previewAnswer(questionId) {
 
 async function answerAndResume(questionId) {
   await fetchDashboard();
-  const view = state.dashboard?.active_stage_view?.questions;
-  const unresolved = view?.unresolved_blocking_question_ids || [];
-  const question = (view?.questions || []).find((item) => item.question_id === questionId);
+  let view = state.dashboard?.active_stage_view?.questions;
+  let unresolved = view?.unresolved_blocking_question_ids || [];
+  let question = (view?.questions || []).find((item) => item.question_id === questionId);
+  const draft = typeof readOperatorDraft === "function"
+    ? questionDraft(questionId)?.value || null
+    : null;
+  const draftCanResume = Boolean(
+    draft
+      && String(draft.text || "").trim()
+      && String(draft.resolution || "resolved").trim() === "resolved"
+  );
+  if (draftCanResume) {
+    const saved = await saveAnswer(questionId);
+    if (!saved) {
+      await renderAll();
+      return false;
+    }
+    await fetchDashboard();
+    view = state.dashboard?.active_stage_view?.questions;
+    unresolved = view?.unresolved_blocking_question_ids || [];
+    question = (view?.questions || []).find((item) => item.question_id === questionId);
+  }
   if (!question || question.answer_resolution !== "resolved" || unresolved.includes(questionId)) {
     await renderAll();
     toast("Save a resolved answer and confirm durable readback before resuming.");

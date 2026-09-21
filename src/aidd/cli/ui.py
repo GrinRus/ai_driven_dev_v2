@@ -2887,6 +2887,23 @@ class OperatorUiService:
             )
         if (
             use_terminal_default
+            and dashboard.next_action.action == "wait-for-stage"
+            and dashboard.next_action.stage
+            and dashboard.next_action.stage != stage
+            and any(item.stage == dashboard.next_action.stage for item in dashboard.stages)
+        ):
+            return resolve_operator_dashboard_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                active_stage=dashboard.next_action.stage,
+                run_id=run_id,
+                project_root=self.project_root,
+                current_configuration_identity=configuration_identity,
+                selected_runner=selected_runner,
+                active_job=False,
+            )
+        if (
+            use_terminal_default
             and dashboard.terminal_handoff is not None
             and stage != "qa"
             and any(item.stage == "qa" for item in dashboard.stages)
