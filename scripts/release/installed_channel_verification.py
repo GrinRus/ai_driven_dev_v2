@@ -204,11 +204,19 @@ def _aidd_path(bin_dir: Path) -> Path:
 
 def _provenance_script() -> str:
     return (
-        "import importlib.metadata as m, json; "
+        "import hashlib, importlib.metadata as m, json; "
+        "from pathlib import Path; "
+        "from urllib.parse import unquote, urlparse; "
         "d=m.distribution('ai-driven-dev-v2'); "
         "raw=d.read_text('direct_url.json'); "
         "payload=json.loads(raw or '{}'); "
-        "print(payload.get('archive_info', {}).get('hash', ''))"
+        "digest=payload.get('archive_info', {}).get('hash', ''); "
+        "url=payload.get('url', ''); "
+        "parsed=urlparse(url); "
+        "source=Path(unquote(parsed.path)) if parsed.scheme == 'file' else None; "
+        "digest=digest or (('sha256='+hashlib.sha256(source.read_bytes()).hexdigest()) "
+        "if source is not None and source.is_file() else ''); "
+        "print(digest)"
     )
 
 
