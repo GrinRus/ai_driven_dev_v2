@@ -1664,9 +1664,7 @@ def test_qa_cross_validation_accepts_work_item_evidence_path(
     _write_qa_upstream_bundle(workspace_root)
     evidence_root = workspace_root / "workitems" / "WI-001" / "evidence"
     evidence_root.mkdir(parents=True, exist_ok=True)
-    (evidence_root / "final-evidence.md").write_text(
-        "# Final Evidence\n", encoding="utf-8"
-    )
+    (evidence_root / "final-evidence.md").write_text("# Final Evidence\n", encoding="utf-8")
     qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
     qa_path.write_text(
         "# QA Report\n\n"
