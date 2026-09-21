@@ -690,7 +690,7 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             'state.recoveryDetail = "logs";',
             "requestCockpitReveal();",
             'version.startsWith("v") ? version : `v${version || "dev"}`',
-            'const path = runtime',
+            "const path = runtime",
             "`/api/runtime-readiness?runtime=${encodeURIComponent(runtime)}`",
             'if (element.textContent === message) element.textContent = "";',
             'button.setAttribute("aria-selected", isActive ? "true" : "false");',
@@ -1301,7 +1301,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'option value="partial"',
             'option value="deferred"',
             "async function answerAndResume(questionId)",
-            'await startStage(state.activeStage, {skipClientReadiness: true});',
+            "await startStage(state.activeStage, {skipClientReadiness: true});",
             "async function resumeAfterAnswers()",
         ),
     )
