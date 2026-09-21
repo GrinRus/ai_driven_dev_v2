@@ -583,6 +583,27 @@ def test_tasklist_contract_and_prompts_require_rich_task_cards() -> None:
     )
 
 
+def test_tasklist_contract_and_prompts_preserve_plan_prerequisite_chains() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        normalized = " ".join(Path(path).read_text(encoding="utf-8").split()).lower()
+        assert "prerequisite" in normalized
+        assert "transitive" in normalized or "reaches" in normalized
+        assert "prose" in normalized
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
+    assert "TL-5: TL-4" in run_prompt
+    assert "TL-5` to depend on the `M4` card" in repair_prompt
+
+
 def test_tasklist_guides_coupled_behavior_and_regression_scope() -> None:
     paths = (
         "contracts/stages/tasklist.md",

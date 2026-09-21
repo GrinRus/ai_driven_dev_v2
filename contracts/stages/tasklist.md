@@ -87,6 +87,12 @@ Optional context documents may improve task decomposition quality, but they must
   section requirement.
 - task ordering must already be executable in dependency order rather than being silently
   reordered; dependencies may reference only earlier task cards.
+- the task dependency graph must preserve every explicit prerequisite in the upstream plan: when
+  plan milestone `M<n>` depends on `M<m>`, the task mapped primarily to `M<n>` must list a task
+  mapped to `M<m>` or reach one transitively through earlier dependencies. For sequential
+  milestones, the normal form is an edge from each milestone card to its immediately preceding
+  milestone card (for example, `TL-5: TL-4`); mentioning the prerequisite only in prose does not
+  satisfy this requirement.
 - when a regression card validates a behavior change and its checks may reveal a required
   production correction, keep the behavior path and regression coverage in one bounded card, or
   make the production correction an explicit earlier dependency-ready card. Never create a
@@ -151,6 +157,7 @@ Validators for `tasklist` should check:
   - dependency references are explicit and resolvable to listed task ids or upstream stage artifacts,
   - dependency graphs reject self-references and cycles,
   - dependency entries reject later tasks even when the resulting graph is otherwise acyclic,
+  - explicit plan prerequisite edges are preserved by direct or transitive task dependency paths,
 - reviewability:
   - each task has a bounded completion surface and at least one concrete verification note,
   - the dedicated `Verification notes` section covers every declared task id, including
