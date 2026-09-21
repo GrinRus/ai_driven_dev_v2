@@ -92,6 +92,10 @@ Use concrete repair actions:
   backticked `In scope` prefix is equal to or beneath a prefix in
   `context/allowed-write-scope.md`; do not edit, broaden, or reinterpret that context document,
   and use a blocking question if the approved plan has no implementable path inside it;
+- verification-only command inputs are not task scope: shell fixture paths such as
+  `/tmp/probe.csv` or `/tmp/probe.db` must never appear in `In scope`, while the authored command
+  stays unchanged in acceptance criteria or `Verification notes`; `In scope` must contain only
+  repository-relative paths that the task may change;
 - hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks so
   every dependency references an earlier card. If an entry has rationale after the machine-readable
   value, keep that rationale after the leading `none` or task ids; milestone/review ids in rationale

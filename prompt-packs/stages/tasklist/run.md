@@ -81,8 +81,11 @@ notes, and a concrete verification signal.
    `In scope` must name at least one backticked repository-relative file or directory prefix.
    Enclose every intended file or directory prefix in backticks; explanatory prose such as
    “helpers it directly uses”, “related tests”, or “supporting files” does not grant scope to
-   those paths during implement. Do not use absolute paths, `..` traversal, or glob syntax. Explanatory prose does not replace
-   concrete path prefixes.
+   those paths during implement. Do not use absolute paths, `..` traversal, or glob syntax.
+   Shell fixture paths used only as verification inputs (for example `/tmp/probe.csv` or
+   `/tmp/probe.db`) are not repository scope: keep them in acceptance criteria or
+   `Verification notes`, never in the `In scope` bullet, even when an authored command uses them.
+   Explanatory prose does not replace concrete path prefixes.
    When `context/allowed-write-scope.md` exists, read it before decomposition and keep every
    task-local prefix equal to or beneath one listed canonical prefix on a component boundary.
    Do not propose an out-of-bound preferred path with an in-scope fallback: choose a permitted

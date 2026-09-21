@@ -63,6 +63,9 @@ Optional context documents may improve task decomposition quality, but they must
     `repository-change` default,
   - at least one safe backticked repository-relative file or directory prefix in every `In scope`
     field; absolute paths, `..` traversal, and glob syntax are invalid,
+  - shell fixture paths used only as verification inputs (for example `/tmp/probe.csv` or
+    `/tmp/probe.db`) belong in acceptance criteria or `Verification notes`, never in `In scope`;
+    `In scope` names only repository-relative paths that the task may change,
   - when `context/allowed-write-scope.md` exists, every task-local `In scope` path must be the
     exact permitted prefix or one of its descendants; a task must not defer this conflict to
     implementation or propose an alternative path outside the authored global boundary,
