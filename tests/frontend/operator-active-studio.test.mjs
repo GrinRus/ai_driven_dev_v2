@@ -77,6 +77,30 @@ test("active Studio preserves Work Item, phase, and status context", async () =>
   assert.doesNotMatch(html, /data-primary-action/);
 });
 
+test("stage document buttons expose the full path when compact labels ellipsize", async () => {
+  const context = await contextFor({
+    work_item: "WI-1",
+    run: {run_id: "run-1"},
+    stages: [{stage: "idea", status: "succeeded"}],
+    recent_artifacts: [{
+      key: "qa_report",
+      label: "qa_report",
+      path: "reports/runs/WI-1/run-1/stages/idea/attempt-0001/qa-report.md",
+      stage: "idea",
+      kind: "document",
+    }],
+  });
+  const html = vm.runInContext("renderActiveStudio()", context);
+  assert.match(
+    html,
+    /aria-label="qa_report: reports\/runs\/WI-1\/run-1\/stages\/idea\/attempt-0001\/qa-report\.md"/,
+  );
+  assert.match(
+    html,
+    /title="reports\/runs\/WI-1\/run-1\/stages\/idea\/attempt-0001\/qa-report\.md"/,
+  );
+});
+
 test("Work Item headers use title and brief while detailed request stays below", async () => {
   const context = await contextFor({
     work_item: "WI-1",

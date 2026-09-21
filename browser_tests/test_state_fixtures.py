@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import sync_playwright
 
-from browser_tests.browser_harness import operator_browser_harness
+from browser_tests.browser_harness import (
+    operator_browser_harness,
+    wait_for_work_item_surface,
+)
 from browser_tests.state_fixtures import BROWSER_FIXTURE_STATES, build_browser_state_fixture
 
 
@@ -23,14 +26,26 @@ def test_provider_free_state_opens_through_public_ui(tmp_path: Path, state: str)
         playwright,
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        response = browser_page.page.goto(harness.url, wait_until="networkidle")
+        # The no-progress fixture intentionally keeps the operator polling for
+        # updates. Waiting for network idle makes only that provider-free route
+        # flaky even when the rendered surface and all requests are healthy.
+        wait_until = "domcontentloaded" if state == "runtime-no-progress" else "networkidle"
+        response = browser_page.page.goto(harness.url, wait_until=wait_until)
         assert response is not None and response.ok
+        if fixture.work_item:
+            wait_for_work_item_surface(browser_page.page, fixture.work_item)
         payload = browser_page.page.evaluate(
             "async (path) => (await fetch(path)).json()",
             fixture.api_path,
         )
         serialized = str(payload).lower().replace("_", "-")
         assert fixture.state_marker in serialized, (state, payload)
+        if state == "runtime-no-progress":
+            browser_page.page.wait_for_function(
+                "needle => document.body.innerText.toLowerCase().includes(needle.toLowerCase())",
+                arg=fixture.primary_action,
+                timeout=30_000,
+            )
         body_text = browser_page.page.locator("body").inner_text()
         assert fixture.primary_action.lower() in body_text.lower(), (state, body_text)
         browser_page.diagnostics.assert_clean()

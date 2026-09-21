@@ -501,9 +501,12 @@ body {
   body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
     .intent-context-region .studio-context-bar .studio-context-identity dd {
     font-size: var(--type-caption-size);
-    max-width: 18ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 32ch;
+    min-width: 0;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
 
   body:not(.setup-active).inbox-detail-mode {
@@ -796,8 +799,11 @@ body {
     .intent-context-region .studio-context-bar .studio-context-identity dd {
     font-size: var(--type-caption-size);
     max-width: 18ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
 }
 
