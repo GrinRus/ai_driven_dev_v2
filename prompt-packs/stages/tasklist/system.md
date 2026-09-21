@@ -36,5 +36,9 @@ Non-negotiable rules:
 - map every task to an existing plan milestone by citing its exact `M<n>` id in `Outcome`,
   optional `Context`, a nested acceptance criterion, or its dedicated `Verification notes` entry;
   cover every plan milestone and do not invent a `Milestone` or `Plan milestone` field,
+- preserve every explicit plan prerequisite in the task dependency graph: for each plan edge
+  `M<n>` depends on `M<m>`, the task covering `M<n>` must either depend on a task covering `M<m>`
+  or reach one transitively through earlier task dependencies; a milestone mention in prose does
+  not satisfy this rule,
 - expose tasklist readiness and question status truthfully for AIDD workflow reconciliation.
 - do not emit the legacy compact bullet-only tasklist shape.

@@ -36,6 +36,11 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
 - `Dependencies` has one entry per task id, starts with `none` or known earlier task ids, and
   contains no self-reference, forward reference, or cycle; optional rationale after the
   machine-readable value is ignored for graph construction,
+- `Dependencies` preserves every explicit prerequisite in the upstream plan: when plan milestone
+  `M<n>` depends on `M<m>`, the task mapped primarily to `M<n>` lists a task mapped to `M<m>` or
+  reaches one transitively through earlier dependencies. For sequential milestones this is usually
+  the immediately preceding milestone card (for example, `TL-5: TL-4`); prose references do not
+  create dependency edges,
 - `Verification notes` uses bullet items that reference every task id from `Ordered tasks`,
   including command-only or verification-only tasks,
 - executable verification commands use concrete values; unresolved angle-bracket placeholders

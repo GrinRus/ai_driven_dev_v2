@@ -99,7 +99,10 @@ Use concrete repair actions:
 - hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks so
   every dependency references an earlier card. If an entry has rationale after the machine-readable
   value, keep that rationale after the leading `none` or task ids; milestone/review ids in rationale
-  are not dependencies;
+  are not dependencies. Also compare the repaired graph with every explicit plan edge: the card
+  covering a dependent milestone must list or transitively reach a card covering each prerequisite
+  milestone (for a sequential plan, repair `TL-5` to depend on the `M4` card, not only on earlier
+  cards such as `TL-3`);
 - missing or unknown plan milestone mapping: cite an exact existing `M<n>` id in the task's
   `Outcome`, optional `Context`, a nested acceptance criterion, or its dedicated
   `Verification notes` entry. Cover every plan milestone. Do not add or preserve an ad hoc
@@ -145,6 +148,7 @@ Use concrete repair actions:
 - no task bundles unrelated outcomes or hides prerequisites,
 - every task uses the complete H3 task-card shape and has well-formed acceptance ids,
 - dependencies are explicit and ordering is executable,
+- every explicit plan prerequisite is preserved by a direct or transitive task dependency path,
 - every task has at least one concrete verification note in the dedicated `Verification notes`
   section,
 - every task-local scope prefix is inside canonical `context/allowed-write-scope.md` when present,

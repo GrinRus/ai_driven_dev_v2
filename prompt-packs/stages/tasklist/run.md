@@ -105,7 +105,12 @@ notes, and a concrete verification signal.
 5. Keep task ordering executable in dependency order, not only grouped by topic.
    Dependencies may reference only earlier task cards. Reject self-dependencies, unknown task ids,
    forward references, and dependency cycles rather than hiding them in prose or expecting AIDD to
-   reorder the cards.
+   reorder the cards. Before publishing `Dependencies`, copy the prerequisite graph from the
+   upstream plan: for every plan edge `M<n> depends on M<m>`, the card whose primary milestone is
+   `M<n>` must list a card whose primary milestone is `M<m>` or an earlier card chain that reaches
+   one. For a sequential plan, this normally means the `M<n>` card depends on the immediately
+   preceding milestone card (for example, `TL-5: TL-4`). A sentence saying that an earlier
+   milestone was considered, or listing unrelated earlier cards, is not a dependency edge.
 6. Add at least one concrete verification note per task (test/check/scenario). The dedicated
    `Verification notes` section must contain a bullet or list item for every task id declared in
    `Ordered tasks`, including command-only or verification-only tasks. Do not rely on checks
@@ -148,7 +153,9 @@ notes, and a concrete verification signal.
    In `Verification notes`, create one entry for each task id from `Ordered tasks`; command-only
    verification tasks still need their own entry even if their task title already names the
    command.
-3. Ensure dependency references are resolvable and avoid hidden prerequisites.
+3. Ensure dependency references are resolvable and avoid hidden prerequisites. Compare the task
+   graph against every explicit plan dependency and repair any missing prerequisite path before
+   treating the tasklist as ready.
 4. Keep task scope bounded; split bundled work into separate ordered tasks.
    Compact bullet-only tasks are invalid; use the complete H3 task-card shape for every id.
 5. Use `context/verification-output.md` as the verification boundary when present; if you need to
