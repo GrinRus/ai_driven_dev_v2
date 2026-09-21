@@ -1906,6 +1906,14 @@
   .studio-inbox .inbox-selected-context {
     order: -1;
   }
+  /* When a different Work Item is selected but the Inbox has an actionable
+   * Needs input item, keep that decision in the initial viewport. The
+   * inspector remains available immediately after the prioritized sections;
+   * no-run/ready states without a blocking decision keep the selected
+   * inspector first so their primary action stays visible. */
+  .studio-inbox[data-inbox-needs-input="true"] .inbox-selected-context {
+    order: 1;
+  }
   .studio-inbox .inbox-filter-bar {
     align-items: stretch;
     flex-direction: column;

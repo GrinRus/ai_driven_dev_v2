@@ -90,6 +90,7 @@ async function fetchDashboard() {
   } else if (
     nextAction === "qa-verdict"
     && state.dashboard?.terminal_handoff
+    && state.dashboard.terminal_handoff.status === "blocked"
     && state.activeTab === "work"
   ) {
     // A terminal run with a non-ready QA report is a decision surface, not a
@@ -120,14 +121,16 @@ async function fetchDashboard() {
     && state.activeTab === "work"
   ) {
     // A blocked terminal handoff is not a completed handoff: keep the
-    // recovery action visible instead of leaving the operator on a read-only
-    // Flow Complete overview with no way to resume the blocked stage.
-    state.activeTab = "recovery";
+    // recovery action visible in the terminal Studio workspace instead of
+    // leaving the operator on a read-only Flow Complete overview. The
+    // workspace renders the same bounded Resume action without changing the
+    // operator's context to a separate recovery document.
+    state.activeTab = "work";
+    state.workDetail = "overview";
     if (state.dashboard.next_action?.stage && STAGES.includes(state.dashboard.next_action.stage)) {
       state.activeStage = state.dashboard.next_action.stage;
       state.activeStageExplicit = true;
     }
-    state.recoveryDetail = "summary";
     requestCockpitReveal();
   } else if (
     state.activeTab === "work"

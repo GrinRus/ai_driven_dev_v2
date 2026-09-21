@@ -1098,7 +1098,40 @@ test("non-ready terminal QA opens the QA verdict decision surface", async () => 
   assert.equal(vm.runInContext("state.activeStageExplicit", context), true);
 });
 
-test("blocked terminal QA keeps Resume stage visible in recovery", async () => {
+test("warning terminal QA keeps Flow Complete available for follow-up", async () => {
+  const {context} = domContext();
+  context.fetch = async () => response({
+    app_version: "test",
+    active_job: null,
+    dashboard: {
+      work_item: "WI-UI",
+      active_stage: "qa",
+      active_stage_view: null,
+      run: {run_id: "run-ui"},
+      stages: [{stage: "qa", status: "succeeded"}],
+      next_action: {
+        action: "qa-verdict",
+        label: "Resolve QA verdict",
+        stage: "qa",
+        enabled: true
+      },
+      terminal_handoff: {
+        status: "completed-with-warning",
+        final_qa_status: "ready-with-risks",
+        recommended_outcome: "start-follow-up-flow"
+      }
+    }
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+
+  await vm.runInContext("fetchDashboard()", context);
+
+  assert.equal(vm.runInContext("state.activeTab", context), "work");
+  assert.equal(vm.runInContext("state.workDetail", context), "overview");
+});
+
+test("blocked terminal QA keeps Resume stage visible in the terminal workspace", async () => {
   const {context} = domContext();
   context.fetch = async () => response({
     app_version: "test",
@@ -1124,8 +1157,8 @@ test("blocked terminal QA keeps Resume stage visible in recovery", async () => {
 
   await vm.runInContext("fetchDashboard()", context);
 
-  assert.equal(vm.runInContext("state.activeTab", context), "recovery");
-  assert.equal(vm.runInContext("state.recoveryDetail", context), "summary");
+  assert.equal(vm.runInContext("state.activeTab", context), "work");
+  assert.equal(vm.runInContext("state.workDetail", context), "overview");
   assert.equal(vm.runInContext("state.activeStage", context), "qa");
   assert.equal(vm.runInContext("state.activeStageExplicit", context), true);
 });
