@@ -7,8 +7,22 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- The development tree now targets `0.1.0a24.dev0` after the accepted `v0.1.0a23`
-  prerelease publication.
+- No changes yet.
+
+## 0.1.0a24 - 2026-09-22
+
+- Improve Operator UI recovery and active-workspace context so question answers, resume actions,
+  runtime readiness, long identities, and terminal recovery remain visible and scoped to the
+  selected work item.
+- Strengthen task-list and evidence contracts: preserve plan prerequisite chains, separate
+  verification inputs from edit scope, reject unresolved command placeholders, and retain exact
+  QA evidence paths through cross-document validation.
+- Harden command and task evidence parsing for chained dependencies, bound commands, no-op markers,
+  repository-prefixed paths, and retained implementation/QA artifacts.
+- Add regression coverage across the CLI, core task/evidence models, validators, frontend state,
+  responsive browser journeys, and packaged UI acceptance.
+- Keep the alpha release gates provider-neutral and separate local manual live E2E from CI and
+  package publication.
 
 ## 0.1.0a23 - 2026-09-20
 

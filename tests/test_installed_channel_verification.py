@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
@@ -128,3 +129,22 @@ def test_failed_channel_is_reported_not_accepted_and_tampering_is_rejected(tmp_p
     output.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ChannelVerificationError, match="success"):
         read_installed_channel_verification(output, manifest_path=manifest_path)
+
+
+def test_rich_doctor_table_version_is_accepted(tmp_path: Path) -> None:
+    wheel, manifest, manifest_path = _candidate(tmp_path)
+    executions = tuple(
+        replace(
+            execution,
+            doctor_output=(
+                "AIDD doctor\n"
+                "│ Version                               │ "
+                f"{manifest.project_version}                             │"
+            ),
+        )
+        for execution in _executions(manifest, wheel)
+    )
+
+    record = build_installed_channel_verification(manifest_path, wheel, executions)
+
+    assert record.success is True

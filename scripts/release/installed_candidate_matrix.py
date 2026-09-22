@@ -137,10 +137,11 @@ def _validate_git_object(value: str, *, label: str) -> str:
 
 def _extract_bundle_path(output: str) -> str:
     marker = "Evidence bundle:"
-    for line in output.splitlines():
-        if line.startswith(marker):
-            return line.removeprefix(marker).strip()
-    return ""
+    marker_index = output.find(marker)
+    if marker_index < 0:
+        return ""
+    continuation = output[marker_index + len(marker) :].splitlines()
+    return "".join(line.strip() for line in continuation if line.strip())
 
 
 def _python_in_venv(venv_root: Path) -> Path:

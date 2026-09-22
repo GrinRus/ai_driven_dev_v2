@@ -195,18 +195,28 @@ def _python_path(root: Path) -> Path:
     return path
 
 
-def _aidd_path(root: Path) -> Path:
-    path = root / ("Scripts/aidd.exe" if os.name == "nt" else "bin/aidd")
+def _aidd_path(bin_dir: Path) -> Path:
+    """Return the launcher path in a tool channel's configured bin directory."""
+
+    path = bin_dir / ("aidd.exe" if os.name == "nt" else "aidd")
     return path
 
 
 def _provenance_script() -> str:
     return (
-        "import importlib.metadata as m, json; "
+        "import hashlib, importlib.metadata as m, json; "
+        "from pathlib import Path; "
+        "from urllib.parse import unquote, urlparse; "
         "d=m.distribution('ai-driven-dev-v2'); "
         "raw=d.read_text('direct_url.json'); "
         "payload=json.loads(raw or '{}'); "
-        "print(payload.get('archive_info', {}).get('hash', ''))"
+        "digest=payload.get('archive_info', {}).get('hash', ''); "
+        "url=payload.get('url', ''); "
+        "parsed=urlparse(url); "
+        "source=Path(unquote(parsed.path)) if parsed.scheme == 'file' else None; "
+        "digest=digest or (('sha256='+hashlib.sha256(source.read_bytes()).hexdigest()) "
+        "if source is not None and source.is_file() else ''); "
+        "print(digest)"
     )
 
 
@@ -319,6 +329,10 @@ def _execution_success(
     project_version: str,
     wheel_sha256: str,
 ) -> bool:
+    doctor_reports_version = any(
+        "Version" in line and project_version in line
+        for line in execution.doctor_output.splitlines()
+    )
     return (
         execution.channel in CHANNELS
         and execution.phase in PHASES
@@ -327,7 +341,7 @@ def _execution_success(
         and execution.doctor_return_code == 0
         and execution.provenance_return_code == 0
         and execution.version_output.splitlines() == [f"aidd {project_version}"]
-        and f"Version {project_version}" in execution.doctor_output.splitlines()
+        and doctor_reports_version
         and execution.provenance_output == f"sha256={wheel_sha256}"
     )
 
