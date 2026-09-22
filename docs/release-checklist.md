@@ -255,19 +255,18 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a24`.
-Latest accepted published prerelease evidence: `0.1.0a23`.
-That accepted release is the prior version before this candidate.
-The accepted `v0.1.0a24` evidence log entry will be added after publication and verification.
+Maintainer source development package version: `0.1.0a25.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a24`.
+No current release candidate is accepted from this development version.
 
 Future beta readiness is not implied by alpha package publication. Beta claims require the
 provider, browser, onboarding, project-set, provenance, approval, and install evidence defined
 in `docs/product/user-stories.md`.
 
-README install instructions resolve the latest published package from PyPI. The release branch
-carries `0.1.0a24`; `main` returns to a `.dev0` version in the post-release follow-up. Keep only
-the latest accepted package evidence below; previous release notes and verification records remain
-in Git history and GitHub Releases.
+README install instructions resolve the latest published package from PyPI. The accepted release
+is `v0.1.0a24`; the `main` branch now targets `0.1.0a25.dev0` and is not a published release.
+Keep only the latest accepted package evidence below; previous release notes and verification
+records remain in Git history and GitHub Releases.
 
 A beta-oriented claim requires fresh evidence for the exact candidate.
 
@@ -312,6 +311,26 @@ Beta-oriented release note criteria:
 - [ ] Announce release with links to package and notes.
 
 ## Latest accepted release evidence
+
+### `v0.1.0a24` accepted evidence on 2026-09-22
+
+- Tag: `v0.1.0a24`
+- Release branch: `release/v0.1.0a24`
+- Commit: `95e457e6f30c8f03c163e00174849ce88ce44ffe`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a24`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/35671164113`
+- Result: accepted published prerelease and package-channel evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: the release tag matched `project.version` `0.1.0a24`, and the tag commit
+  matched the remote `release/v0.1.0a24` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a24/`.
+- Independent local `pipx` verification used an isolated pipx environment with the `pip`
+  backend; the installed `aidd` binary returned `aidd 0.1.0a24` and `aidd doctor` completed
+  successfully.
+- Independent local `uv tool` verification installed `ai-driven-dev-v2==0.1.0a24`; the installed
+  `aidd` binary returned `aidd 0.1.0a24` and `aidd doctor` completed successfully.
+- No Docker/GHCR artifact was published.
 
 ### `v0.1.0a23` accepted evidence on 2026-09-20
 

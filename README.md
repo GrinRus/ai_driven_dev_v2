@@ -46,7 +46,7 @@ AIDD is prerelease alpha software. See [PyPI](https://pypi.org/project/ai-driven
 for the latest published package and the
 [changelog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/CHANGELOG.md) for release
 history. The latest accepted prerelease is
-[v0.1.0a23](https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a23); the `main`
+[v0.1.0a24](https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a24); the `main`
 branch may contain unreleased changes.
 
 > **Warning:** AIDD is intended for local evaluation and controlled operator trials. It is not
