@@ -1,8 +1,8 @@
 # Release Notes: v0.1.0a24
 
-Status: draft, not tagged or published.
+Status: published and verified on 2026-09-22.
 
-Current release-candidate package version: `0.1.0a24`.
+Published package version: `0.1.0a24`.
 Latest accepted published prerelease before this candidate: `v0.1.0a23`.
 
 ## Summary
@@ -37,11 +37,18 @@ validation hardening, and deterministic release-quality coverage.
 - Runtime binaries, authentication, and provider access remain external operator prerequisites.
 - Docker/GHCR is not a supported alpha distribution channel.
 
-## Publication checklist
+## Publication evidence
 
 - Release branch: `release/v0.1.0a24`.
-- Publish only through the GitHub Release `published` event after deterministic release-branch
-  checks pass.
-- Accept the release only after PyPI, `pipx`, and `uv tool` verification jobs pass.
-- Replace this draft status with observed publication and install-verification results after the
-  release workflow reaches a terminal state.
+- Tag: `v0.1.0a24` at commit `95e457e6f30c8f03c163e00174849ce88ce44ffe`.
+- GitHub Release: https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a24
+- Release workflow: https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/35671164113
+- Result: published prerelease and package-channel evidence accepted.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- PyPI: https://pypi.org/project/ai-driven-dev-v2/0.1.0a24/
+- Independent isolated `pipx` install returned `aidd 0.1.0a24`; `aidd doctor` completed
+  successfully.
+- Independent isolated `uv tool` install returned `aidd 0.1.0a24`; `aidd doctor` completed
+  successfully.
+- No Docker/GHCR artifact was published.
