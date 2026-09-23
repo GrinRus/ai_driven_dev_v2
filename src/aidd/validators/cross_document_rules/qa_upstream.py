@@ -19,8 +19,8 @@ from aidd.validators.semantic_rules.common import (
     is_risk_metadata_entry,
 )
 from aidd.validators.semantic_rules.evidence import (
-    IMPLEMENT_RESULT_PATTERN,
     has_implementation_command_evidence,
+    has_implementation_result_evidence,
 )
 
 QA_REVIEW_RISK_CODE = "CROSS-QA-REVIEW-RISK"
@@ -123,7 +123,7 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
             return False
         return (
             has_implementation_command_evidence(text)
-            and IMPLEMENT_RESULT_PATTERN.search(text) is not None
+            and has_implementation_result_evidence(text)
         )
 
     evidence_sections_by_heading = {

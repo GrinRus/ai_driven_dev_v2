@@ -293,8 +293,8 @@ from aidd.runtime_logs.events import persist_lifecycle_projection_from_jsonl
 from aidd.validators.semantic_rules.blocks import extract_implementation_verification_blocks
 from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
-    IMPLEMENT_RESULT_PATTERN,
     has_implementation_command_evidence,
+    has_implementation_result_evidence,
     is_deferred_implementation_verification,
 )
 
@@ -5704,7 +5704,7 @@ def _implementation_verification_evidence_shape(report_text: str) -> dict[str, o
     backed_items = []
     outcome_claims = []
     for item in verification_items:
-        has_result_reference = IMPLEMENT_RESULT_PATTERN.search(item) is not None
+        has_result_reference = has_implementation_result_evidence(item)
         has_command_reference = has_implementation_command_evidence(item)
         has_artifact_reference = IMPLEMENT_ARTIFACT_REFERENCE_PATTERN.search(item) is not None
         is_deferred = is_deferred_implementation_verification(item)

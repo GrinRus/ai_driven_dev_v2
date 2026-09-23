@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.core.workspace import stage_root as workspace_stage_root
+from aidd.validators.semantic_rules.evidence import (
+    has_implementation_command_evidence,
+    has_implementation_result_evidence,
+    is_deferred_implementation_verification,
+)
 
 _MAX_REPORT_BYTES = 256 * 1024
 _BACKTICK_PATH_PATTERN = re.compile(r"`([^`\n]+\.[A-Za-z0-9][^`]*)`")
@@ -24,6 +29,8 @@ class ImplementationEvidenceView:
     selected_task_id: str | None
     touched_files: tuple[str, ...]
     verification_commands: tuple[str, ...]
+    verification_results: tuple[dict[str, str], ...]
+    verification_status: str
     skipped_checks: tuple[str, ...]
     residual_risks: tuple[str, ...]
     warnings: tuple[str, ...]
@@ -145,15 +152,78 @@ def _extract_selected_task_id(text: str) -> str | None:
     return None
 
 
-def _extract_commandish_items(lines: tuple[str, ...]) -> tuple[str, ...]:
-    commands: list[str] = []
+def _verification_result(line: str) -> dict[str, str] | None:
+    normalized = _normalize_line(line)
+    if not normalized:
+        return None
+    # Keep the command and observed outcome on the same verification item.
+    # An outcome-only line such as "Outcome: 12 passed -> pass" must not
+    # become a fake executable command in the operator's evidence ledger.
+    if not has_implementation_command_evidence(normalized):
+        return None
+    outcome = "missing"
+    matched = re.search(
+        r"(?:->|=>)\s*(?P<outcome>pass(?:ed)?|success(?:ful)?|ok|fail(?:ed|ure)?|error|"
+        r"not[- ]run|skipped|deferred|exit\s+[0-9]+)\b",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if matched:
+        value = matched.group("outcome").lower().replace(" ", "-")
+        if value in {"pass", "passed", "success", "successful", "ok", "exit-0"}:
+            outcome = "pass"
+        elif value in {"not-run", "skipped", "deferred"}:
+            outcome = "not-run"
+        elif value.startswith("exit-"):
+            outcome = "pass" if value == "exit-0" else "fail"
+        else:
+            outcome = "fail"
+    else:
+        exit_code = re.search(
+            r"\bexit(?:\s+code)?\s*(?:[:=]\s*)?(?P<code>[0-9]+)\b",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        if exit_code:
+            outcome = "pass" if exit_code.group("code") == "0" else "fail"
+        elif is_deferred_implementation_verification(normalized):
+            outcome = "not-run"
+        elif has_implementation_result_evidence(normalized):
+            outcome = "fail" if re.search(
+                r"\b(?:fail(?:ed|ure)?|error)\b|\bexit(?:\s+code)?\s*[1-9]\b",
+                normalized,
+                flags=re.IGNORECASE,
+            ) else "pass"
+    return {"command": normalized, "status": outcome}
+
+
+def _verification_results(lines: tuple[str, ...]) -> tuple[dict[str, str], ...]:
+    results: list[dict[str, str]] = []
     for line in lines:
-        normalized = _normalize_line(line)
-        if not normalized:
+        result = _verification_result(line)
+        if result is not None:
+            results.append(result)
             continue
-        if "`" in normalized or "->" in normalized or "exit 0" in normalized.lower():
-            commands.append(normalized)
-    return _unique(commands)
+        normalized = _normalize_line(line)
+        # Keep an outcome-only claim in the evidence ledger as an explicit
+        # unverifiable item.  Otherwise a valid command next to a prose claim
+        # such as "the full suite passed" could incorrectly become verified.
+        if normalized and has_implementation_result_evidence(normalized):
+            results.append({"command": normalized, "status": "unverifiable", "kind": "claim"})
+    return tuple(results)
+
+
+def _verification_status(results: tuple[dict[str, str], ...]) -> str:
+    statuses = {result["status"] for result in results}
+    if not statuses:
+        return "missing"
+    if statuses == {"pass"}:
+        return "verified"
+    if "fail" in statuses:
+        return "failed"
+    if "not-run" in statuses:
+        return "not-run"
+    return "unverifiable"
 
 
 def parse_implementation_report_text(
@@ -188,15 +258,27 @@ def parse_implementation_report_text(
         for line in verification_section
         if re.search(r"\b(skipped|not[- ]run|deferred)\b", line, flags=re.IGNORECASE)
     ]
-    verification_commands = _extract_commandish_items(verification_section)
+    verification_results = _verification_results(verification_section)
+    verification_commands = tuple(
+        result["command"]
+        for result in verification_results
+        if result.get("kind") != "claim"
+    )
+    verification_status = _verification_status(verification_results)
     if not verification_commands:
         local_warnings.append(
             "No executable verification commands were detected in implementation-report.md."
+        )
+    elif verification_status != "verified":
+        local_warnings.append(
+            "Verification evidence contains a non-passing or unverifiable outcome."
         )
     return ImplementationEvidenceView(
         selected_task_id=_extract_selected_task_id(text),
         touched_files=touched_files,
         verification_commands=verification_commands,
+        verification_results=verification_results,
+        verification_status=verification_status,
         skipped_checks=_unique(skipped),
         residual_risks=_extract_list_items(risk_section),
         warnings=tuple(local_warnings),

@@ -129,6 +129,8 @@ class StageInteractOptions:
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
     cancel_requested: Callable[[], bool] | None = None
     prepared_interaction: PreparedStageInteraction | None = None
+    model_override: str | None = None
+    reasoning_effort_override: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +150,8 @@ class StageRepairExtensionOptions:
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
     runtime_operator_decision_provider: RuntimeOperatorDecisionProvider | None = None
     cancel_requested: Callable[[], bool] | None = None
+    model_override: str | None = None
+    reasoning_effort_override: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -996,6 +1000,8 @@ def run_stage_repair_extension_command(options: StageRepairExtensionOptions) -> 
         runtime_chunk_sink=options.runtime_chunk_sink,
         runtime_operator_decision_provider=options.runtime_operator_decision_provider,
         cancel_requested=options.cancel_requested,
+        model_override=options.model_override,
+        reasoning_effort_override=options.reasoning_effort_override,
     )
     _validate_stage_run_options(stage_options)
     if not options.run_id.strip():
@@ -1210,6 +1216,8 @@ def prepare_stage_interaction(options: StageInteractOptions) -> PreparedStageInt
         log_follow=options.log_follow,
         runtime_chunk_sink=options.runtime_chunk_sink,
         cancel_requested=options.cancel_requested,
+        model_override=options.model_override,
+        reasoning_effort_override=options.reasoning_effort_override,
     )
     _validate_stage_run_options(stage_run_options)
     request_text = _operator_request_text(options)
@@ -1290,6 +1298,8 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
         log_follow=options.log_follow,
         runtime_chunk_sink=options.runtime_chunk_sink,
         cancel_requested=options.cancel_requested,
+        model_override=options.model_override,
+        reasoning_effort_override=options.reasoning_effort_override,
     )
     _validate_stage_run_options(stage_run_options)
     runtime_config = _resolve_stage_run_config(stage_run_options)
@@ -1329,6 +1339,8 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
                 log_follow=options.log_follow,
                 intervention_request_path=operator_request.request_path,
                 stage_runner=run_stage_attempt_command,
+                model_override=options.model_override,
+                reasoning_effort_override=options.reasoning_effort_override,
             )
         except ValueError as exc:
             console.print(f"Error: {exc}")

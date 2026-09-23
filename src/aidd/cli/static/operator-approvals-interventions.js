@@ -182,6 +182,9 @@ function renderLatestRequestSummary(context) {
 }
 
 async function renderRequestChange() {
+  const requestGeneration = state.requestChangeRequestGeneration = (Number(state.requestChangeRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   let documents = {};
   const context = activeStageView()?.diagnostics?.request_change || {};
   const item = activeStageItem();
@@ -190,11 +193,26 @@ async function renderRequestChange() {
       const params = new URLSearchParams({stage: state.activeStage});
       if (state.activeRunId) params.set("run_id", state.activeRunId);
       const artifacts = await api(`/api/artifacts?${params.toString()}`);
+      if (
+        requestGeneration !== state.requestChangeRequestGeneration
+        || requestedRunId !== state.activeRunId
+        || requestedStage !== state.activeStage
+      ) return;
       documents = artifacts.documents || {};
     } catch (error) {
+      if (
+        requestGeneration !== state.requestChangeRequestGeneration
+        || requestedRunId !== state.activeRunId
+        || requestedStage !== state.activeStage
+      ) return;
       documents = {};
     }
   }
+  if (
+    requestGeneration !== state.requestChangeRequestGeneration
+    || requestedRunId !== state.activeRunId
+    || requestedStage !== state.activeStage
+  ) return;
   const targets = requestChangeTargetEntries(documents, context);
   const restoredDraft = typeof operatorPurposeDraftValue === "function"
     ? operatorPurposeDraftValue("intervention", interventionDraft()?.value || {})
@@ -597,6 +615,10 @@ function renderApprovalsSurface({view, diagnostics, requests, decisions, pending
 }
 
 async function renderApprovals() {
+  const requestGeneration = state.approvalsRequestGeneration = (Number(state.approvalsRequestGeneration) || 0) + 1;
+  const requestedJobId = state.activeJobId;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   const content = document.getElementById("intentContent");
   const diagnostics = activeStageView()?.diagnostics?.approvals || null;
   if (!state.activeJobId) {
@@ -612,6 +634,12 @@ async function renderApprovals() {
   }
   try {
     const view = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests`);
+    if (
+      requestGeneration !== state.approvalsRequestGeneration
+      || requestedJobId !== state.activeJobId
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     const requests = view.requests || [];
     const decisions = view.decisions || [];
     const pendingIds = new Set(view.pending_request_ids || []);
@@ -619,6 +647,12 @@ async function renderApprovals() {
     content.innerHTML = renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds});
     restoreApprovalSessionConfirmation(view);
   } catch (error) {
+    if (
+      requestGeneration !== state.approvalsRequestGeneration
+      || requestedJobId !== state.activeJobId
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
@@ -892,7 +926,8 @@ async function submitIntervention() {
     runtime: descriptor.runtime,
     request: descriptor.request,
     target_documents: descriptor.targetDocuments,
-    log_follow: true
+    log_follow: true,
+    ...(typeof runtimeSelectorPayload === "function" ? runtimeSelectorPayload() : {})
   };
   if (descriptor.runId) payload.run_id = descriptor.runId;
   const key = interventionMutationKey(descriptor);

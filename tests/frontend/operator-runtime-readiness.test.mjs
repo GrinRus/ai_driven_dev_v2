@@ -177,6 +177,33 @@ test("eligible readiness keeps one contextual Runner control focused on the cano
   assert.equal((html.match(/data-open-runner/g) || []).length, 1);
 });
 
+test("implementation recovery exposes capability-gated model and reasoning controls", async () => {
+  const context = await readinessContext();
+  context.state.selectedRuntime = "codex";
+  context.state.runtimeModel = "gpt-5.6-luna";
+  context.state.runtimeReasoningEffort = "xhigh";
+  context.state.readiness = {
+    runtimes: [{
+      runtime_id: "codex",
+      eligible: true,
+      configured_model: "gpt-5.6-luna",
+      configured_reasoning_effort: "high",
+      capabilities: {supported_selectors: ["model", "reasoning_effort"]},
+    }],
+  };
+  const html = vm.runInContext(
+    "renderContextualRunnerControl({actionLabel: 'task resume', inspector: true})",
+    context,
+  );
+  assert.match(html, /data-runner-selector-overrides/);
+  assert.match(html, /data-runtime-inline-model/);
+  assert.match(html, /value="gpt-5\.6-luna"/);
+  assert.match(html, /data-runtime-inline-reasoning-effort/);
+  assert.match(html, /value="xhigh"/);
+  assert.match(html, /data-refresh-runtime-readiness/);
+  assert.doesNotMatch(html, /data-runtime-inline-model[^>]*disabled/);
+});
+
 test("operator shell exposes model and reasoning-effort controls and forwards them", async () => {
   const [index, actions] = await Promise.all([
     readFile(indexPath, "utf8"),

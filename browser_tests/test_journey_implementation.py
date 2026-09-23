@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import Page, Route, sync_playwright
 
 from browser_tests.browser_harness import (
     VIEWPORTS,
@@ -69,7 +69,14 @@ def test_implementation_recovery_preserves_success_and_repository_evidence(
                 assert completed.get_attribute("data-task-status") == "succeeded"
                 assert completed.get_by_role("button", name="Resume").count() == 0
                 assert failed.get_attribute("data-task-status") == "failed"
+                assert failed.get_by_role("button", name="Resume").is_visible()
                 assert failed.get_by_role("button", name="Resume").is_enabled()
+                assert page.locator("[data-runner-selector-overrides]").count() == 1
+                assert page.locator("#runtimeSettings .runtime-selector-field").all()[0].is_hidden()
+                assert page.locator("#runtimeSettings .runtime-selector-field").all()[1].is_hidden()
+                resume_box = failed.get_by_role("button", name="Resume").bounding_box()
+                assert resume_box is not None
+                assert resume_box["y"] < viewport[1]
                 assert page.locator("[data-implementation-review-blocker]").count() == 1
 
                 repository = page.locator(
@@ -81,6 +88,41 @@ def test_implementation_recovery_preserves_success_and_repository_evidence(
                 assert "Allowed scope: inside" in repository.inner_text()
                 assert "core-owned .aidd/ evidence" in repository.inner_text()
                 assert repository.get_by_role("button", name="Proceed to review").is_disabled()
+                for disabled_primary in page.locator("[data-aidd-primary-action]:disabled").all():
+                    assert disabled_primary.evaluate(
+                        "node => getComputedStyle(node).position"
+                    ) != "fixed"
+                if viewport == (1280, 900):
+                    def _task_run(route: Route) -> None:
+                        route.fulfill(
+                            status=202,
+                            json={"job_id": "browser-task-recovery"},
+                        )
+
+                    def _job_logs(route: Route) -> None:
+                        route.fulfill(json={"cursor": 0, "chunks": [], "truncated": False})
+
+                    def _job_status(route: Route) -> None:
+                        route.fulfill(
+                            json={
+                                "job_id": "browser-task-recovery",
+                                "kind": "task-run",
+                                "stage": "implement",
+                                "status": "completed",
+                                "message": "browser recovery assertion",
+                            }
+                        )
+
+                    page.route("**/api/tasks/run", _task_run)
+                    page.route("**/api/jobs/browser-task-recovery/logs*", _job_logs)
+                    page.route("**/api/jobs/browser-task-recovery", _job_status)
+                    with page.expect_request("**/api/tasks/run") as task_request:
+                        failed.get_by_role("button", name="Resume", exact=True).click()
+                    assert task_request.value.post_data_json == {
+                        "task_id": "TL-2",
+                        "run_id": fixture.run_id,
+                        "runtime": "generic-cli",
+                    }
                 _assert_gate(page, viewport)
                 browser_page.diagnostics.assert_clean()
 

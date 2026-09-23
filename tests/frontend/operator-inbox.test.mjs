@@ -244,6 +244,22 @@ test("disabled service eligibility does not disable read-only context navigation
   assert.doesNotMatch(html, /\sdisabled(?:\s|>)/);
 });
 
+test("disabled Inbox mutations are visibly disabled instead of silently no-oping", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`renderStudioInboxItem({
+    item_id: "blocked", state: "ready", status_label: "Blocked",
+    title: "Run stage", summary: "Runner readiness is unavailable",
+    route: {intent: "inbox-work-item", work_item: "WI-2", run_id: "run-2", stage: "implement"},
+    primary_action: {
+      action: "run-stage", label: "Run implement", enabled: false,
+      detail: "Selected Runner is not ready for stage execution."
+    }
+  })`, context);
+  assert.match(html, /data-service-action-enabled="false"/);
+  assert.match(html, /disabled aria-disabled="true"/);
+  assert.match(html, /Selected Runner is not ready for stage execution\./);
+});
+
 test("Running-now identity gaps stay visible and cannot navigate", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`
@@ -272,6 +288,10 @@ test("Inbox route activation resumes server context before browser navigation", 
   assert.match(main, /activateInboxWorkItemRoute\(context\)/);
   assert.match(main, /async function activateInboxAction\(context, action\)/);
   assert.match(main, /await activateInboxAction\(context, action\)/);
+  assert.match(main, /safeInboxNavigation/);
+  assert.match(main, /"choose-runtime"/);
+  assert.match(main, /"wait-for-stage"/);
+  assert.match(main, /"open-terminal-handoff"/);
   assert.match(main, /serviceActionEnabled === "false"/);
 });
 

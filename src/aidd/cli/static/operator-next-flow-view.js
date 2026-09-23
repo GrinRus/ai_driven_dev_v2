@@ -26,6 +26,13 @@ function nextFlowButtonLabel(action) {
   return action.label;
 }
 
+function nextFlowDisabledAttributes(enabled, reason = "This action is not currently eligible.") {
+  if (enabled) return "";
+  const detail = String(reason || "This action is not currently eligible.").trim()
+    || "This action is not currently eligible.";
+  return `disabled aria-disabled="true" title="${escapeHtml(detail)}"`;
+}
+
 function separateScopeHandoffMessage(handoff) {
   if (!terminalHandoffNeedsRecovery(handoff)) {
     return "Create unrelated work from the target project root with a new request. Use Follow-up or Clone when the source run should be inherited.";
@@ -223,7 +230,7 @@ function rememberStudioFlowCompleteDisclosure(details) {
 
 function renderStudioFlowCompleteAction(action, {primary = false} = {}) {
   return `
-    <button data-next-flow-action="${escapeHtml(action.action)}"${primary ? " data-primary-action" : ""} type="button" class="${primary ? "primary" : "secondary"}" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>
+    <button data-next-flow-action="${escapeHtml(action.action)}"${primary ? " data-primary-action" : ""} type="button" class="${primary ? "primary" : "secondary"}" ${nextFlowDisabledAttributes(action.enabled !== false, action.disabled_reason || action.detail)}>
       ${escapeHtml(action.label || nextFlowButtonLabel(action))}
     </button>
   `;
@@ -672,8 +679,8 @@ function renderSourceSelectionSummary(payload, selectedCount) {
         ${noSelection ? '<span class="small-badge warn">select at least one</span>' : ""}
       </div>
       <div class="source-selection-actions">
-        <button data-source-selection-mode="recommended" type="button" class="secondary" ${recommendedCount ? "" : "disabled"}>Select recommended</button>
-        <button data-source-selection-mode="clear" type="button" class="secondary" ${selectedCount ? "" : "disabled"}>Clear selection</button>
+        <button data-source-selection-mode="recommended" type="button" class="secondary" ${nextFlowDisabledAttributes(Boolean(recommendedCount), "No recommended source findings are available.")}>Select recommended</button>
+        <button data-source-selection-mode="clear" type="button" class="secondary" ${nextFlowDisabledAttributes(Boolean(selectedCount), "No source findings are selected.")}>Clear selection</button>
       </div>
     </div>
   `;
@@ -724,7 +731,7 @@ function renderNextFlowSourceSelection() {
       ${selectedCount ? "" : '<div class="truncation-notice"><strong>Selection required</strong><span>Choose at least one source finding before defining the follow-up Work Item.</span></div>'}
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
-        <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue to Define Work Item</button>
+        <button data-next-flow-continue type="button" ${nextFlowDisabledAttributes(Boolean(selectedCount), "Select at least one source finding before continuing.")}>Continue to Define Work Item</button>
       </div>
     `
   });
@@ -982,10 +989,13 @@ function renderCloneLaunchSafetySummary(wizard) {
 }
 
 function renderLaunchConfirmationActions({backPrimary, backLabel, launchLabel, blocked, launchBusy}) {
+  const launchDisabledReason = launchBusy
+    ? "Launch is already in progress."
+    : "Resolve the launch preflight blockers before retrying.";
   return `
     <div class="wizard-actions">
       <button data-next-flow-back-to-definition type="button" class="${backPrimary ? "" : "secondary"}">${escapeHtml(backLabel)}</button>
-      <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${blocked || launchBusy ? "disabled" : ""}>${escapeHtml(launchLabel)}</button>
+      <button data-launch-flow-now type="button" class="${backPrimary ? "secondary" : ""}" ${nextFlowDisabledAttributes(!(blocked || launchBusy), launchDisabledReason)}>${escapeHtml(launchLabel)}</button>
     </div>
   `;
 }
@@ -1244,7 +1254,7 @@ function renderGlobalLiveProgress(job) {
       </div>
       <div class="live-progress-actions">
         <button data-tab-shortcut="logs" type="button" class="secondary">Open live logs</button>
-        <button data-cancel-job="${escapeHtml(job.job_id || state.activeJobId || "")}" type="button" class="danger" ${activeJobIsTerminal() ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
+        <button data-cancel-job="${escapeHtml(job.job_id || state.activeJobId || "")}" type="button" class="danger" ${nextFlowDisabledAttributes(!activeJobIsTerminal(), "This job has already reached a terminal state.")}>${escapeHtml(activeJobCancelLabel())}</button>
       </div>
       ${renderActiveJobProgressNotice(job)}
     </div>
@@ -1487,6 +1497,10 @@ function renderNextActionPanel() {
     || (!(action.enabled || noRunWithRuntime) && !choosingRuntime)
     || runtimeBlocked;
   const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
+  const disabledReason = activeJobState?.detail
+    || blockerMessage
+    || action.detail
+    || "The server has not published an eligible next action.";
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : choosingRuntime
@@ -1527,7 +1541,7 @@ function renderNextActionPanel() {
     ${renderValidationFindingSummary(finding, {compact: true})}
     <div class="next-action-button-stack">
       ${runtimeNeeded && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label}) : ""}
-      <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+      <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${nextFlowDisabledAttributes(!disabled, disabledReason)}>${escapeHtml(label)}</button>
       ${renderNextActionBlocker(blockerMessage)}
     </div>
   `;
@@ -1570,6 +1584,10 @@ function renderGlobalNextActionStrip() {
     || (!(action.enabled || noRunWithRuntime) && !choosingRuntime)
     || runtimeBlocked;
   const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
+  const disabledReason = activeJobState?.detail
+    || blockerMessage
+    || action.detail
+    || "The server has not published an eligible next action.";
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
     : choosingRuntime
@@ -1638,7 +1656,7 @@ function renderGlobalNextActionStrip() {
       </div>
       <div class="next-action-button-stack">
         ${showRunner && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label, inspector: launchOverview}) : ""}
-        <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${disabled ? "disabled" : ""}${launchGuidance ? ' aria-describedby="launch-runtime-guidance"' : ""}>${escapeHtml(label)}</button>
+        <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${nextFlowDisabledAttributes(!disabled, disabledReason)}${launchGuidance ? ' aria-describedby="launch-runtime-guidance"' : ""}>${escapeHtml(label)}</button>
         ${launchOverview ? '<button class="secondary launch-edit-request" data-open-request-tab type="button">Edit request</button>' : ""}
         ${renderNextActionBlocker(blockerMessage)}
       </div>

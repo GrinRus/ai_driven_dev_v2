@@ -532,3 +532,74 @@ test("question resume remains blocked until the durable answer is resolved", asy
   assert.equal(await vm.runInContext("answerAndResume('Q1')", context), false);
   assert.equal(stageStarts, 0);
 });
+
+test("question resume is cancelled when its work item changes during readiness", async () => {
+  const readiness = deferred();
+  let stageStarts = 0;
+  const context = vm.createContext({
+    CSS: {escape: (value) => value},
+    console,
+    document: {querySelector() { return null; }, querySelectorAll() { return []; }},
+    state: {
+      activeStage: "plan",
+      activeRunId: "run-1",
+      activeRouteWorkItem: "WI-1",
+      activeJobId: "",
+      dashboard: {
+        work_item: "WI-1",
+        active_stage_view: {
+          questions: {
+            unresolved_blocking_question_ids: [],
+            questions: [{question_id: "Q1", answer_resolution: "resolved", answer_text: "Approved."}],
+          },
+        },
+      },
+    },
+    fetchDashboard: async () => {},
+    fetchReadiness: () => readiness.promise,
+    selectedRuntimeReady: () => true,
+    renderAll: async () => {},
+    resumeStageOrImplementationTarget: async () => { stageStarts += 1; },
+    toast() {},
+  });
+  await load(context, "operator-questions.js");
+
+  const resume = vm.runInContext("resumeAfterAnswers()", context);
+  await new Promise((resolve) => setImmediate(resolve));
+  context.state.activeStage = "implement";
+  context.state.activeRunId = "run-2";
+  context.state.activeRouteWorkItem = "WI-2";
+  context.state.dashboard.work_item = "WI-2";
+  readiness.resolve(true);
+
+  assert.equal(await resume, false);
+  assert.equal(stageStarts, 0);
+});
+
+test("resume after answers stays blocked when the selected Runner is not ready", async () => {
+  let stageStarts = 0;
+  const context = vm.createContext({
+    console,
+    document: {querySelector() { return null; }, querySelectorAll() { return []; }},
+    state: {
+      activeStage: "plan",
+      activeRunId: "run-1",
+      activeRouteWorkItem: "WI-1",
+      dashboard: {
+        work_item: "WI-1",
+        active_stage_view: {questions: {unresolved_blocking_question_ids: []}},
+      },
+    },
+    fetchDashboard: async () => {},
+    fetchReadiness: async () => false,
+    selectedRuntimeReady: () => false,
+    runtimeReadinessMessage: () => "Selected Runner is unavailable.",
+    renderAll: async () => {},
+    resumeStageOrImplementationTarget: async () => { stageStarts += 1; },
+    toast() {},
+  });
+  await load(context, "operator-questions.js");
+
+  assert.equal(await vm.runInContext("resumeAfterAnswers()", context), false);
+  assert.equal(stageStarts, 0);
+});

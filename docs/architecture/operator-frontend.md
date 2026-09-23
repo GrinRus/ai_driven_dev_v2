@@ -504,6 +504,10 @@ Runtime readiness remains observational. The UI may preselect a project-local ru
 preference as a convenience, but every launch request must still include the operator-selected
 runtime id. There is no hidden `generic-cli` fallback.
 
+Project and project-set validation belongs to the exact input snapshot that was submitted.
+Changing the project root or any project-set row invalidates the displayed result and any
+in-flight response; an older validation must not qualify the edited inputs for creation or launch.
+
 One UI process may maintain a noncanonical recent-project list, but each active workflow,
 job, answer write, log read, artifact read, and `.aidd/` workspace mutation is scoped to one
 selected project root. Multiple roots inside a monorepo or related local workspace use the

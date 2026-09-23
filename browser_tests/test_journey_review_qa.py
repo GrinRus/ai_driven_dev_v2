@@ -82,6 +82,10 @@ def test_review_qa_gate_blocks_rejected_and_not_ready_evidence_across_viewports(
                 assert handoff["status"] == "failed"
                 assert handoff["final_qa_status"] == "not-ready"
                 assert handoff["recommended_outcome"] == "start-follow-up-flow"
+                for disabled_primary in page.locator("[data-aidd-primary-action]:disabled").all():
+                    assert disabled_primary.evaluate(
+                        "node => getComputedStyle(node).position"
+                    ) != "fixed"
                 assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
                 assert_rendered_geometry(page)
                 browser_page.diagnostics.assert_clean()
@@ -156,4 +160,53 @@ def test_stale_qa_has_no_terminal_handoff_and_requires_durable_rerun(tmp_path: P
             page.reload(wait_until="domcontentloaded")
         _open_gate(page, "qa-verdict")
         assert page.locator('[data-remediation-readback="qa"]').count() == 1
+        browser_page.diagnostics.assert_clean()
+
+
+def test_review_remediation_selection_and_editor_tabs_are_live(
+    tmp_path: Path,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / "review-remediation-editor",
+        "review-qa-rejected",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        with expect_rendered_surface(
+            page.locator('[data-studio-flow-complete][data-terminal-status="failed"]')
+        ):
+            page.goto(
+                _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
+                wait_until="domcontentloaded",
+            )
+        _open_gate(page, "review-findings")
+        review = page.locator('[data-studio-quality-gate="review"]')
+        checkbox = review.locator('[data-remediation-source="review"]').first
+        assert checkbox.is_checked()
+        checkbox.uncheck()
+        page.wait_for_function(
+            "document.querySelector('[data-target-remediation-surface=review] "
+            ".target-remediation-request .small-badge').textContent.includes('0 selected')"
+        )
+        assert review.get_by_role("button", name="Send selected to implement").is_disabled()
+
+        preview = review.locator('[data-remediation-editor-mode="preview"]')
+        write = review.locator('[data-remediation-editor-mode="write"]')
+        preview.click()
+        assert preview.get_attribute("aria-selected") == "true"
+        assert page.locator('[data-remediation-write-preview="review"]').evaluate(
+            "node => node.open"
+        )
+        write.click()
+        assert write.get_attribute("aria-selected") == "true"
+        assert not page.locator('[data-remediation-write-preview="review"]').evaluate(
+            "node => node.open"
+        )
+        assert page.locator('[data-remediation-note="review"]').evaluate(
+            "node => node === document.activeElement"
+        )
         browser_page.diagnostics.assert_clean()

@@ -4,6 +4,20 @@ function studioTaskStatusClass(status) {
   return "warn";
 }
 
+function qualityGateDisabledAttributes(enabled, reason = "This action is not currently eligible.") {
+  if (enabled) return "";
+  const detail = String(reason || "This action is not currently eligible.").trim()
+    || "This action is not currently eligible.";
+  return `disabled aria-disabled="true" title="${escapeHtml(detail)}"`;
+}
+
+function qualityGateRuntimeReason() {
+  if (typeof runtimeReadinessMessage === "function") {
+    return runtimeReadinessMessage() || "Choose an eligible Runner before starting this action.";
+  }
+  return "Choose an eligible Runner before starting this action.";
+}
+
 function studioRemediationReadback(sourceStage) {
   const job = state.activeJobStatus || {};
   const pending = job.kind === "remediation" && job.stage === "implement"
@@ -23,7 +37,7 @@ function studioRemediationReadback(sourceStage) {
         <span>Stale stages: ${escapeHtml(staleLabels)}.</span>
         <span>Invalidated by: ${escapeHtml(invalidators.join(", ") || "durable remediation status")}.</span>
         <span class="form-error">Terminal handoff stays blocked until Review and QA are rerun from fresh evidence.</span>
-        <button data-recovery-action="rerun-stale-downstream" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Rerun stale downstream</button>
+        <button data-recovery-action="rerun-stale-downstream" type="button" ${qualityGateDisabledAttributes(selectedRuntimeReady(), qualityGateRuntimeReason())}>Rerun stale downstream</button>
       ` : ""}
     </aside>
   `;
@@ -39,9 +53,16 @@ function remediationDraftSelection(sourceStage) {
   return new Set(readRemediationDraft(sourceStage)?.value?.source_ids || []);
 }
 
-function renderStudioImplementationTask(task) {
+function remediationDraftHasExplicitSelection(sourceStage) {
+  if (typeof readRemediationDraft !== "function") return false;
+  const draft = readRemediationDraft(sourceStage);
+  return Array.isArray(draft?.value?.source_ids);
+}
+
+function renderStudioImplementationTask(task, {primary = false} = {}) {
   const attempts = task.attempts || [];
-  const runnable = task.ready && task.status !== "succeeded";
+  const action = studioTaskMutationAction(task);
+  const runnable = Boolean(action);
   return `
     <article class="panel-item studio-implementation-task" data-task-id="${escapeHtml(task.id)}" data-task-ready="${task.ready ? "true" : "false"}" data-task-status="${escapeHtml(task.status)}">
       <div class="surface-title compact">
@@ -53,21 +74,66 @@ function renderStudioImplementationTask(task) {
       ${task.outcome ? `<span>Outcome: ${escapeHtml(task.outcome)}</span>` : ""}
       ${attempts.map((attempt) => `<span data-task-attempt="${escapeHtml(attempt.number)}">Attempt ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
       ${task.blocker ? `<span class="form-error" data-task-blocker>Blocker: ${escapeHtml(task.blocker)}</span>` : ""}
-      ${runnable ? `<button data-run-task="${escapeHtml(task.id)}" type="button" ${task.ready && selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${task.status === "pending" ? "Run" : "Resume"}</button>` : ""}
+      ${runnable ? `<button ${primary ? "data-aidd-primary-action" : ""} data-run-task="${escapeHtml(task.id)}" type="button" ${qualityGateDisabledAttributes(selectedRuntimeReady(), qualityGateRuntimeReason())}>${action === "run" ? "Run" : "Resume"}</button>` : ""}
     </article>
   `;
+}
+
+function studioTaskMutationAction(task) {
+  const projection = task?.action_projection;
+  const states = projection?.states;
+  if (states && typeof states === "object") {
+    for (const action of ["run", "resume"]) {
+      if (states[action]?.eligible === true) return action;
+    }
+    return "";
+  }
+  if (task?.ready && task.status !== "succeeded") {
+    return task.status === "pending" ? "run" : "resume";
+  }
+  return "";
+}
+
+function implementationRecoveryTarget(taskView) {
+  const tasks = taskView?.tasks || [];
+  const eligibleTasks = tasks.filter((task) => Boolean(studioTaskMutationAction(task)));
+  const preferredTaskId = String(taskView?.next_ready_task || "");
+  const task = eligibleTasks.find((candidate) => candidate.id === preferredTaskId)
+    || eligibleTasks[0];
+  if (task) {
+    const action = studioTaskMutationAction(task);
+    return {
+      kind: "task",
+      taskId: String(task.id || ""),
+      action,
+      label: action === "run" ? `Run ${task.id}` : `Resume ${task.id}`,
+    };
+  }
+  const finalization = taskView?.finalization || {};
+  if (taskView?.finalization_eligible && finalization.status !== "succeeded") {
+    return {
+      kind: "finalization",
+      label: finalization.status === "failed" ? "Resume finalization" : "Finalize implementation",
+    };
+  }
+  return null;
 }
 
 function renderStudioImplementationQualityGate(taskView) {
   const tasks = taskView?.tasks || [];
   if (!tasks.length) return "";
   const finalization = taskView.finalization || {status: "pending", attempts: []};
-  const runnableTasks = tasks.filter((task) => task.ready && task.status !== "succeeded");
-  const runnerAction = runnableTasks.length
-    ? runnableTasks.length === 1 ? "task run or resume" : "task actions"
-    : "implementation finalization";
+  const runnableTasks = tasks.filter((task) => Boolean(studioTaskMutationAction(task)));
+  const recoveryTarget = implementationRecoveryTarget(taskView);
+  const runnerAction = recoveryTarget?.kind === "task"
+    ? "task run or resume"
+    : recoveryTarget?.kind === "finalization"
+      ? "implementation finalization"
+      : runnableTasks.length > 1
+        ? "task actions"
+        : "implementation recovery";
   return `
-    <section class="surface studio-implementation-gate target-implementation-ledger" data-studio-quality-gate="implement" data-review-eligible="${taskView.review_eligible ? "true" : "false"}">
+    <section class="surface studio-implementation-gate target-implementation-ledger${recoveryTarget && selectedRuntimeReady() ? " target-implementation-ledger-with-primary" : ""}" data-studio-quality-gate="implement" data-review-eligible="${taskView.review_eligible ? "true" : "false"}">
       <div class="target-implementation-ledger-heading">
         <div>
           <p class="eyebrow">Canonical task ledger</p>
@@ -76,11 +142,12 @@ function renderStudioImplementationQualityGate(taskView) {
         <span class="small-badge">${escapeHtml(tasks.length)} total</span>
       </div>
       <p class="target-implementation-ledger-copy">Task readiness, attempts, blockers, and aggregate finalization come from the canonical task ledger.</p>
-      ${(runnableTasks.length || (taskView.finalization_eligible && finalization.status !== "succeeded")) && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: runnerAction}) : ""}
       <details class="target-implementation-ledger-details" open>
         <summary>Task attempts and finalization</summary>
         <div class="compact-list">
-          ${tasks.map(renderStudioImplementationTask).join("")}
+          ${tasks.map((task) => renderStudioImplementationTask(task, {
+            primary: recoveryTarget?.kind === "task" && recoveryTarget.taskId === task.id,
+          })).join("")}
           <article class="panel-item" data-aggregate-finalization="${escapeHtml(finalization.status || "pending")}">
             <div class="surface-title compact">
               <strong>Aggregate finalization</strong>
@@ -89,10 +156,11 @@ function renderStudioImplementationQualityGate(taskView) {
             <span>Attempts: ${escapeHtml(finalization.attempt_count || 0)}</span>
             ${(finalization.attempts || []).map((attempt) => `<span>Finalize ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
             ${finalization.blocker ? `<span class="form-error">Blocker: ${escapeHtml(finalization.blocker)}</span>` : ""}
-            ${taskView.finalization_eligible && finalization.status !== "succeeded" ? `<button data-finalize-tasks type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${finalization.status === "failed" ? "Resume finalization" : "Finalize"}</button>` : ""}
+            ${taskView.finalization_eligible && finalization.status !== "succeeded" ? `<button ${recoveryTarget?.kind === "finalization" ? "data-aidd-primary-action" : ""} data-finalize-tasks type="button" ${qualityGateDisabledAttributes(selectedRuntimeReady(), qualityGateRuntimeReason())}>${finalization.status === "failed" ? "Resume finalization" : "Finalize"}</button>` : ""}
           </article>
         </div>
       </details>
+      ${(runnableTasks.length || (taskView.finalization_eligible && finalization.status !== "succeeded")) && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: runnerAction, inspector: true}) : ""}
       ${taskView.review_eligible ? "" : `<div class="next-action-blocker" data-implementation-review-blocker>${escapeHtml(taskView.review_blocker || "Review remains blocked until aggregate finalization succeeds.")}</div>`}
     </section>
   `;
@@ -172,6 +240,9 @@ function renderStudioRepositoryEvidence({
       (file) => `Claim mismatch: ${file.path} changed but is absent from implementation-report.md.`
     )
   ];
+  const recoveryAction = !taskView
+    ? `<button data-rerun-implement data-rerun-implement-stage="true" type="button" class="secondary" ${qualityGateDisabledAttributes(selectedRuntimeReady(), qualityGateRuntimeReason())}>Rerun implement</button>`
+    : "";
   return `
     <section class="surface studio-repository-evidence" data-document-canvas="implementation-evidence" data-implementation-review>
       <div class="surface-title">
@@ -238,8 +309,8 @@ function renderStudioRepositoryEvidence({
       </div>
       ${renderImplementationProceedGuard(evidence)}
       <div class="wizard-actions">
-        <button data-proceed-stage="review" type="button" ${reviewEnabled ? "" : "disabled aria-disabled=\"true\""}>Proceed to review</button>
-        <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
+        <button data-proceed-stage="review" type="button" ${qualityGateDisabledAttributes(reviewEnabled, "Implementation verification must pass before Review can start.")}>Proceed to review</button>
+        ${recoveryAction}
         <button data-open-request-tab type="button" class="secondary">Request intervention</button>
       </div>
     </section>
@@ -266,11 +337,17 @@ function renderStudioReviewQualityGate(view) {
     .filter(Boolean)
     .join(" · ");
   const draftSelection = remediationDraftSelection("review");
+  const hasExplicitSelection = remediationDraftHasExplicitSelection("review");
   const defaultNote = "Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.";
-  const selectedFinding = (finding) => draftSelection.size
+  const selectedFinding = (finding) => hasExplicitSelection
     ? draftSelection.has(finding.finding_id)
     : finding.disposition === "must-fix";
   const selectedCount = findings.filter(selectedFinding).length;
+  const runtimeReady = selectedRuntimeReady();
+  const remediationEnabled = selectedCount > 0 && runtimeReady;
+  const remediationDisabledReason = selectedCount > 0
+    ? qualityGateRuntimeReason()
+    : "Select at least one Review finding before sending remediation.";
   const blockingCount = findings.filter((finding) => ["critical", "high"].includes(finding.severity) || finding.disposition === "must-fix").length;
   const filter = typeof state !== "undefined" ? state.remediationFindingFilter || "all" : "all";
   const visibleFindings = findings.filter((finding) => filter === "selected"
@@ -319,7 +396,7 @@ function renderStudioReviewQualityGate(view) {
         </main>
         <aside class="target-remediation-request" aria-label="Remediation request">
           <div class="target-remediation-request-heading"><h3>Remediation request</h3><span class="small-badge">${escapeHtml(selectedCount)} selected</span></div>
-          <div class="target-editor-tabs" role="tablist" aria-label="Remediation draft mode"><button class="target-editor-tab active" type="button" role="tab" aria-selected="true">Write</button><button class="target-editor-tab" type="button" role="tab" aria-selected="false">Preview</button></div>
+          <div class="target-editor-tabs" role="tablist" aria-label="Remediation draft mode"><button class="target-editor-tab active" data-remediation-editor-mode="write" data-remediation-editor-source="review" type="button" role="tab" aria-controls="reviewRemediationNote" aria-selected="true">Write</button><button class="target-editor-tab" data-remediation-editor-mode="preview" data-remediation-editor-source="review" type="button" role="tab" aria-controls="reviewRemediationPreview" aria-selected="false">Preview</button></div>
           <label class="form-field" for="reviewRemediationNote"><span>Markdown</span><textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="8">${escapeHtml(remediationDraftNote("review", defaultNote))}</textarea></label>
           ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("review", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
           <div class="target-remediation-destination"><span>Destination</span><code>${escapeHtml(typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md")}</code><small>Draft is retained in this browser session until it is written.</small></div>
@@ -327,8 +404,8 @@ function renderStudioReviewQualityGate(view) {
           ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
           ${findings.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "review remediation"}) : ""}
           <div class="target-remediation-actions">
-            <button data-remediation-launch="review" data-aidd-primary-action type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to Implement</button>
-            <button data-proceed-stage="qa" type="button" class="secondary" ${status === "approved" && selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Proceed to QA</button>
+            <button data-remediation-launch="review" data-aidd-primary-action type="button" ${qualityGateDisabledAttributes(remediationEnabled, remediationDisabledReason)}>Send selected to Implement</button>
+            <button data-proceed-stage="qa" type="button" class="secondary" ${qualityGateDisabledAttributes(status === "approved" && runtimeReady, status !== "approved" ? "Review must be approved before QA can start." : qualityGateRuntimeReason())}>Proceed to QA</button>
             <button data-open-request-tab type="button" class="link-button">Request change</button>
           </div>
         </aside>
@@ -343,11 +420,17 @@ function renderStudioQaQualityGate(view, sourceItems) {
   const issues = view?.known_issues || [];
   const blocked = !["ready", "ready-with-risks"].includes(verdict);
   const draftSelection = remediationDraftSelection("qa");
+  const hasExplicitSelection = remediationDraftHasExplicitSelection("qa");
   const defaultNote = "Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.";
-  const selectedItem = (item) => draftSelection.size
+  const selectedItem = (item) => hasExplicitSelection
     ? draftSelection.has(item.id)
     : verdict === "not-ready";
   const selectedCount = sourceItems.filter(selectedItem).length;
+  const runtimeReady = selectedRuntimeReady();
+  const remediationEnabled = selectedCount > 0 && runtimeReady;
+  const remediationDisabledReason = selectedCount > 0
+    ? qualityGateRuntimeReason()
+    : "Select at least one QA risk or issue before sending remediation.";
   const blockingCount = sourceItems.filter((item) => item.kind === "risk").length;
   const filter = typeof state !== "undefined" ? state.remediationFindingFilter || "all" : "all";
   const visibleItems = sourceItems.filter((item) => filter === "selected"
@@ -398,7 +481,7 @@ function renderStudioQaQualityGate(view, sourceItems) {
         </main>
         <aside class="target-remediation-request" aria-label="QA remediation request">
           <div class="target-remediation-request-heading"><h3>Remediation request</h3><span class="small-badge">${escapeHtml(selectedCount)} selected</span></div>
-          <div class="target-editor-tabs" role="tablist" aria-label="QA remediation draft mode"><button class="target-editor-tab active" type="button" role="tab" aria-selected="true">Write</button><button class="target-editor-tab" type="button" role="tab" aria-selected="false">Preview</button></div>
+          <div class="target-editor-tabs" role="tablist" aria-label="QA remediation draft mode"><button class="target-editor-tab active" data-remediation-editor-mode="write" data-remediation-editor-source="qa" type="button" role="tab" aria-controls="qaRemediationNote" aria-selected="true">Write</button><button class="target-editor-tab" data-remediation-editor-mode="preview" data-remediation-editor-source="qa" type="button" role="tab" aria-controls="qaRemediationPreview" aria-selected="false">Preview</button></div>
           <label class="form-field" for="qaRemediationNote"><span>Markdown</span><textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="8">${escapeHtml(remediationDraftNote("qa", defaultNote))}</textarea></label>
           ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("qa", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
           <div class="target-remediation-destination"><span>Destination</span><code>${escapeHtml(typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md")}</code><small>Draft is retained in this browser session until it is written.</small></div>
@@ -407,8 +490,8 @@ function renderStudioQaQualityGate(view, sourceItems) {
           ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
           ${sourceItems.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "QA remediation"}) : ""}
           <div class="target-remediation-actions">
-            <button data-remediation-launch="qa" data-aidd-primary-action type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to Implement</button>
-            <button data-accept-qa type="button" class="secondary" ${blocked ? "disabled aria-disabled=\"true\"" : ""}>Accept complete</button>
+            <button data-remediation-launch="qa" data-aidd-primary-action type="button" ${qualityGateDisabledAttributes(remediationEnabled, remediationDisabledReason)}>Send selected to Implement</button>
+            <button data-accept-qa type="button" class="secondary" ${qualityGateDisabledAttributes(!blocked, blocked ? "QA must be ready before it can be accepted as complete." : "")}>Accept complete</button>
             <button data-next-flow-start type="button" class="link-button">Start follow-up</button>
           </div>
         </aside>

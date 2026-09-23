@@ -214,6 +214,8 @@ def _task_attempt_port(
     project_root: Path,
     stage_runner: StageRunner,
     intervention_request_path: Path | None = None,
+    model_override: str | None = None,
+    reasoning_effort_override: str | None = None,
 ) -> Callable[[TaskExecutionContext], TaskAttemptOutcome]:
     def _execute(context: TaskExecutionContext) -> TaskAttemptOutcome:
         try:
@@ -238,6 +240,8 @@ def _task_attempt_port(
                         )
                     ),
                     intervention_request_path=intervention_request_path,
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                 )
             )
         except typer.Exit as exc:
@@ -261,6 +265,8 @@ def _implementation_service(
     project_root: Path,
     stage_runner: StageRunner,
     intervention_request_path: Path | None = None,
+    model_override: str | None = None,
+    reasoning_effort_override: str | None = None,
 ) -> ImplementationExecutionService:
     return ImplementationExecutionService(
         task_executor=cast(
@@ -275,6 +281,8 @@ def _implementation_service(
                 project_root=project_root,
                 stage_runner=stage_runner,
                 intervention_request_path=intervention_request_path,
+                model_override=model_override,
+                reasoning_effort_override=reasoning_effort_override,
             ),
         ),
         aggregate_finalizer=cast(
@@ -317,6 +325,8 @@ def execute_task_by_id(
     stage_runner: StageRunner = run_stage_attempt_command,
     mutation_lease: RunMutationLease | None = None,
     intervention_request_path: Path | None = None,
+    model_override: str | None = None,
+    reasoning_effort_override: str | None = None,
 ) -> TaskLedger:
     workspace_root = _workspace_root(root, config)
     project_root = Path.cwd().resolve(strict=True)
@@ -351,6 +361,8 @@ def execute_task_by_id(
             project_root=project_root,
             stage_runner=stage_runner,
             intervention_request_path=intervention_request_path,
+            model_override=model_override,
+            reasoning_effort_override=reasoning_effort_override,
         )
         try:
             result = service.run_task(
@@ -379,6 +391,8 @@ def finalize_implementation(
     root: Path | None,
     config: Path,
     mutation_lease: RunMutationLease | None = None,
+    model_override: str | None = None,
+    reasoning_effort_override: str | None = None,
 ) -> TaskLedger:
     workspace_root = _workspace_root(root, config)
     _validate_run_manifest_identity(
@@ -407,6 +421,8 @@ def finalize_implementation(
             log_follow=False,
             project_root=Path.cwd().resolve(strict=True),
             stage_runner=run_stage_attempt_command,
+            model_override=model_override,
+            reasoning_effort_override=reasoning_effort_override,
         )
         try:
             return service.finalize(
@@ -477,6 +493,8 @@ def interact_with_implementation(
     log_follow: bool,
     intervention_request_path: Path,
     stage_runner: StageRunner,
+    model_override: str | None = None,
+    reasoning_effort_override: str | None = None,
 ) -> TaskLedger:
     project_root = Path.cwd().resolve(strict=True)
     _validate_run_manifest_identity(
@@ -496,6 +514,8 @@ def interact_with_implementation(
         project_root=project_root,
         stage_runner=stage_runner,
         intervention_request_path=intervention_request_path,
+        model_override=model_override,
+        reasoning_effort_override=reasoning_effort_override,
     )
     request = _execution_request(
         workspace_root=root,
@@ -521,6 +541,8 @@ def interact_with_implementation(
             log_follow=log_follow,
             stage_runner=stage_runner,
             intervention_request_path=intervention_request_path,
+            model_override=model_override,
+            reasoning_effort_override=reasoning_effort_override,
         )
     if target.next_target is ImplementationNextTarget.FINALIZATION:
         return finalize_implementation(
@@ -529,6 +551,8 @@ def interact_with_implementation(
             runtime=runtime,
             root=root,
             config=config,
+            model_override=model_override,
+            reasoning_effort_override=reasoning_effort_override,
         )
     raise ImplementationTaskSelectionError(
         "Implementation interaction has no pending task or finalization target.",

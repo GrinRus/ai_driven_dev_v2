@@ -1850,6 +1850,9 @@ class OperatorUiService:
         if not runtime:
             raise ValueError("runtime is required.")
         self._revalidate_runtime_for_mutation(runtime=runtime)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         lease = acquire_run_mutation_lease_handle(
             run_root(
                 workspace_root=self.workspace_root,
@@ -1871,6 +1874,8 @@ class OperatorUiService:
                         runtime=runtime,
                         run_id=run_id,
                         job_id=job_id,
+                        model_override=model_override,
+                        reasoning_effort_override=reasoning_effort_override,
                     )
                     ledger = service.finalize(self._implementation_request(run_id=run_id)).ledger
             except Exception:
@@ -2303,6 +2308,9 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         self._revalidate_runtime_for_mutation(runtime=runtime)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         source_stage = _text_from_payload(payload, "source_stage")
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
@@ -2333,6 +2341,8 @@ class OperatorUiService:
                     runtime=runtime,
                     run_id=request.run_id,
                     job_id=job_id,
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                 ).reopen_for_remediation(
                     self._implementation_request(run_id=request.run_id),
                     remediation_id=request.request_id,
@@ -2343,6 +2353,8 @@ class OperatorUiService:
                 run_id=request.run_id,
                 log_follow=log_follow,
                 job_id=job_id,
+                model_override=model_override,
+                reasoning_effort_override=reasoning_effort_override,
             )
             completed = bool(
                 result.get("completed", False) if isinstance(result, Mapping) else False
@@ -2404,6 +2416,9 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         self._revalidate_runtime_for_mutation(runtime=runtime)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         run_id = _source_run_id_from_payload(payload)
         stale_stages = self._stale_downstream_stages(run_id)
         if not stale_stages:
@@ -2422,6 +2437,8 @@ class OperatorUiService:
                     run_id=run_id,
                     log_follow=log_follow,
                     job_id=job_id,
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                 )
                 results.append(result)
                 result_exit = int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
@@ -2467,6 +2484,9 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         self._revalidate_runtime_for_mutation(runtime=runtime)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         run_id = _source_run_id_from_payload(payload)
         stage = _text_from_payload(payload, "stage")
         stale_stages = self._stale_downstream_stages(run_id)
@@ -2485,6 +2505,8 @@ class OperatorUiService:
                     run_id=run_id,
                     log_follow=log_follow,
                     job_id=job_id,
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                 )
                 exit_code = int(result.get("exit_code", 1)) if isinstance(result, Mapping) else 1
                 completed = exit_code == 0
@@ -3237,6 +3259,9 @@ class OperatorUiService:
             if isinstance(raw_reason, str) and raw_reason.strip()
             else "Apply one bounded correction after automatic repair exhaustion."
         )
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         log_follow = bool(payload.get("log_follow", True))
 
         def _target(job_id: str) -> object:
@@ -3252,6 +3277,8 @@ class OperatorUiService:
                     author=author,
                     reason=reason,
                     log_follow=log_follow,
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                     runtime_chunk_sink=lambda stream, text: self._jobs.append_chunk(
                         job_id,
                         stream=stream,
@@ -3300,6 +3327,9 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         self._revalidate_runtime_for_mutation(runtime=runtime)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         raw_request = payload.get("request")
         if not isinstance(raw_request, str) or not raw_request.strip():
             raise ValueError("request is required.")
@@ -3317,6 +3347,8 @@ class OperatorUiService:
             request_file=None,
             target_documents=target_documents,
             log_follow=log_follow,
+            model_override=model_override,
+            reasoning_effort_override=reasoning_effort_override,
         )
         prepared = self._stage_interact_preparer(prepared_options)
 
@@ -3330,6 +3362,8 @@ class OperatorUiService:
                 log_follow=log_follow,
                 job_id=job_id,
                 prepared=prepared,
+                model_override=model_override,
+                reasoning_effort_override=reasoning_effort_override,
             )
 
         job = self._start_job(
@@ -3440,6 +3474,8 @@ class OperatorUiService:
         log_follow: bool,
         job_id: str,
         prepared: PreparedStageInteraction,
+        model_override: str | None = None,
+        reasoning_effort_override: str | None = None,
     ) -> object:
         try:
             self._stage_interact_runner(
@@ -3461,6 +3497,8 @@ class OperatorUiService:
                     ),
                     cancel_requested=lambda: self._jobs.cancel_requested(job_id),
                     prepared_interaction=prepared,
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                 )
             )
         except typer.Exit as exc:

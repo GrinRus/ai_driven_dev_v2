@@ -26,6 +26,16 @@ def test_studio_runtime_readiness_is_dimensioned_and_scope_truthful(tmp_path: Pa
         browser_page.page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         browser_page.page.locator("#runtimeSelect").select_option("generic-cli")
         browser_page.page.wait_for_timeout(100)
+        settings = browser_page.page.locator("#runtimeSettings")
+        settings.evaluate("node => { node.open = true; }")
+        browser_page.page.locator("#intentContent").click(position={"x": 12, "y": 12})
+        assert settings.get_attribute("open") is None
+        settings.evaluate("node => { node.open = true; }")
+        browser_page.page.get_by_role("button", name="Close").click()
+        assert settings.get_attribute("open") is None
+        settings.evaluate("node => { node.open = true; }")
+        browser_page.page.keyboard.press("Escape")
+        assert settings.get_attribute("open") is None
         assert browser_page.diagnostics.page_errors == []
         panel = browser_page.page.locator("[data-studio-runtime-readiness]")
         selected = browser_page.page.evaluate("() => eval('state.selectedRuntime')")

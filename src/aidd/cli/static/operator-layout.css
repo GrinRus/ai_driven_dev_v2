@@ -412,6 +412,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-surface);
+  color: var(--text);
   box-shadow: var(--elevation-overlay);
   display: grid;
   gap: var(--space-4);

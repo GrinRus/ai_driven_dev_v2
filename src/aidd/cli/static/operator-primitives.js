@@ -101,6 +101,13 @@ function renderStatusMarker({status, label}) {
   `;
 }
 
+function sharedDisabledActionAttributes(enabled, reason = "This action is not currently eligible.") {
+  if (enabled) return "";
+  const detail = String(reason || "This action is not currently eligible.").trim()
+    || "This action is not currently eligible.";
+  return `disabled aria-disabled="true" title="${escapeHtml(detail)}"`;
+}
+
 function renderStateSurface({kind, state: requestedState, title, consequence, recovery = null}) {
   const stateName = String(requestedState || "").trim();
   if (!STATE_SURFACE_STATES.has(stateName) && !SHARED_INTERACTION_STATE_CONTRACT[stateName]) {
@@ -120,7 +127,7 @@ function renderStateSurface({kind, state: requestedState, title, consequence, re
   const role = contract.role;
   const live = contract.live;
   const recoveryAction = recovery && String(recovery.action || "").trim()
-    ? `<button data-state-recovery="${escapeHtml(recovery.action)}" type="button" ${recovery.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(recovery.label)}</button>`
+    ? `<button data-state-recovery="${escapeHtml(recovery.action)}" type="button" ${sharedDisabledActionAttributes(recovery.enabled !== false, recovery.disabled_reason || recovery.detail)}>${escapeHtml(recovery.label)}</button>`
     : "";
   return `
     <section class="state-surface" data-state-surface="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" data-interaction-region role="${role}" aria-live="${live}" aria-busy="${waiting ? "true" : "false"}"
@@ -181,7 +188,7 @@ function renderRecoverySummary({
       </div>
       ${showPrimary
         ? `<div class="recovery-summary-primary" data-primary-recovery-slot>
-        <button data-primary-action data-recovery-action="${escapeHtml(primaryAction.action)}"${recoveryStage}${repairExtension} type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
+        <button data-primary-action data-recovery-action="${escapeHtml(primaryAction.action)}"${recoveryStage}${repairExtension} type="button" ${sharedDisabledActionAttributes(primaryAction.enabled !== false, primaryAction.disabled_reason || primaryAction.detail)}>${escapeHtml(primaryAction.label)}</button>
       </div>`
         : `<div class="recovery-summary-primary recovery-summary-primary-readonly" data-recovery-primary-readonly><span>Action is available in the recovery decision panel above.</span></div>`}
     </section>

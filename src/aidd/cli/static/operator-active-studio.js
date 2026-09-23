@@ -316,8 +316,12 @@ function renderTaskWorkspace(taskView) {
   const evidenceMarkup = evidenceLinks.length
     ? `<ul class="task-contract-list">${evidenceLinks.map((link) => `<li><code>${escapeHtml(link)}</code></li>`).join("")}</ul>`
     : `<p class="muted">No evidence links recorded.</p>`;
+  const actionEnabled = actionState?.eligible === true;
+  const actionDisabledAttributes = actionEnabled
+    ? ""
+    : `disabled aria-disabled="true" title="${escapeHtml(actionReason)}"`;
   const actionButton = actionName
-    ? `<button data-task-action="${escapeHtml(actionName)}"${actionName === "run" || actionName === "resume" ? ` data-task-action-id="${escapeHtml(selected.id)}"` : ""} type="button" ${actionState?.eligible === true ? "" : "disabled aria-disabled=\"true\""}>${escapeHtml(actionLabel)}</button>`
+    ? `<button data-task-action="${escapeHtml(actionName)}"${actionName === "run" || actionName === "resume" ? ` data-task-action-id="${escapeHtml(selected.id)}"` : ""} type="button" ${actionDisabledAttributes}>${escapeHtml(actionLabel)}</button>`
     : "";
   const recoveryButton = recoveryTaskId
     ? `<button class="secondary" data-task-recovery-task-id="${escapeHtml(recoveryTaskId)}" data-task-recovery-action="${escapeHtml(recoveryAction)}" type="button">Open ${escapeHtml(recoveryTaskId)} recovery</button>`
@@ -346,7 +350,7 @@ function renderTaskWorkspace(taskView) {
       </dl>
       <div class="task-attempt-actions">
         <button class="primary" data-task-attempt-primary data-aidd-primary-action data-aidd-focus-role="primary" data-tab-shortcut="logs" type="button">Open live output</button>
-        ${activeTaskJob && ["running", "waiting-for-operator", "cancelling"].includes(activeJob.status) ? `<button class="secondary" data-cancel-job="${escapeHtml(activeJob.job_id)}" type="button" ${activeJob.status === "cancelling" ? "disabled" : ""}>${activeJob.status === "cancelling" ? "Cancelling..." : "Cancel attempt"}</button>` : ""}
+        ${activeTaskJob && ["running", "waiting-for-operator", "cancelling"].includes(activeJob.status) ? `<button class="secondary" data-cancel-job="${escapeHtml(activeJob.job_id)}" type="button" ${activeJob.status === "cancelling" ? 'disabled aria-disabled="true" title="Cancellation is already in progress."' : ""}>${activeJob.status === "cancelling" ? "Cancelling..." : "Cancel attempt"}</button>` : ""}
       </div>
       ${scopePaths.length ? `<section class="task-attempt-files"><h4>Changed files</h4><ul class="task-contract-list">${scopePaths.map((path) => `<li><code>${escapeHtml(path)}</code></li>`).join("")}</ul></section>` : ""}
       ${activeTaskJob ? renderActiveJobConnectionSurface() : ""}` : `<p class="muted">No task attempt has started; durable runtime output is not available.</p>`}
@@ -460,6 +464,10 @@ function renderTaskWorkspace(taskView) {
 }
 
 async function renderWorkItemTasks() {
+  const requestGeneration = state.taskWorkspaceRequestGeneration = (Number(state.taskWorkspaceRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
+  const requestedTaskId = state.selectedTaskId;
   const content = document.getElementById("intentContent");
   content.innerHTML = renderWorkItemTabPlaceholder("tasks");
   try {
@@ -477,10 +485,22 @@ async function renderWorkItemTasks() {
     if (state.selectedRuntime) taskParams.set("runtime", state.selectedRuntime);
     const taskId = state.selectedTaskId ? `&task_id=${encodeURIComponent(state.selectedTaskId)}` : "";
     const payload = await api(`/api/tasks?${taskParams.toString()}${taskId}`);
+    if (
+      requestGeneration !== state.taskWorkspaceRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+      || requestedTaskId !== state.selectedTaskId
+    ) return;
     state.taskWorkspace = payload;
     state.taskWorkspaceError = "";
     content.innerHTML = renderTaskWorkspace(payload);
   } catch (error) {
+    if (
+      requestGeneration !== state.taskWorkspaceRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+      || requestedTaskId !== state.selectedTaskId
+    ) return;
     state.taskWorkspaceError = error.message || "Task Workspace unavailable";
     content.innerHTML = renderWorkItemTabError("tasks", state.taskWorkspaceError);
   }

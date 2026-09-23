@@ -1553,3 +1553,137 @@ tasks such as `W48-E3-S1-T1` are claimed in the canonical roadmap.
     journeys, scenarios, conformance, security and package build before normal merge. Verify
     the resulting main tree against the reviewed and tested head; retain final CI/merge evidence
     with the PR. Local probe failures under host load are not substituted for a passing CI run.
+
+## Wave 53 — operator recovery and evidence navigation (`done`)
+
+This wave is accepted from the operator report for IUIT-1527: implementation recovery must
+launch the canonical task mutation, Runner controls must be visible at the recovery decision,
+and retained documents must remain readable while technical evidence stays available on demand.
+
+### Epic W53-E1 — recoverable implementation runs (`done`)
+
+#### Slice W53-E1-S1 — task-scoped recovery controls (`done`)
+
+- `W53-E1-S1-T1` (done) Make implementation recovery launch the canonical eligible task or
+  finalization target and expose the selected Runner controls at that decision.
+  - Output: failed or blocked implementation recovery targets `/api/tasks/run` for the eligible
+    task, finalization recovery targets `/api/tasks/finalize`, and Runner model/reasoning settings
+    plus readiness evidence are available without leaving the recovery surface.
+  - Scope: operator quality-gate/shell/action assets and their frontend/browser checks; preserve
+    core task eligibility, run leases, provenance, and existing stage routes.
+  - Verification: deterministic frontend and browser evidence proves the failed-task action
+    creates a task attempt request rather than a no-op aggregate stage run; unsupported Runner
+    selectors remain disabled with an explicit reason; desktop and compact recovery surfaces
+    expose one actionable recovery target.
+  - Local evidence: `node --test tests/frontend/operator-implementation-recovery.test.mjs` -> 3
+    passed; `make test-frontend` -> 146 passed; `make test-browser` -> 5 passed.
+
+#### Slice W53-E1-S2 — evidence workspace hierarchy (`done`)
+
+- `W53-E1-S2-T1` (done) Reduce document-reader density and make Work Item navigation task-oriented.
+  - Output: the primary document reader, supporting evidence, and Work Item context are visually
+    distinct; technical detail stays collapsible; tabs retain stable context and do not overlap or
+    force the operator to reconstruct the current location.
+  - Scope: packaged operator document/navigation assets, CSS, and rendered frontend/browser checks;
+    preserve artifact ownership, bounded reads, source/compare modes, keyboard access, and routes.
+  - Verification: rendered desktop and 390px evidence shows no overlap or horizontal clipping, one
+    primary reader/action hierarchy, readable document headings, and keyboard-reachable navigation.
+  - Local evidence: `uv run --extra dev pytest -q browser_tests/test_w44_documents_attempt_layout.py` -> 7
+    passed; `uv run --extra dev pytest -q browser_tests/test_journey_review_qa.py` -> 4 passed; `make
+    test-browser` -> 5 passed.
+
+## Wave 54 — operator evidence truth hardening (`done`)
+
+This wave is accepted from the follow-up audit of the IUIT-1527 operator report and targets
+the remaining fail-open verification projections discovered after W53: incomplete evidence
+payloads and outcome-only claims must never appear as verified work.
+
+### Epic W54-E1 — fail-closed implementation evidence (`done`)
+
+#### Slice W54-E1-S1 — canonical verification truth (`done`)
+
+- `W54-E1-S1-T1` (done) Make implementation evidence fail closed across parsing and Operator UI.
+  - Output: missing verification status/results, legacy command-only payloads, and outcome-only
+    claims remain explicitly unverifiable; Review stays blocked until every recorded check has
+    same-item executable command evidence and an observed passing result.
+  - Scope: `src/aidd/core/operator_reports.py`, the shared implementation-evidence helpers and
+    semantic/cross-document/harness projections in `src/aidd/validators/` and `src/aidd/harness/`,
+    implementation and intervention mutation selector propagation in `src/aidd/cli/ui.py`,
+    `src/aidd/cli/stage_run.py`, and `src/aidd/cli/task.py`, packaged implementation-review
+    assets, and their focused
+    core/validator/CLI/frontend/browser regression tests; preserve the Markdown report contract,
+    canonical task routes, and validator ownership.
+  - Verification: focused parser, shared-helper, validator, harness, mutation propagation, and
+    UI tests plus the implementation review browser journey prove legacy, malformed, mixed,
+    failed, not-run, and fully verified evidence states render and gate truthfully without
+    treating result words inside executable command arguments as observed outcomes, and prove
+    model/reasoning overrides reach every implementation mutation route.
+  - Completion evidence: the parser keeps outcome-only claims explicitly unverifiable, the
+    Operator UI no longer upgrades legacy/malformed payloads to pass, canonical recovery and
+    Inbox actions dispatch to their owned routes or visibly disable ineligible mutations, and
+    run-scoped selections plus model/reasoning overrides are cleared/propagated at the correct
+    boundaries. `uv run --extra dev pytest -q tests/cli/test_ui.py tests/cli/test_stage_run.py
+    tests/cli/test_ui_assets_contracts.py tests/test_planning_integrity.py` -> 252 passed;
+    `make test-frontend` -> 149 passed; the focused browser journeys -> 31 passed and the
+    post-patch `uv run --extra dev pytest -q browser_tests/test_journey_inbox.py` smoke -> 9
+    passed;
+  `make check-js` -> checked 25 packaged JavaScript assets; scoped Ruff and
+  `git diff --check` -> pass. The broader pre-existing `make check` attempt remains limited
+  by two adapter subprocess timing failures outside this wave's touched paths.
+
+## Wave 55 — post-W54 residual operator integrity audit (`done`)
+
+This wave is accepted from the next operator audit request: after the W53/W54 repairs,
+inspect the remaining repository-wide action, state, rendered UI, and evidence projections
+for confirmed defects of the same class and repair them with provider-free evidence.
+
+### Epic W55-E1 — residual operator and evidence hardening (`done`)
+
+#### Slice W55-E1-S1 — repository-wide confirmed-defect repair (`done`)
+
+- `W55-E1-S1-T1` (done) Audit and repair all remaining confirmed operator, UI-state, and
+  evidence-integrity defects of the W53/W54 class.
+  - Output: every confirmed residual no-op or misrouted action, stale route/selection state,
+    inaccessible Runner/model/reasoning/readiness control, rendered overlap/overflow or weak
+    interaction state, and fail-open evidence projection in the audited scope has an owning-path
+    fix and a regression check; no unsupported state is silently treated as success or ignored.
+  - Scope: `src/aidd/core/`, `src/aidd/cli/`, packaged `src/aidd/cli/static/`,
+    `src/aidd/validators/`, `src/aidd/harness/`, relevant contracts/docs, and nearest
+    `tests/`, `tests/frontend/`, and `browser_tests/`; preserve runtime-agnostic core,
+    canonical routes, evidence ownership, and validation gates.
+  - Dependencies: W54-E1-S1-T1; existing W53/W54 UI and evidence baselines; no provider
+    credentials required for discovery or regression verification.
+  - Verification: targeted static ownership audit, core/CLI/validator/harness tests, packaged
+    JS checks, frontend state/route tests, rendered desktop/mobile browser journeys, keyboard
+    and disabled/error/loading-state checks, planning integrity, and the broadest feasible
+    repository checks with exact external blockers recorded.
+  - Completion evidence: the audit repaired late onboarding/dashboard/refresh responses that
+    could overwrite newer context; stale task/recovery/question actions that could act on a
+    different run or bypass current Runner readiness; and project/project-set validation results
+    that could incorrectly approve edited inputs. Run changes now clear run-owned selections, and
+    asynchronous readers/actions reject responses whose request generation or route identity is
+    stale. `make test-frontend` -> 164 passed; `make check-js` -> checked 25 packaged JavaScript
+    assets; `uv run --extra dev ruff check src/aidd/cli/stage_run.py src/aidd/cli/task.py
+    src/aidd/cli/ui.py src/aidd/core/operator_reports.py
+    src/aidd/harness/live_e2e_black_box_orchestration.py
+    src/aidd/validators/cross_document_rules/qa_upstream.py
+    src/aidd/validators/semantic_rules/common.py src/aidd/validators/semantic_rules/evidence.py
+    src/aidd/validators/semantic_rules/implement.py tests/cli/test_ui.py
+    tests/cli/test_ui_assets_contracts.py tests/core/test_operator_reports.py
+    tests/harness/test_live_e2e_black_box.py tests/validators/test_implementation_evidence.py
+    tests/validators/test_semantic_implement.py` -> all checks passed; `uv run --extra dev
+    pytest -q tests/cli/test_stage_run.py tests/cli/test_task.py` -> 61 passed; `uv run --extra
+    dev pytest -q tests/cli/test_ui_assets_contracts.py` -> 53 passed; `make test-frontend` ->
+    164 passed; `uv run --extra dev pytest -q browser_tests/test_journey_guided_setup.py` -> 6
+    passed; `uv run --extra dev pytest -q browser_tests/test_journey_document_evidence.py` -> 6
+    passed, including all five responsive widths. The full `make test-browser` executed all 12
+    registered journeys; its first run had one 1440px Document Canvas visibility timeout while
+    concurrent CLI/Python suites were consuming the host. The exact 1440px case then passed
+    alone (1 passed), and the full document journey passed alone (6 passed); the other 11
+    journeys passed in the packaged run. A combined Python audit run reported 428 passed and two
+    obsolete UI-asset source-text assertions; those assertions were corrected to encode factual
+    cancellation wording and the current refresh-generation guard, and the complete asset
+    contract module passed (53 passed); `uv run --extra dev pytest -q
+    tests/test_docs_consistency.py tests/test_planning_integrity.py` -> 70 passed;
+    `git diff --check` -> pass. The broader `make check` was not rerun in this wave; the
+    previously recorded two adapter subprocess timing failures remain outside the audited paths.

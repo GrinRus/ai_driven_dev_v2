@@ -6,6 +6,7 @@ from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
     IMPLEMENT_ASSERTION_REFERENCE_PATTERN,
     has_implementation_command_evidence,
+    has_implementation_result_evidence,
 )
 
 
@@ -43,11 +44,26 @@ from aidd.validators.semantic_rules.evidence import (
         "`if git diff --name-only | rg -q -v '^(src|tests)/'; then exit 1; "
         "else exit 0; fi -> pass`",
         "`if git status --short; then exit 1; else exit 0; fi -> exit code 0`",
-        "Reused the same verification command as `TL-2`; outcome passed.",
     ),
 )
 def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) -> None:
     assert has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    ("evidence", "expected"),
+    (
+        ("`uv run pytest -k passed`.", False),
+        ("`uv run pytest -q` (4 passed).", True),
+        ("`uv run pytest -q` -> pass.", True),
+        ("Command: `uv run pytest -k passed`; Observed: 4 passed.", True),
+    ),
+)
+def test_result_evidence_ignores_result_words_inside_command_arguments(
+    evidence: str,
+    expected: bool,
+) -> None:
+    assert has_implementation_result_evidence(evidence) is expected
 
 
 @pytest.mark.parametrize(
@@ -161,6 +177,7 @@ def test_command_evidence_rejects_unclosed_or_prose_multiline_spans(evidence: st
         "The Node.js runtime passed.",
         "nl inspection passed.",
         "The `notes.nl` file passed inspection.",
+        "Reused the same verification command as `TL-2`; outcome passed.",
         "`138 passed`.",
         "`context/verification.log` shows pass.",
     ),

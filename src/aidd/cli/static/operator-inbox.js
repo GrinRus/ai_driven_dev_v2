@@ -12,6 +12,23 @@ const STUDIO_INBOX_SECTION_LABELS = Object.freeze({
   complete: "Complete"
 });
 
+const INBOX_NAVIGATION_ONLY_ACTIONS = new Set([
+  "choose-runtime",
+  "wait-for-stage",
+  "open-running-job",
+  "open-terminal-handoff",
+]);
+
+function inboxActionDisabledAttributes(action) {
+  if (
+    !action
+    || action.enabled !== false
+    || INBOX_NAVIGATION_ONLY_ACTIONS.has(action.action)
+  ) return "";
+  const reason = action.detail || "This action is not currently eligible.";
+  return ` disabled aria-disabled="true" title="${escapeHtml(reason)}"`;
+}
+
 function inboxRouteAttributes(route) {
   if (!route) return "";
   return [
@@ -97,7 +114,7 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
   ) || null;
   const selected = Boolean(selectedWorkItem && selectedWorkItem === route?.work_item);
   const actionMarkup = action && route
-    ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}" type="button">${escapeHtml(action.label)}</button>`
+    ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}"${inboxActionDisabledAttributes(action)} type="button">${escapeHtml(action.label)}</button>`
     : '<span class="inbox-item-no-action">No action available</span>';
   const markerStatus = {
     blocking: "blocked",
@@ -161,7 +178,7 @@ function renderInboxSelectedContext(item) {
     (candidate) => candidate.work_item === route.work_item
   ) || null;
   const actionMarkup = action
-    ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}" type="button">${escapeHtml(action.label)}</button>`
+    ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}"${inboxActionDisabledAttributes(action)} type="button">${escapeHtml(action.label)}</button>`
     : '<span class="inbox-item-no-action">No primary action available</span>';
   const context = [route.work_item, route.run_id, route.stage].filter(Boolean).join(" / ");
   const progress = projectItem ? inboxProjectProgressText(projectItem) : item.status_label;

@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- None; T10 and its dependent live acceptance T4 are complete.
+- None; W55-E1-S1-T1 is complete.
 
 ## Soon
 
-- None; the next accepted work is intentionally parked pending operator/product evidence.
+- None.
 
 ## Parking lot
 
@@ -38,7 +38,19 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-14` T10 is complete in `68f7a9fe`: QA upstream verdicts now use parsed review
+- `2026-09-23` W55-E1-S1-T1 is complete: stale async operator responses/actions and obsolete
+  project validation could apply to a newer run, route, or edited input. Fixes and provider-free
+  regression evidence are recorded in `roadmap.md`; 164 frontend tests, 61 CLI stage/task tests,
+  53 UI asset contracts, and the isolated five-width Document Canvas journey passed. The first
+  full packaged browser invocation executed all 12 journeys but hit one 1440px visibility
+  timeout under concurrent Python/CLI test load; the exact case and whole document journey both
+  passed when rerun alone. W54-E1-S1-T1 is complete from the post-W53 operator evidence audit:
+  it owns fail-closed parser/UI truth
+  for legacy, malformed, and mixed verification claims, recovery action dispatch,
+  implementation/intervention selector propagation, and visible disabled states for ineligible
+  Inbox mutations. Scoped CLI/frontend/browser evidence is recorded in `roadmap.md`; the
+  broader `make check` attempt still has two adapter subprocess timing failures outside W54.
+  T10 is complete in `68f7a9fe`: QA upstream verdicts now use parsed review
   dispositions, and focused/full checks pass. T4 is complete in live run
   `eval-live-007-claude-code-20260914T112909Z` on `deepseek-flash` from an independent root;
   all stages, validator reports, Seatbelt/session integrity, and final manual quality reports

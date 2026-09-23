@@ -81,6 +81,117 @@ def test_parse_implementation_report_warns_when_verification_commands_are_missin
     assert any("No executable verification commands" in warning for warning in view.warnings)
 
 
+def test_parse_implementation_report_keeps_non_passing_outcomes_unverified() -> None:
+    view = parse_implementation_report_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "## Verification",
+                "",
+                "- `uv run pytest -q` — not-run: provider unavailable.",
+                "- `uv run ruff check .` -> exit 1.",
+            )
+        )
+    )
+
+    assert view.verification_status == "failed"
+    assert view.verification_commands == (
+        "`uv run pytest -q` — not-run: provider unavailable.",
+        "`uv run ruff check .` -> exit 1.",
+    )
+    assert [item["status"] for item in view.verification_results] == ["not-run", "fail"]
+    assert any("non-passing" in warning for warning in view.warnings)
+
+
+def test_parse_implementation_report_does_not_treat_command_claim_without_result_as_pass() -> None:
+    view = parse_implementation_report_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "## Verification",
+                "",
+                "- `uv run pytest -q` was executed successfully.",
+            )
+        )
+    )
+
+    assert view.verification_status == "unverifiable"
+    assert view.verification_results[0]["status"] == "missing"
+    assert view.verification_commands == ("`uv run pytest -q` was executed successfully.",)
+    assert any("non-passing" in warning for warning in view.warnings)
+
+
+def test_parse_implementation_report_ignores_result_word_in_command_argument() -> None:
+    view = parse_implementation_report_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "## Verification",
+                "",
+                "- `uv run pytest -k passed`.",
+            )
+        )
+    )
+
+    assert view.verification_status == "unverifiable"
+    assert view.verification_results == (
+        {"command": "`uv run pytest -k passed`.", "status": "missing"},
+    )
+    assert any("non-passing" in warning for warning in view.warnings)
+
+
+def test_parse_implementation_report_requires_command_and_outcome_on_one_item() -> None:
+    view = parse_implementation_report_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "## Verification",
+                "",
+                "- Command: `uv run pytest -q`.",
+                "- Outcome: `12 passed`, exit code `0` -> pass.",
+            )
+        )
+    )
+
+    assert view.verification_status == "unverifiable"
+    assert view.verification_results == (
+        {"command": "Command: `uv run pytest -q`.", "status": "missing"},
+        {
+            "command": "Outcome: `12 passed`, exit code `0` -> pass.",
+            "status": "unverifiable",
+            "kind": "claim",
+        },
+    )
+    assert any("non-passing" in warning for warning in view.warnings)
+
+
+def test_parse_implementation_report_blocks_mixed_outcome_only_claims() -> None:
+    view = parse_implementation_report_text(
+        "\n".join(
+            (
+                "# Implementation Report",
+                "",
+                "## Verification",
+                "",
+                "- `uv run pytest -q` -> pass.",
+                "- Full test suite passed.",
+            )
+        )
+    )
+
+    assert view.verification_status == "unverifiable"
+    assert view.verification_commands == ("`uv run pytest -q` -> pass.",)
+    assert view.verification_results == (
+        {"command": "`uv run pytest -q` -> pass.", "status": "pass"},
+        {"command": "Full test suite passed.", "status": "unverifiable", "kind": "claim"},
+    )
+    assert any("non-passing" in warning for warning in view.warnings)
+
+
 def test_parse_review_findings_extracts_severity_disposition_and_evidence() -> None:
     view = parse_review_report_text(
         "\n".join(

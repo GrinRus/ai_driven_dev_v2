@@ -66,13 +66,13 @@ from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_RESULT_PATTERN as IMPLEMENT_RESULT_PATTERN,
 )
 from aidd.validators.semantic_rules.evidence import (
-    IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN as IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN,
-)
-from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_TEST_REFERENCE_PATTERN as IMPLEMENT_TEST_REFERENCE_PATTERN,
 )
 from aidd.validators.semantic_rules.evidence import (
     has_implementation_command_evidence as has_implementation_command_evidence,
+)
+from aidd.validators.semantic_rules.evidence import (
+    has_implementation_result_evidence as has_implementation_result_evidence,
 )
 from aidd.validators.semantic_rules.evidence import (
     is_deferred_implementation_verification as is_deferred_implementation_verification,

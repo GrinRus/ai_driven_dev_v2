@@ -406,17 +406,29 @@ function activeJobCancelLabel() {
   return "Cancel job";
 }
 
+function activeJobCancelDisabledAttributes(job = state.activeJobStatus) {
+  const status = String(job?.status || "running");
+  if (!activeJobIsTerminal() && status !== "cancelling") return "";
+  const reason = status === "cancelling"
+    ? "Cancellation is already in progress."
+    : "This job has already reached a terminal state.";
+  return `disabled aria-disabled="true" title="${escapeHtml(reason)}"`;
+}
+
 function renderLiveJobActions() {
   if (!state.activeJobId || !state.activeJobStatus) return "";
   const status = state.activeJobStatus.status || "running";
-  const disabled = activeJobIsTerminal() || status === "cancelling";
   return `
     <span class="small-badge ${escapeHtml(activeJobStatusClass())}">${escapeHtml(status)}</span>
-    <button data-cancel-job="${escapeHtml(state.activeJobId)}" class="danger" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
+    <button data-cancel-job="${escapeHtml(state.activeJobId)}" class="danger" type="button" ${activeJobCancelDisabledAttributes()}>${escapeHtml(activeJobCancelLabel())}</button>
   `;
 }
 
 async function renderLogs() {
+  const requestGeneration = state.logsRequestGeneration = (Number(state.logsRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
+  const requestedJobId = state.activeJobId;
   const item = activeStageItem();
   const liveLogAvailable = Boolean(
     state.activeJobId
@@ -447,6 +459,12 @@ async function renderLogs() {
     const params = new URLSearchParams({stage: state.activeStage});
     if (state.activeRunId) params.set("run_id", state.activeRunId);
     const view = await api(`/api/logs?${params.toString()}`);
+    if (
+      requestGeneration !== state.logsRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+      || requestedJobId !== state.activeJobId
+    ) return;
     state.savedLogText = view.text || "";
     const summary = view.summary || {};
     const logAvailable = view.available !== false;
@@ -459,6 +477,12 @@ async function renderLogs() {
       truncation: view
     })}`;
   } catch (error) {
+    if (
+      requestGeneration !== state.logsRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+      || requestedJobId !== state.activeJobId
+    ) return;
     document.getElementById("intentContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
