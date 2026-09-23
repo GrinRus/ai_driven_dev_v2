@@ -782,7 +782,7 @@ def test_validate_semantic_outputs_accepts_pytest_node_reference_in_executable_c
             "## Touched files\n\n"
             "- none\n\n"
             "## Verification\n\n"
-                "- `uv run pytest tests/test_cli.py::test_csv_detect_types_header_only` -> pass "
+            "- `uv run pytest tests/test_cli.py::test_csv_detect_types_header_only` -> pass "
             "(exit code 0; asserted the header-derived TEXT schema and empty table).\n\n"
             "## Risks\n\n"
             "- The full suite remains a downstream check.\n\n"

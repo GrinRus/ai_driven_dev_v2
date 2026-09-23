@@ -121,9 +121,8 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
             for reference in _BACKTICKED_REFERENCE_PATTERN.findall(text)
         ):
             return False
-        return (
-            has_implementation_command_evidence(text)
-            and has_implementation_result_evidence(text)
+        return has_implementation_command_evidence(text) and has_implementation_result_evidence(
+            text
         )
 
     evidence_sections_by_heading = {

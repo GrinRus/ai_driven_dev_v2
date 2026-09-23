@@ -4698,9 +4698,7 @@ def test_implementation_verification_evidence_shape_uses_validator_patterns() ->
 
 def test_evidence_shape_ignores_result_word_in_command_argument() -> None:
     shape = _implementation_verification_evidence_shape(
-        "# Implementation Report\n\n"
-        "## Verification\n\n"
-        "- `uv run pytest -k passed`.\n"
+        "# Implementation Report\n\n## Verification\n\n- `uv run pytest -k passed`.\n"
     )
 
     assert shape == {

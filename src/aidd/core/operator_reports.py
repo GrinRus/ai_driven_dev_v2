@@ -189,11 +189,15 @@ def _verification_result(line: str) -> dict[str, str] | None:
         elif is_deferred_implementation_verification(normalized):
             outcome = "not-run"
         elif has_implementation_result_evidence(normalized):
-            outcome = "fail" if re.search(
-                r"\b(?:fail(?:ed|ure)?|error)\b|\bexit(?:\s+code)?\s*[1-9]\b",
-                normalized,
-                flags=re.IGNORECASE,
-            ) else "pass"
+            outcome = (
+                "fail"
+                if re.search(
+                    r"\b(?:fail(?:ed|ure)?|error)\b|\bexit(?:\s+code)?\s*[1-9]\b",
+                    normalized,
+                    flags=re.IGNORECASE,
+                )
+                else "pass"
+            )
     return {"command": normalized, "status": outcome}
 
 
@@ -260,9 +264,7 @@ def parse_implementation_report_text(
     ]
     verification_results = _verification_results(verification_section)
     verification_commands = tuple(
-        result["command"]
-        for result in verification_results
-        if result.get("kind") != "claim"
+        result["command"] for result in verification_results if result.get("kind") != "claim"
     )
     verification_status = _verification_status(verification_results)
     if not verification_commands:

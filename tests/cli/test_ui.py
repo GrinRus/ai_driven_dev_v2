@@ -3556,9 +3556,7 @@ def test_ui_remediation_launch_propagates_runtime_selector_overrides(
 
     service = _service(workspace_root, stage_runner=fake_stage_runner)
     service._implementation_service = (  # type: ignore[method-assign]
-        lambda **kwargs: (
-            captured_service.update(kwargs) or _FakeImplementationService()
-        )
+        lambda **kwargs: captured_service.update(kwargs) or _FakeImplementationService()
     )
     monkeypatch.setattr(ui_module, "implementation_finalization_blocker", lambda **_: None)
 
@@ -5806,9 +5804,7 @@ def test_ui_task_finalize_propagates_runtime_selector_overrides(tmp_path: Path) 
 
     service._validate_implementation_runtime = lambda **_: None  # type: ignore[method-assign]
     service._implementation_service = (  # type: ignore[method-assign]
-        lambda **kwargs: (
-            captured.update({"service": kwargs}) or _FakeImplementationService()
-        )
+        lambda **kwargs: captured.update({"service": kwargs}) or _FakeImplementationService()
     )
 
     response = service.handle_post(

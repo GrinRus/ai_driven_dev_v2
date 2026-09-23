@@ -1514,9 +1514,9 @@ def test_task_workspace_attempt_tray_preserves_factual_live_state() -> None:
         "async function renderWorkItemTasks", 1
     )[0]
     assert "Cancellation is already in progress." in task_workspace
-    assert "progress" not in task_workspace.replace(
-        "Cancellation is already in progress.", ""
-    ).lower()
+    assert (
+        "progress" not in task_workspace.replace("Cancellation is already in progress.", "").lower()
+    )
     assert 'state.workDetail === "tasks"' in logs
 
 

@@ -383,11 +383,7 @@ def has_implementation_result_evidence(verification_item: str) -> bool:
     command_spans = _executable_command_spans(verification_item)
     for match in IMPLEMENT_RESULT_PATTERN.finditer(verification_item):
         containing_span = next(
-            (
-                span
-                for span in command_spans
-                if span[0] <= match.start() < span[1]
-            ),
+            (span for span in command_spans if span[0] <= match.start() < span[1]),
             None,
         )
         if containing_span is None:
