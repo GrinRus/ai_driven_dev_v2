@@ -1,8 +1,13 @@
 async function refresh() {
+  const refreshGeneration = state.refreshRequestGeneration = (
+    Number(state.refreshRequestGeneration) || 0
+  ) + 1;
+  const refreshIsCurrent = () => refreshGeneration === state.refreshRequestGeneration;
   state.readinessLoading = true;
   state.readinessError = "";
   try {
-    await fetchOnboardingState();
+    const onboardingAccepted = await fetchOnboardingState();
+    if (!refreshIsCurrent() || onboardingAccepted === false) return;
     if (state.onboarding.setupRequired) {
       state.dashboard = null;
       await renderOnboarding();
@@ -27,12 +32,15 @@ async function refresh() {
           project_root: state.onboarding.projectRootInput || ".",
           work_item: route.workItem
         });
-        await fetchOnboardingState();
+        if (!refreshIsCurrent()) return;
+        const restoredContextAccepted = await fetchOnboardingState();
+        if (!refreshIsCurrent() || restoredContextAccepted === false) return;
         selectedWorkItem = state.onboarding.contextWorkItem;
         if (selectedWorkItem !== route.workItem) {
           throw new Error("The requested Work Item was not restored.");
         }
       } catch (error) {
+        if (!refreshIsCurrent()) return;
         routeRestoreError = error.message || "The requested Work Item could not be restored.";
       }
     }
@@ -48,7 +56,9 @@ async function refresh() {
       state.readiness = {runtimes: []};
       setOperatorMode("project-home");
       await Promise.all([fetchProjectHome(), fetchInbox()]);
+      if (!refreshIsCurrent()) return;
       await renderAll();
+      if (!refreshIsCurrent()) return;
       if (routeRestoreError) toast(routeRestoreError);
       return;
     }
@@ -59,6 +69,7 @@ async function refresh() {
       setOperatorMode("work");
     }
     await fetchDashboard();
+    if (!refreshIsCurrent()) return;
     // Recovery deep links are a critical path: render the decision surface
     // before secondary project/inbox projections can compete with an operator
     // answer or resume request. Those projections are refreshed on the next
@@ -66,13 +77,17 @@ async function refresh() {
     const recoveryDeepLink = route.mode !== "inbox" && route.view === "recovery";
     if (!recoveryDeepLink) {
       await fetchProjectHome(state.dashboard?.work_item || "");
+      if (!refreshIsCurrent()) return;
       await fetchInbox();
+      if (!refreshIsCurrent()) return;
     }
     await renderAll();
+    if (!refreshIsCurrent()) return;
     void fetchReadiness({runtimeOnly: recoveryDeepLink}).then((accepted) => {
-      if (accepted) renderReadinessSurfaces();
+      if (accepted && refreshIsCurrent()) renderReadinessSurfaces();
     });
   } catch (error) {
+    if (!refreshIsCurrent()) return;
     document.getElementById("intentContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
@@ -101,18 +116,45 @@ async function activateInboxAction(context, action) {
     await rerunStaleDownstream();
     return;
   }
-  if (action === "run-stage" || action === "resume-stage") {
+  if (action === "run-stage") {
     await startStage(state.activeStage);
+    return;
+  }
+  if (action === "run-workflow") {
+    await startWorkflow();
+    return;
+  }
+  if (action === "run-repair") {
+    await startStage(state.activeStage);
+    return;
+  }
+  if (action === "repair-extension") {
+    await startRepairExtension(state.activeStage);
+    return;
+  }
+  if (action === "resume-stage") {
+    await resumeStageOrImplementationTarget(state.activeStage);
     return;
   }
   if (action === "answer-questions") setOperatorMode("questions");
   else if (action === "inspect-validation" || action === "review-intervention" || action === "inspect-blocker") setOperatorMode("validation");
   else if (action === "request-change") setOperatorMode("request");
-  else if (action === "inspect-runtime-log" || action === "open-running-job") setOperatorMode("logs");
+  else if (
+    action === "inspect-runtime-log"
+    || action === "open-running-job"
+    || action === "wait-for-stage"
+  ) setOperatorMode("logs");
   else if (action === "review-findings") setOperatorMode("review-findings");
   else if (action === "qa-verdict") setOperatorMode("qa-verdict");
-  else if (action === "review-complete") setOperatorMode("artifacts");
-  else return;
+  else if (action === "review-complete" || action === "open-terminal-handoff") setOperatorMode("artifacts");
+  else if (action === "choose-runtime") {
+    focusRuntimeSelector();
+    toast("Select runtime first.");
+    return;
+  } else {
+    toast(`Unsupported Inbox action: ${action || "missing"}`);
+    return;
+  }
   requestCockpitReveal();
   await fetchDashboard();
   await fetchProjectHome(state.dashboard?.work_item || "");
@@ -168,7 +210,50 @@ async function focusTabAtIndex(index) {
   nextButton.focus();
 }
 
+function setRemediationEditorMode(sourceStage, mode = "write") {
+  const normalizedMode = mode === "preview" ? "preview" : "write";
+  document.querySelectorAll(`[data-remediation-editor-source="${CSS.escape(sourceStage || "")}"]`).forEach((button) => {
+    const active = button.dataset.remediationEditorMode === normalizedMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  const preview = document.querySelector(`[data-remediation-write-preview="${CSS.escape(sourceStage || "")}"]`);
+  if (preview) preview.open = normalizedMode === "preview";
+  if (normalizedMode === "write") {
+    document.querySelector(`[data-remediation-note="${CSS.escape(sourceStage || "")}"]`)?.focus();
+  }
+}
+
+function setAnswerEditorMode(questionId, mode = "write") {
+  const normalizedMode = mode === "preview" ? "preview" : "write";
+  document.querySelectorAll(`[data-answer-editor-question="${CSS.escape(questionId || "")}"]`).forEach((button) => {
+    const active = button.dataset.answerEditorMode === normalizedMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  const panel = document.querySelector(`[data-answer-preview-panel="${CSS.escape(questionId || "")}"]`);
+  if (panel) {
+    if (normalizedMode !== "preview") {
+      panel.dataset.answerPreviewGeneration = String(
+        Number(panel.dataset.answerPreviewGeneration || "0") + 1
+      );
+    }
+    panel.hidden = normalizedMode !== "preview";
+  }
+  if (normalizedMode === "write") {
+    document.querySelector(`[data-question-text="${CSS.escape(questionId || "")}"]`)?.focus();
+  }
+}
+
 document.addEventListener("keydown", async (event) => {
+  if (event.key === "Escape") {
+    const runtimeSettings = document.getElementById("runtimeSettings");
+    if (runtimeSettings?.open) {
+      runtimeSettings.open = false;
+      event.preventDefault();
+      return;
+    }
+  }
   const inboxItem = event.target.closest?.("[data-inbox-select]");
   if (inboxItem && !event.target.closest?.("[data-inbox-action]") && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
@@ -225,6 +310,14 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    const runtimeSettings = document.getElementById("runtimeSettings");
+    if (runtimeSettings?.open && !runtimeSettings.contains(event.target)) {
+      runtimeSettings.open = false;
+    }
+    if (event.target.closest("[data-close-runtime-settings]")) {
+      if (runtimeSettings) runtimeSettings.open = false;
+      return;
+    }
     if (event.target.closest("[data-copy-request-destination]")) {
       const destination = document.querySelector("[data-request-preview-panel] code")?.textContent || "";
       if (destination && typeof copyArtifactPath === "function") {
@@ -251,6 +344,15 @@ document.addEventListener("click", async (event) => {
       focusRuntimeSelector();
       return;
     }
+    if (event.target.closest("[data-refresh-runtime-readiness]")) {
+      await fetchReadiness();
+      renderRuntimeSelector();
+      renderTopbar();
+      renderSidebar();
+      if (state.activeTab === "work") await renderCockpit();
+      else await renderAll();
+      return;
+    }
     const stateRecovery = event.target.closest("[data-state-recovery]")?.dataset.stateRecovery;
     if (stateRecovery === "reconnect-live-job") {
       await reconnectActiveJob();
@@ -262,9 +364,21 @@ document.addEventListener("click", async (event) => {
     }
     const inboxActionTarget = event.target.closest("[data-inbox-action]");
     if (inboxActionTarget) {
-      if (inboxActionTarget.disabled || inboxActionTarget.dataset.serviceActionEnabled === "false") return;
-      const routeTarget = inboxActionTarget.closest("[data-operator-route-intent]");
       const action = inboxActionTarget.dataset.inboxAction || "";
+      const safeInboxNavigation = new Set([
+        "choose-runtime",
+        "wait-for-stage",
+        "open-running-job",
+        "open-terminal-handoff",
+      ]);
+      if (
+        inboxActionTarget.disabled
+        || (
+          inboxActionTarget.dataset.serviceActionEnabled === "false"
+          && !safeInboxNavigation.has(action)
+        )
+      ) return;
+      const routeTarget = inboxActionTarget.closest("[data-operator-route-intent]");
       if (routeTarget) {
         const context = {
           workItem: routeTarget.dataset.routeWorkItem,
@@ -521,6 +635,7 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-close-next-flow-wizard]")) {
+      invalidateNextFlowWizardRequests();
       state.nextFlowWizard.active = false;
       await renderCockpit();
       return;
@@ -552,6 +667,7 @@ document.addEventListener("click", async (event) => {
       persistNextFlowBrowserDraft();
       state.nextFlowWizard.step = state.nextFlowWizard.action === "clone-flow" ? "sources" : "definition";
       if (state.nextFlowWizard.action === "clone-flow") {
+        invalidateNextFlowWizardRequests();
         state.nextFlowWizard.active = false;
       } else {
         requestNextFlowWizardReveal();
@@ -588,6 +704,14 @@ document.addEventListener("click", async (event) => {
       else if (state.workDetail === "qa-verdict") await renderQaVerdict();
       return;
     }
+    const remediationEditorMode = event.target.closest("[data-remediation-editor-mode]");
+    if (remediationEditorMode) {
+      setRemediationEditorMode(
+        remediationEditorMode.dataset.remediationEditorSource,
+        remediationEditorMode.dataset.remediationEditorMode
+      );
+      return;
+    }
     const proceedStage = event.target.closest("[data-proceed-stage]")?.dataset.proceedStage;
     if (proceedStage) {
       await startStage(proceedStage);
@@ -602,7 +726,17 @@ document.addEventListener("click", async (event) => {
       await startTaskFinalization();
       return;
     }
-    if (event.target.closest("[data-rerun-implement]")) {
+    const implementationRecovery = event.target.closest("[data-rerun-implement]");
+    if (implementationRecovery) {
+      const taskId = implementationRecovery.dataset.rerunImplementTask || "";
+      if (taskId) {
+        await startImplementationTask(taskId);
+        return;
+      }
+      if (implementationRecovery.dataset.rerunImplementFinalize === "true") {
+        await startTaskFinalization();
+        return;
+      }
       await startStage("implement");
       return;
     }
@@ -790,6 +924,22 @@ document.addEventListener("click", async (event) => {
       else if (action === "inspect-runtime-log") setOperatorMode("logs");
       else if (action === "review-findings") setOperatorMode("review-findings");
       else if (action === "qa-verdict") setOperatorMode("qa-verdict");
+      else if (action === "review-intervention") setOperatorMode("validation");
+      else if (action === "review-complete" || action === "open-terminal-handoff") setOperatorMode("artifacts");
+      else if (action === "open-running-job" || action === "wait-for-stage") setOperatorMode("logs");
+      else if (action === "choose-runtime") {
+        focusRuntimeSelector();
+        toast("Select runtime first.");
+        return;
+      }
+      else if (action === "run-workflow") {
+        await startWorkflow();
+        return;
+      }
+      else if (action === "run-stage") {
+        await startStage(state.activeStage);
+        return;
+      }
       else if (action === "run-repair") {
         await startStage(state.activeStage);
         return;
@@ -799,11 +949,15 @@ document.addEventListener("click", async (event) => {
         return;
       }
       else if (action === "resume-stage") {
-        await startStage(state.activeStage);
+        await resumeStageOrImplementationTarget(state.activeStage);
         return;
       }
       else if (action === "rerun-stale-downstream") {
         await rerunStaleDownstream();
+        return;
+      }
+      else {
+        toast(`Unsupported recovery action: ${action || "missing"}`);
         return;
       }
       requestCockpitReveal();
@@ -827,8 +981,17 @@ document.addEventListener("click", async (event) => {
       keepQuestionDraft(saveDraftButton.dataset.saveDraft);
       return;
     }
+    const answerEditorMode = event.target.closest("[data-answer-editor-mode]");
+    if (answerEditorMode) {
+      const questionId = answerEditorMode.dataset.answerEditorQuestion || "";
+      const mode = answerEditorMode.dataset.answerEditorMode || "write";
+      setAnswerEditorMode(questionId, mode);
+      if (mode === "preview") await previewAnswer(questionId);
+      return;
+    }
     const answerPreviewButton = event.target.closest("[data-answer-preview]");
     if (answerPreviewButton) {
+      setAnswerEditorMode(answerPreviewButton.dataset.answerPreview, "preview");
       await previewAnswer(answerPreviewButton.dataset.answerPreview);
       return;
     }
@@ -965,6 +1128,18 @@ document.addEventListener("change", async (event) => {
     state.runtimeReasoningEffort = event.target.value;
     state.runtimeReasoningEffortDirty = true;
   }
+  if (event.target.matches?.("[data-runtime-inline-model]")) {
+    state.runtimeModel = event.target.value;
+    state.runtimeModelDirty = true;
+    const globalInput = document.getElementById("runtimeModelInput");
+    if (globalInput) globalInput.value = event.target.value;
+  }
+  if (event.target.matches?.("[data-runtime-inline-reasoning-effort]")) {
+    state.runtimeReasoningEffort = event.target.value;
+    state.runtimeReasoningEffortDirty = true;
+    const globalInput = document.getElementById("runtimeReasoningEffortInput");
+    if (globalInput) globalInput.value = event.target.value;
+  }
   const historyFilter = event.target.closest("[data-history-filter]")?.dataset.historyFilter;
   if (historyFilter) {
     if (historyFilter === "status") state.historyStatusFilter = event.target.value || "";
@@ -985,6 +1160,14 @@ document.addEventListener("change", async (event) => {
   if (remediationSource) {
     persistRemediationDraft(remediationSource);
     updateRemediationPreview(remediationSource);
+    if (state.workDetail === "review-findings") {
+      await renderReviewFindings();
+      return;
+    }
+    if (state.workDetail === "qa-verdict") {
+      await renderQaVerdict();
+      return;
+    }
   }
   const sourceSelection = event.target.closest("[data-source-selection-id]");
   if (sourceSelection) {
@@ -1002,6 +1185,14 @@ document.addEventListener("change", async (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.matches?.("[data-runtime-inline-model]")) {
+    state.runtimeModel = event.target.value;
+    state.runtimeModelDirty = true;
+  }
+  if (event.target.matches?.("[data-runtime-inline-reasoning-effort]")) {
+    state.runtimeReasoningEffort = event.target.value;
+    state.runtimeReasoningEffortDirty = true;
+  }
   if (event.target.closest?.("[data-operator-rail-filter]")) {
     state.projectRailFilter = event.target.value || "";
     const filter = state.projectRailFilter.trim().toLowerCase();
@@ -1029,7 +1220,7 @@ document.addEventListener("input", (event) => {
     return;
   }
   if (event.target.id === "onboardingProjectRoot") {
-    state.onboarding.projectRootInput = event.target.value;
+    updateOnboardingProjectRoot(event.target.value);
   }
   if (event.target.id === "onboardingWorkItem") {
     state.onboarding.workItemInput = event.target.value;

@@ -45,6 +45,7 @@ async function fetchDashboard() {
   state.dashboard = payload.dashboard;
   state.dashboardActiveJob = payload.active_job || null;
   await recoverActiveJobFromDashboard(payload.active_job);
+  if (requestGeneration !== state.dashboardRequestGeneration) return false;
   const version = String(payload.app_version || "").trim();
   document.getElementById("appVersion").textContent = version.startsWith("v")
     ? version
@@ -56,6 +57,26 @@ async function fetchDashboard() {
   const previousRunId = state.activeRunId;
   state.activeRunId = state.dashboard.run?.run_id || "";
   if (state.activeRunId !== previousRunId) {
+    state.activeAttempt = null;
+    state.activeTaskAttempt = null;
+    state.selectedTaskId = "";
+    state.activeArtifactKey = "";
+    state.activeArtifactWorkbench = null;
+    state.activeArtifactComparison = null;
+    state.activeStudioWorkbench = null;
+    state.activeStudioWorkbenchError = "";
+    state.selectedEvidenceNodeId = "";
+    state.selectedEvidenceEdgeId = "";
+    state.implementDiffPath = "";
+    state.runAccountability = null;
+    state.runAccountabilityError = "";
+    state.runComparison = null;
+    state.runComparisonRequestGeneration += 1;
+    state.runComparisonError = "";
+    state.runComparisonLoading = false;
+    state.runComparisonBaselineInput = "";
+    state.historyTimeline = null;
+    state.historySelectedFrame = "";
     state.reviewFindingsView = null;
     state.reviewFindingsRunId = "";
     state.qaVerdictView = null;
@@ -268,6 +289,46 @@ async function startStage(
   });
 }
 
+async function resumeStageOrImplementationTarget(stage = state.activeStage) {
+  if (stage !== "implement" || !state.activeRunId) {
+    await startStage(stage);
+    return;
+  }
+  const targetContext = {
+    workItem: state.dashboard?.work_item || "",
+    routeWorkItem: state.activeRouteWorkItem || "",
+    runId: state.activeRunId,
+    stage
+  };
+  const targetContextIsCurrent = () => (
+    (state.dashboard?.work_item || "") === targetContext.workItem
+    && (state.activeRouteWorkItem || "") === targetContext.routeWorkItem
+    && state.activeRunId === targetContext.runId
+    && state.activeStage === targetContext.stage
+  );
+  let taskView;
+  try {
+    taskView = await api(`/api/tasks?${runScopedQuery("implement")}`);
+  } catch (error) {
+    if (!targetContextIsCurrent()) return;
+    toast(`Implementation recovery target unavailable: ${error.message}`);
+    return;
+  }
+  if (!targetContextIsCurrent()) return;
+  const target = typeof implementationRecoveryTarget === "function"
+    ? implementationRecoveryTarget(taskView)
+    : null;
+  if (target?.kind === "task" && target.taskId) {
+    await startImplementationTask(target.taskId);
+    return;
+  }
+  if (target?.kind === "finalization") {
+    await startTaskFinalization();
+    return;
+  }
+  await startStage(stage);
+}
+
 async function startRepairExtension(stage = state.activeStage) {
   if (!ensureRunnableRuntime()) return;
   if (!state.activeRunId) {
@@ -352,6 +413,16 @@ async function rerunStaleDownstream() {
 
 async function handleNextAction() {
   const action = state.dashboard?.next_action || {action: "choose-runtime"};
+  const targetContext = {
+    workItem: state.dashboard?.work_item || "",
+    routeWorkItem: state.activeRouteWorkItem || "",
+    runId: state.activeRunId || ""
+  };
+  const targetContextIsCurrent = () => (
+    (state.dashboard?.work_item || "") === targetContext.workItem
+    && (state.activeRouteWorkItem || "") === targetContext.routeWorkItem
+    && (state.activeRunId || "") === targetContext.runId
+  );
   if (activeJobBlocksNextAction(action)) {
     activateTab("logs");
     await renderCockpit();
@@ -371,15 +442,32 @@ async function handleNextAction() {
     await startWorkflow();
     return;
   }
-  if (action.action === "run-stage" || action.action === "resume-stage") {
+  if (action.action === "run-stage") {
     if (action.stage && action.stage !== state.activeStage) {
       state.activeStage = action.stage;
       state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
+      if (!targetContextIsCurrent()) return;
       await renderAll();
+      if (!targetContextIsCurrent()) return;
     }
+    if (!targetContextIsCurrent()) return;
     await startStage(action.stage || state.activeStage);
+    return;
+  }
+  if (action.action === "resume-stage") {
+    if (action.stage && action.stage !== state.activeStage) {
+      state.activeStage = action.stage;
+      state.activeStageExplicit = true;
+      state.activeArtifactKey = "";
+      await fetchDashboard();
+      if (!targetContextIsCurrent()) return;
+      await renderAll();
+      if (!targetContextIsCurrent()) return;
+    }
+    if (!targetContextIsCurrent()) return;
+    await resumeStageOrImplementationTarget(action.stage || state.activeStage);
     return;
   }
   if (action.action === "rerun-stale-downstream") {
@@ -392,8 +480,11 @@ async function handleNextAction() {
       state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
+      if (!targetContextIsCurrent()) return;
       await renderAll();
+      if (!targetContextIsCurrent()) return;
     }
+    if (!targetContextIsCurrent()) return;
     activateTab("questions");
     await renderCockpit();
     return;
@@ -404,8 +495,11 @@ async function handleNextAction() {
       state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
+      if (!targetContextIsCurrent()) return;
       await renderAll();
+      if (!targetContextIsCurrent()) return;
     }
+    if (!targetContextIsCurrent()) return;
     activateTab("validation");
     await renderCockpit();
     return;
@@ -416,8 +510,11 @@ async function handleNextAction() {
       state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       await fetchDashboard();
+      if (!targetContextIsCurrent()) return;
       await renderAll();
+      if (!targetContextIsCurrent()) return;
     }
+    if (!targetContextIsCurrent()) return;
     activateTab(action.action);
     await renderCockpit();
     return;
@@ -425,5 +522,17 @@ async function handleNextAction() {
   if (action.action === "review-complete") {
     activateTab("artifacts");
     await renderCockpit();
+    return;
   }
+  if (action.action === "open-terminal-handoff") {
+    activateTab("artifacts");
+    await renderCockpit();
+    return;
+  }
+  if (action.action === "open-running-job" || action.action === "wait-for-stage" || action.action === "inspect-runtime-log") {
+    activateTab("logs");
+    await renderCockpit();
+    return;
+  }
+  toast(`Unsupported next action: ${action.action || "missing"}`);
 }

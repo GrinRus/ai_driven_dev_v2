@@ -321,6 +321,31 @@ def test_implementation_report_preserves_authored_command_result_span(tmp_path: 
     )
 
 
+def test_implementation_report_rejects_result_word_in_command_argument(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-RESULT-ARGUMENT",
+        _compatibility_report(
+            summary="Implemented the bounded behavior with focused coverage.",
+            touched_files="- `src/example.py` - preserve the selected behavior.",
+            verification="- `uv run pytest -k passed`.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-RESULT-ARGUMENT",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "must include observed command outcome" in finding.message
+        for finding in findings
+    )
+
+
 def test_implementation_report_rejects_command_free_verification_caveat(
     tmp_path: Path,
 ) -> None:
@@ -346,6 +371,60 @@ def test_implementation_report_rejects_command_free_verification_caveat(
     findings = validate_semantic_outputs(
         stage="implement",
         work_item="WI-SEM-IMPLEMENT-VERIFICATION-CAVEAT",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "outcome claim without executable command evidence" in finding.message
+        for finding in findings
+    )
+
+
+def test_implementation_report_rejects_reused_command_without_exact_command(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-REUSED-COMMAND",
+        _compatibility_report(
+            summary="Implemented the selected compatibility fix with focused evidence.",
+            touched_files="- `src/example.py` - preserve the selected behavior.",
+            verification="- `same stash/pop procedure as T1` -> `3 passed`.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-REUSED-COMMAND",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "outcome claim without executable command evidence" in finding.message
+        for finding in findings
+    )
+
+
+def test_implementation_report_rejects_artifact_only_outcome_claim(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-ARTIFACT-ONLY",
+        _compatibility_report(
+            summary="Implemented the selected compatibility fix with focused evidence.",
+            touched_files="- `src/example.py` - preserve the selected behavior.",
+            verification="- `validator-report.md` records the self-validator pass.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-ARTIFACT-ONLY",
         workspace_root=workspace_root,
     )
 
@@ -435,7 +514,7 @@ def test_validate_semantic_outputs_accepts_example_style_implementation_report(
             "changed files limited to `data_tool/cli.py`, `tests/test_cli.py`, "
             "and `tests/test_cli_memory.py`.\n\n"
             "### TL-5 evidence bundle\n\n"
-            "- `validator-report.md` records the draft self-validator pass.\n"
+            "- `test -f validator-report.md` -> pass (draft self-validator report retained).\n"
             "- QA reproduction recipe:\n"
             "  - `printf 'a,b,c\\n' > /tmp/header_only.csv && "
             ".venv/bin/data-tool insert /tmp/test.db tbl /tmp/header_only.csv --csv`\n"
@@ -687,7 +766,7 @@ def test_validate_semantic_outputs_accepts_node_eval_command_evidence_for_implem
     assert findings == ()
 
 
-def test_validate_semantic_outputs_accepts_pytest_node_reference_evidence_for_implement(
+def test_validate_semantic_outputs_accepts_pytest_node_reference_in_executable_command(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -703,7 +782,7 @@ def test_validate_semantic_outputs_accepts_pytest_node_reference_evidence_for_im
             "## Touched files\n\n"
             "- none\n\n"
             "## Verification\n\n"
-            "- `tests/test_cli.py::test_csv_detect_types_header_only` -> pass "
+            "- `uv run pytest tests/test_cli.py::test_csv_detect_types_header_only` -> pass "
             "(exit code 0; asserted the header-derived TEXT schema and empty table).\n\n"
             "## Risks\n\n"
             "- The full suite remains a downstream check.\n\n"
@@ -913,10 +992,13 @@ def test_validate_semantic_outputs_accepts_flat_example_verification_evidence(
             "&& uv run pytest tests/test_cli.py::test_insert_detect_types_header_only_csv` "
             "-> `3 failed` with `AssertionError`; `git stash pop` restored the "
             "fix; subsequent re-run -> `3 passed`.\n"
-            "- `T3` -- revert sanity check: same stash/pop procedure as `T2` "
+            "- `T3` -- revert sanity check: `git stash push -- data_tool/cli.py "
+            "&& uv run pytest tests/test_cli.py::test_insert_detect_types_header_only_csv` "
             "-> `3 failed` with the same `AssertionError`; restored the fix; "
             "re-run -> `3 passed`.\n"
-            "- `T4` -- revert sanity check: stash/pop procedure -> the `None` "
+            "- `T4` -- revert sanity check: `git stash push -- data_tool/cli.py "
+            "&& uv run pytest tests/test_cli.py::test_insert_detect_types_header_only_csv` "
+            "-> the `None` "
             "parametrization fails with the pre-fix assertion; restored the "
             "fix; re-run -> `3 passed`.\n"
             "- `T5` -- boundary check: `git diff --name-only` -> "

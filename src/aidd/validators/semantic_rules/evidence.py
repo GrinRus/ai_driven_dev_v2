@@ -69,11 +69,6 @@ IMPLEMENT_TEST_REFERENCE_PATTERN = re.compile(
     r"`(?:[^`\n/]+/)*tests?/[^`\n]+::[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z0-9_]+)*`",
     flags=re.IGNORECASE,
 )
-IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN = re.compile(
-    r"\b(same\s+)?stash/pop\s+procedure\b|"
-    r"\bsame\b.{0,80}\b(?:procedure|command|check|run)\b.{0,80}\bas\s+`?(?:T\d+|TL-\d+)`?",
-    flags=re.IGNORECASE | re.DOTALL,
-)
 IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN = re.compile(
     r"`?\.?(?:pytest|ruff|mypy)_cache/?`?|"
     r"`?\.hypothesis/?`?|"
@@ -334,6 +329,76 @@ def _command_starts_with_known_executable(candidate: str) -> bool:
     return bool(tokens and tokens[0].lower() in _KNOWN_COMMAND_EXECUTABLES and len(tokens) > 1)
 
 
+def _executable_command_spans(text: str) -> tuple[tuple[int, int], ...]:
+    """Return spans whose result-like words are still command arguments.
+
+    ``IMPLEMENT_RESULT_PATTERN`` intentionally accepts natural-language outcome
+    notes, but a broad word such as ``passed`` must not count when it occurs in
+    an executable argument (for example ``pytest -k passed``).  Keep this
+    distinction local to the semantic result helper so the public pattern can
+    remain backwards-compatible for callers that use it for classification.
+    """
+
+    spans: list[tuple[int, int]] = []
+    for pattern, group_name in (
+        (_MULTILINE_BACKTICKED_FRAGMENT_PATTERN, "body"),
+        (_BACKTICKED_FRAGMENT_PATTERN, None),
+    ):
+        for match in pattern.finditer(text):
+            candidate = match.group(group_name) if group_name is not None else match.group(1)
+            if _looks_like_command(candidate, explicit_container=False):
+                start = match.start(group_name) if group_name is not None else match.start(1)
+                end = match.end(group_name) if group_name is not None else match.end(1)
+                spans.append((start, end))
+
+    for pattern in (_PROMPT_COMMAND_PATTERN, _COMMAND_FIELD_PATTERN):
+        for match in pattern.finditer(text):
+            if _looks_like_command(match.group(1), explicit_container=True):
+                spans.append((match.start(1), match.end(1)))
+
+    for fence in _FENCED_COMMAND_PATTERN.finditer(text):
+        body = fence.group("body")
+        body_start = fence.start("body")
+        for line in re.finditer(r"[^\n]*(?:\n|$)", body):
+            candidate = line.group(0).rstrip("\r\n")
+            normalized = candidate.strip().removeprefix("$ ").strip()
+            if (
+                normalized
+                and not normalized.startswith("#")
+                and _looks_like_command(normalized, explicit_container=True)
+            ):
+                spans.append((body_start + line.start(), body_start + line.end()))
+    return tuple(spans)
+
+
+def has_implementation_result_evidence(verification_item: str) -> bool:
+    """Return whether a verification item contains an observed outcome.
+
+    Result words inside a recognized command span are ignored unless the item
+    uses an explicit outcome delimiter or an observation-like separator.  This
+    prevents command arguments such as ``-k passed`` from satisfying the
+    same-item command-plus-result contract.
+    """
+
+    command_spans = _executable_command_spans(verification_item)
+    for match in IMPLEMENT_RESULT_PATTERN.finditer(verification_item):
+        containing_span = next(
+            (span for span in command_spans if span[0] <= match.start() < span[1]),
+            None,
+        )
+        if containing_span is None:
+            return True
+
+        matched_text = match.group(0).lstrip()
+        if matched_text.startswith("->"):
+            return True
+
+        prefix = verification_item[containing_span[0] : match.start()]
+        if re.search(r"(?:->|[(:,;])\s*$", prefix):
+            return True
+    return False
+
+
 def has_implementation_command_evidence(verification_item: str) -> bool:
     # Authored verification context may describe a concrete Click invocation as
     # ``click.testing.CliRunner`` invocation of ``insert ...`` instead of emitting
@@ -342,8 +407,6 @@ def has_implementation_command_evidence(verification_item: str) -> bool:
     if _CLI_RUNNER_INVOCATION_PATTERN.search(verification_item) is not None:
         return True
     command_candidate = _without_non_command_artifact_text_outside_code(verification_item)
-    if IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate) is not None:
-        return True
     backticked_command_status = _classify_backticked_command_with_result(command_candidate)
     if backticked_command_status is True:
         return True
@@ -405,7 +468,7 @@ __all__ = [
     "IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN",
     "IMPLEMENT_RESULT_PATTERN",
     "IMPLEMENT_TEST_REFERENCE_PATTERN",
-    "IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN",
     "has_implementation_command_evidence",
+    "has_implementation_result_evidence",
     "is_deferred_implementation_verification",
 ]

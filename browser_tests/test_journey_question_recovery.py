@@ -59,9 +59,20 @@ def test_question_recovery_preserves_answer_service_path(tmp_path: Path) -> None
         page = browser_page.page
         with expect_rendered_surface(page.locator('[data-question-text="Q1"]')):
             page.goto(harness.url, wait_until="domcontentloaded")
-        page.locator('[data-question-text="Q1"]').fill(
-            "Use the same durable answer service path."
+        answer = page.locator('[data-question-text="Q1"]')
+        answer.fill("Use the same durable answer service path.")
+        preview_button = page.locator('[data-answer-editor-mode="preview"]').first
+        preview_button.click()
+        assert preview_button.get_attribute("aria-selected") == "true"
+        assert page.locator('[data-answer-preview-panel="Q1"]').is_visible()
+        write_button = page.locator('[data-answer-editor-mode="write"]').first
+        write_button.click()
+        assert write_button.get_attribute("aria-selected") == "true"
+        page.wait_for_function(
+            "document.querySelector('[data-answer-preview-panel=Q1]').hidden === true"
         )
+        assert page.locator('[data-answer-preview-panel="Q1"]').is_hidden()
+        assert answer.evaluate("node => node === document.activeElement")
         page.locator('[data-question-resolution="Q1"]').select_option("resolved")
         page.locator(".question-save-options").evaluate("node => { node.open = true; }")
         with page.expect_response(

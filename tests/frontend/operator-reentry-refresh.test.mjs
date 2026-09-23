@@ -12,12 +12,20 @@ function classList() {
   return {add() {}, remove() {}, toggle() {}};
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolver) => {
+    resolve = resolver;
+  });
+  return {promise, resolve};
+}
+
 async function load(context, filename) {
   const source = await readFile(path.join(staticRoot, filename), "utf8");
   vm.runInContext(source, context, {filename});
 }
 
-async function refreshContext({contextWorkItem, resumeFails = false}) {
+async function refreshContext({contextWorkItem, resumeFails = false, supersedeInitialRefresh = false}) {
   const calls = [];
   const elements = new Map();
   const element = (id) => {
@@ -63,11 +71,14 @@ async function refreshContext({contextWorkItem, resumeFails = false}) {
   context.__calls = calls;
   context.__initialContextWorkItem = contextWorkItem;
   context.__resumeFails = resumeFails;
+  const onboardingGate = supersedeInitialRefresh ? deferred() : null;
+  context.__onboardingGate = onboardingGate;
   vm.runInContext(`
     let onboardingFetchCount = 0;
     fetchOnboardingState = async () => {
       __calls.push({kind: "onboarding"});
       onboardingFetchCount += 1;
+      if (__onboardingGate) await __onboardingGate.promise;
       state.onboarding.setupRequired = false;
       state.onboarding.projectRootInput = "/project";
       state.onboarding.contextWorkItem = onboardingFetchCount === 1
@@ -112,7 +123,12 @@ async function refreshContext({contextWorkItem, resumeFails = false}) {
   const mainPath = path.join(staticRoot, "operator-main.js");
   const main = await readFile(mainPath, "utf8");
   vm.runInContext(main.replace(/\nrefresh\(\);\s*$/, "\n"), context, {filename: mainPath});
-  await vm.runInContext("refresh()", context);
+  const initialRefresh = vm.runInContext("refresh()", context);
+  if (onboardingGate) {
+    vm.runInContext("state.refreshRequestGeneration += 1", context);
+    onboardingGate.resolve();
+  }
+  await initialRefresh;
   await new Promise((resolve) => setImmediate(resolve));
   return {calls, context};
 }
@@ -169,6 +185,17 @@ test("failed explicit Studio re-entry falls back to the project Inbox", async ()
     ))),
     {tab: "work", detail: "project-home", routeWorkItem: "", dashboard: null},
   );
+});
+
+test("superseded refresh stops before it can render an obsolete work-item context", async () => {
+  const {calls} = await refreshContext({
+    contextWorkItem: "WI-ROUTE",
+    supersedeInitialRefresh: true,
+  });
+
+  assert.equal(calls.filter((call) => call.kind === "dashboard").length, 0);
+  assert.equal(calls.filter((call) => call.kind === "project-home").length, 0);
+  assert.equal(calls.filter((call) => call.kind === "render").length, 0);
 });
 
 test("resuming a project work item refreshes readiness after the durable render", async () => {

@@ -572,8 +572,15 @@ function renderWorkbenchTree(workbench) {
   }).filter(Boolean).join("");
   return `
     ${renderDocumentNavigator(workbench)}
-    <div class="surface-title">Artifact categories</div>
-    ${grouped || `<div class="empty-state">No artifacts indexed for this stage.</div>`}
+    <details class="artifact-categories" data-artifact-categories>
+      <summary>
+        <span>Artifact categories</span>
+        <span class="small-badge">${escapeHtml(references.length)} retained</span>
+      </summary>
+      <div class="artifact-categories-body">
+        ${grouped || `<div class="empty-state">No artifacts indexed for this stage.</div>`}
+      </div>
+    </details>
   `;
 }
 
@@ -1281,17 +1288,28 @@ function renderLoadedArtifactDocument(workbench, {tree, viewer, studioCanvas}) {
 }
 
 async function loadArtifactDocument(key) {
+  const requestGeneration = state.artifactRequestGeneration = (Number(state.artifactRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
+  const requestedKey = String(key || "");
   const tree = document.getElementById("workbenchTree");
   const viewer = activeReaderViewer();
   if (!viewer) return;
-  const requestGeneration = ++state.artifactWorkbenchRequestGeneration;
+  const workbenchRequestGeneration = ++state.artifactWorkbenchRequestGeneration;
   state.artifactWorkbenchAbortController?.abort();
   const controller = new AbortController();
   state.artifactWorkbenchAbortController = controller;
-  const requestedRunId = state.activeRunId;
   const studioCanvas = viewer.id === "studioDocumentCanvas";
   if (key && key !== state.activeArtifactKey) state.activeArtifactComparison = null;
   viewer.innerHTML = `<div class="reader-state loading-state" role="status">Loading retained document evidence…</div>`;
+  let expectedRunId = requestedRunId;
+  const requestIsCurrent = () => (
+    requestGeneration === state.artifactRequestGeneration
+    && workbenchRequestGeneration === state.artifactWorkbenchRequestGeneration
+    && expectedRunId === state.activeRunId
+    && requestedStage === state.activeStage
+    && (!requestedKey || !state.activeArtifactKey || requestedKey === state.activeArtifactKey)
+  );
   try {
     let workbench;
     try {
@@ -1300,18 +1318,19 @@ async function loadArtifactDocument(key) {
       if (controller.signal.aborted || error?.name === "AbortError") return;
       if (error?.status !== 400 || !requestedRunId) throw error;
       state.activeRunId = "";
+      expectedRunId = "";
       workbench = await api(
         workbenchRequestPath(key, null, {includeRunId: false}),
         {signal: controller.signal},
       );
     }
-    if (requestGeneration !== state.artifactWorkbenchRequestGeneration) return;
+    if (controller.signal.aborted || !requestIsCurrent()) return;
     const comparisonKey = state.activeArtifactComparison?.workbench?.selected_key;
     if (comparisonKey && comparisonKey !== workbench.selected_key) state.activeArtifactComparison = null;
     renderLoadedArtifactDocument(workbench, {tree, viewer, studioCanvas});
   } catch (error) {
     if (controller.signal.aborted || error?.name === "AbortError") return;
-    if (requestGeneration !== state.artifactWorkbenchRequestGeneration) return;
+    if (!requestIsCurrent()) return;
     if (studioCanvas) {
       state.activeStudioWorkbench = null;
       state.activeStudioWorkbenchError = error.message || "Document Canvas unavailable";
@@ -1326,21 +1345,32 @@ async function loadArtifactDocument(key) {
 }
 
 function cancelArtifactWorkbenchRequest() {
+  state.artifactRequestGeneration += 1;
   state.artifactWorkbenchRequestGeneration += 1;
   state.artifactWorkbenchAbortController?.abort();
   state.artifactWorkbenchAbortController = null;
 }
 
 async function loadArtifactComparison(attemptNumber) {
+  const requestGeneration = state.artifactRequestGeneration = (Number(state.artifactRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   const currentWorkbench = state.activeArtifactWorkbench || state.activeStudioWorkbench;
   const viewer = activeReaderViewer();
   if (!currentWorkbench || !viewer || !state.activeArtifactKey) return;
+  const requestedKey = state.activeArtifactKey;
   const selectedAttempt = Number(attemptNumber || 0);
   if (!selectedAttempt || selectedAttempt === Number(currentWorkbench.attempt_number || 0)) return;
   const studioCanvas = viewer.id === "studioDocumentCanvas";
   viewer.innerHTML = `<div class="reader-state loading-state" role="status">Loading retained comparison copy…</div>`;
   try {
     const comparison = await api(workbenchRequestPath(state.activeArtifactKey, selectedAttempt));
+    if (
+      requestGeneration !== state.artifactRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+      || requestedKey !== state.activeArtifactKey
+    ) return;
     state.activeArtifactComparison = {attemptNumber: selectedAttempt, workbench: comparison};
     renderLoadedArtifactDocument(currentWorkbench, {
       tree: document.getElementById("workbenchTree"),
@@ -1348,6 +1378,12 @@ async function loadArtifactComparison(attemptNumber) {
       studioCanvas
     });
   } catch (error) {
+    if (
+      requestGeneration !== state.artifactRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+      || requestedKey !== state.activeArtifactKey
+    ) return;
     state.activeArtifactComparison = null;
     viewer.innerHTML = renderDocumentReaderFailure(error);
   }
@@ -1684,6 +1720,9 @@ function renderEvidenceGraphScreen(view, selection) {
 }
 
 async function renderArtifacts() {
+  const requestGeneration = state.artifactGraphRequestGeneration = (Number(state.artifactGraphRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   const item = activeStageItem();
   if (!item || Number(item.attempt_count || 0) <= 0) {
     document.getElementById("intentContent").innerHTML = `<div class="empty-state">No artifacts for this stage yet.</div>`;
@@ -1695,6 +1734,11 @@ async function renderArtifacts() {
     const params = new URLSearchParams({stage: state.activeStage});
     if (state.activeRunId) params.set("run_id", state.activeRunId);
     const view = await api(`/api/artifacts/evidence-graph?${params.toString()}`);
+    if (
+      requestGeneration !== state.artifactGraphRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     const selection = selectedEvidenceSelection(view);
     content.innerHTML = renderEvidenceGraphScreen(view, selection);
     const selectedArtifactKey = selection.node?.kind === "document"
@@ -1708,6 +1752,11 @@ async function renderArtifacts() {
       renderEvidenceWorkbenchUnavailable(view);
     }
   } catch (error) {
+    if (
+      requestGeneration !== state.artifactGraphRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }

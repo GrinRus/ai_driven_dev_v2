@@ -35,6 +35,9 @@ def test_documents_keep_navigator_reader_and_context_visible(
         viewer.locator('[data-document-canvas-mode="preview"]').wait_for(
             state="visible"
         )
+        categories = tree.locator("[data-artifact-categories]")
+        assert categories.count() == 1
+        assert categories.get_attribute("open") is None
         page.locator("[data-studio-context-bar]").wait_for(state="visible")
         page.locator("[data-intent-phase-stepper]").wait_for(state="visible")
 
@@ -135,6 +138,12 @@ def test_markdown_workspace_uses_target_context_inspector_and_compact_reader(
             brief_box = viewer.locator(".reader-brief-compact").bounding_box()
             assert body_box is not None and body_box["y"] < viewport[1]
             assert brief_box is not None and brief_box["height"] <= 40
+        else:
+            reader_box = viewer.locator(".reader-document-column").bounding_box()
+            inspector_box = viewer.locator(".workbench-sidebar").bounding_box()
+            assert reader_box is not None and inspector_box is not None
+            assert reader_box["y"] < inspector_box["y"]
+            assert viewer.locator(".reader-body-content").bounding_box()["y"] < viewport[1]
 
         assert page.evaluate("document.documentElement.scrollWidth") <= viewport[0]
         browser_page.diagnostics.assert_clean()

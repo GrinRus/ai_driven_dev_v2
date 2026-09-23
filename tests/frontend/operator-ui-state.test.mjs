@@ -351,6 +351,51 @@ test("exhausted and explicitly stopped recovery route only to the stage interven
   }
 });
 
+test("disabled recovery actions stay visibly disabled with an operator-facing reason", async () => {
+  const context = vm.createContext({
+    RECOVERY_SUMMARY_KINDS: new Set(["validation", "intervention"]),
+    escapeHtml(value) {
+      return String(value);
+    },
+    isRuntimeFirstFailure() {
+      return false;
+    },
+    state: {
+      activeStage: "plan",
+      dashboard: {
+        recovery_actions: [],
+        next_action: {
+          action: "answer-questions",
+          label: "Answer questions",
+          detail: "The question surface is not ready yet.",
+          stage: "plan",
+          enabled: false,
+        },
+      },
+    },
+  });
+  await load(context, "operator-primitives.js");
+  await load(context, "operator-stage-cockpit.js");
+  const result = JSON.parse(JSON.stringify(vm.runInContext(`(() => {
+    const action = recoveryPrimaryActionSpec({validation: {status: "blocked"}});
+    const html = renderRecoverySummary({
+      kind: "validation",
+      status: "blocked",
+      statusLabel: "blocked",
+      title: "Questions unavailable",
+      consequence: action.detail,
+      decisiveFailure: {label: "Selected stage", detail: "plan"},
+      evidence: {path: "questions.md"},
+      primaryAction: {...action, enabled: !action.attrs.includes("disabled"), stage: "plan"}
+    });
+    return {action, html};
+  })()`, context)));
+  assert.match(result.action.attrs, /disabled/);
+  assert.match(result.action.attrs, /aria-disabled="true"/);
+  assert.match(result.action.attrs, /title="The question surface is not ready yet\."/);
+  assert.match(result.html, /aria-disabled="true"/);
+});
+
 test("Studio implementation gate preserves canonical readiness and finalization guards", async () => {
   const context = vm.createContext({
     escapeHtml(value) {
@@ -534,6 +579,56 @@ test("Implementation Review exposes report truth without editing stage documents
   assert.match(html, /Residual risks/);
   assert.match(html, /Manual browser check remains/);
   assert.doesNotMatch(html, /<textarea|contenteditable|data-document-write/);
+});
+
+test("Implementation verification fails closed for legacy and incomplete payloads", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    renderWarnings() {
+      return "";
+    },
+    renderDecisionSummary() {
+      return "";
+    },
+  });
+  await load(context, "operator-control-center.js");
+
+  assert.equal(
+    vm.runInContext(
+      `implementationVerificationReady({verification_commands: ["pytest -q -> exit 0"]})`,
+      context,
+    ),
+    false,
+  );
+  assert.equal(
+    vm.runInContext(
+      `implementationVerificationReady({verification_status: "verified", verification_commands: ["pytest -q -> exit 0"]})`,
+      context,
+    ),
+    false,
+  );
+  assert.equal(
+    vm.runInContext(
+      `implementationVerificationReady({verification_status: "verified", verification_results: [{command: "pytest -q -> exit 0", status: "pass"}]})`,
+      context,
+    ),
+    true,
+  );
+  const legacy = vm.runInContext(
+    `renderImplementationVerificationItems({verification_commands: ["pytest -q -> exit 0"]})`,
+    context,
+  );
+  assert.match(legacy, /unverifiable/);
+  assert.doesNotMatch(legacy, />pass<|· pass/);
+  assert.equal(
+    vm.runInContext(
+      `implementationVerificationStatus({verification_status: "verified", verification_commands: ["pytest -q -> exit 0"]})`,
+      context,
+    ),
+    "unverifiable",
+  );
 });
 
 test("Studio Review and QA gates render exact upstream identities and blockers", async () => {
@@ -1161,6 +1256,234 @@ test("blocked terminal QA keeps Resume stage visible in the terminal workspace",
   assert.equal(vm.runInContext("state.workDetail", context), "overview");
   assert.equal(vm.runInContext("state.activeStage", context), "qa");
   assert.equal(vm.runInContext("state.activeStageExplicit", context), true);
+});
+
+test("late onboarding state cannot replace a newer selected work item", async () => {
+  const {context, element} = domContext();
+  const requests = [];
+  context.fetch = (url) => {
+    const pending = deferred();
+    requests.push({url, pending});
+    return pending.promise;
+  };
+  await load(context, "operator-api-state.js");
+
+  const older = vm.runInContext("fetchOnboardingState()", context);
+  const newer = vm.runInContext("fetchOnboardingState()", context);
+  requests[1].pending.resolve(response({
+    app_version: "new",
+    setup_required: false,
+    context: {project_root: "/new", work_item: "WI-NEW"},
+  }));
+  assert.equal(await newer, true);
+  requests[0].pending.resolve(response({
+    app_version: "old",
+    setup_required: false,
+    context: {project_root: "/old", work_item: "WI-OLD"},
+  }));
+  assert.equal(await older, false);
+
+  assert.equal(vm.runInContext("state.onboarding.contextWorkItem", context), "WI-NEW");
+  assert.equal(vm.runInContext("state.onboarding.projectRootInput", context), "/new");
+  assert.equal(element("appVersion").textContent, "vnew");
+  assert.equal(vm.runInContext("state.onboarding.loading", context), false);
+});
+
+test("late dashboard recovery cannot apply the older app version after a newer read", async () => {
+  const {context, element} = domContext();
+  const requests = [];
+  const oldRecovery = deferred();
+  context.fetch = (url) => {
+    const pending = deferred();
+    requests.push({url, pending});
+    return pending.promise;
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+  context.recoverActiveJobFromDashboard = (job) => (
+    job?.job_id === "job-old" ? oldRecovery.promise : Promise.resolve()
+  );
+
+  const older = vm.runInContext("fetchDashboard()", context);
+  requests[0].pending.resolve(response({
+    app_version: "old",
+    active_job: {job_id: "job-old", status: "running"},
+    dashboard: {work_item: "WI-OLD", run: {run_id: "run-old"}, active_stage: "plan", stages: [], next_action: {}},
+  }));
+  await new Promise((resolve) => setImmediate(resolve));
+  const newer = vm.runInContext("fetchDashboard()", context);
+  requests[1].pending.resolve(response({
+    app_version: "new",
+    active_job: null,
+    dashboard: {work_item: "WI-NEW", run: {run_id: "run-new"}, active_stage: "plan", stages: [], next_action: {}},
+  }));
+  await newer;
+  oldRecovery.resolve();
+  await older;
+
+  assert.equal(element("appVersion").textContent, "vnew");
+  assert.equal(vm.runInContext("state.activeRunId", context), "run-new");
+});
+
+test("Next Action does not dispatch a stage from the old run after context changes", async () => {
+  const {context} = domContext();
+  const dashboardRefresh = deferred();
+  let startedStage = "";
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+  context.activeJobBlocksNextAction = () => false;
+  context.fetchDashboard = () => dashboardRefresh.promise;
+  context.renderAll = async () => {};
+  context.startStage = async (stage) => { startedStage = stage; };
+  vm.runInContext(`
+    state.activeRunId = "run-1";
+    state.activeRouteWorkItem = "WI-1";
+    state.activeStage = "plan";
+    state.dashboard = {
+      work_item: "WI-1",
+      run: {run_id: "run-1"},
+      next_action: {action: "run-stage", stage: "qa"}
+    };
+  `, context);
+
+  const action = vm.runInContext("handleNextAction()", context);
+  vm.runInContext(`
+    state.activeRunId = "run-2";
+    state.activeRouteWorkItem = "WI-2";
+    state.dashboard.work_item = "WI-2";
+    state.dashboard.run.run_id = "run-2";
+  `, context);
+  dashboardRefresh.resolve();
+  await action;
+
+  assert.equal(startedStage, "");
+});
+
+test("changing runs clears stale document, evidence, task, and comparison selections", async () => {
+  const {context} = domContext();
+  context.fetch = async () => response({
+    app_version: "new",
+    active_job: null,
+    dashboard: {
+      run: {run_id: "run-new"},
+      active_stage: "plan",
+      stages: [],
+      next_action: {},
+    },
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
+  vm.runInContext(`
+    state.activeRunId = "run-old";
+    state.activeJobId = "job-old";
+    state.activeJobStatus = {job_id: "job-old", status: "running"};
+    state.activeJobCursor = 12;
+    state.activeJobLogChunks = [{text: "old live output"}];
+    state.activeAttempt = 3;
+    state.activeTaskAttempt = 2;
+    state.selectedTaskId = "TL-OLD";
+    state.activeArtifactKey = "old-report";
+    state.activeArtifactWorkbench = {selected_key: "old-report"};
+    state.activeArtifactComparison = {attemptNumber: 1};
+    state.activeStudioWorkbench = {selected_key: "old-report"};
+    state.activeStudioWorkbenchError = "old error";
+    state.selectedEvidenceNodeId = "document:old-report";
+    state.selectedEvidenceEdgeId = "old-edge";
+    state.implementDiffPath = "old.py";
+    state.runAccountability = {run_id: "run-old"};
+    state.runAccountabilityError = "old provenance error";
+    state.runComparison = {target_run_id: "run-old"};
+    state.runComparisonError = "old comparison error";
+    state.runComparisonBaselineInput = "run-baseline-old";
+    state.historyTimeline = {run_id: "run-old", frames: [{identity: "old-frame"}]};
+    state.historySelectedFrame = "old-frame";
+  `, context);
+
+  await vm.runInContext("fetchDashboard()", context);
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(vm.runInContext(`({
+      run: state.activeRunId,
+      job: state.activeJobId,
+      jobStatus: state.activeJobStatus,
+      jobCursor: state.activeJobCursor,
+      jobChunks: state.activeJobLogChunks,
+      attempt: state.activeAttempt,
+      taskAttempt: state.activeTaskAttempt,
+      task: state.selectedTaskId,
+      artifact: state.activeArtifactKey,
+      artifactWorkbench: state.activeArtifactWorkbench,
+      artifactComparison: state.activeArtifactComparison,
+      studioWorkbench: state.activeStudioWorkbench,
+      studioError: state.activeStudioWorkbenchError,
+      evidenceNode: state.selectedEvidenceNodeId,
+      evidenceEdge: state.selectedEvidenceEdgeId,
+      diff: state.implementDiffPath,
+      accountability: state.runAccountability,
+      accountabilityError: state.runAccountabilityError,
+      comparison: state.runComparison,
+      comparisonError: state.runComparisonError,
+      baseline: state.runComparisonBaselineInput
+      ,historyTimeline: state.historyTimeline
+      ,historySelectedFrame: state.historySelectedFrame
+    })`, context))),
+    {
+      run: "run-new",
+      job: "",
+      jobStatus: null,
+      jobCursor: 0,
+      jobChunks: [],
+      attempt: null,
+      taskAttempt: null,
+      task: "",
+      artifact: "",
+      artifactWorkbench: null,
+      artifactComparison: null,
+      studioWorkbench: null,
+      studioError: "",
+      evidenceNode: "",
+      evidenceEdge: "",
+      diff: "",
+      accountability: null,
+      accountabilityError: "",
+      comparison: null,
+      comparisonError: "",
+      baseline: "",
+      historyTimeline: null,
+      historySelectedFrame: "",
+    },
+  );
+});
+
+test("late history timeline response cannot replace a newer run", async () => {
+  const {context} = domContext();
+  const pending = deferred();
+  context.fetch = async () => ({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    async json() {
+      return pending.promise;
+    },
+  });
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-history.js");
+  context.runScopedQuery = () => "run_id=run-old";
+  vm.runInContext(`
+    state.activeRunId = "run-old";
+    state.historyTimeline = {run_id: "run-new", frames: [{identity: "new-frame"}]};
+  `, context);
+  const request = vm.runInContext("loadStudioHistoryTimeline()", context);
+  vm.runInContext(`
+    state.activeRunId = "run-new";
+    state.historyTimelineRequestGeneration += 1;
+  `, context);
+  pending.resolve({run_id: "run-old", frames: [{identity: "old-frame"}]});
+  await request;
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(vm.runInContext("state.historyTimeline", context))),
+    {run_id: "run-new", frames: [{identity: "new-frame"}]},
+  );
 });
 
 test("shared dashboard actions preserve workflow and stage request payloads", async () => {

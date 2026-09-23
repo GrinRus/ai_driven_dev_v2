@@ -169,7 +169,7 @@ override, AIDD leaves the command unchanged and records `runtime-default` in the
 snapshot rather than asserting a factual provider model.
 
 The local Operator UI exposes the same selectors beside the runtime picker. Enter a model
-and optional reasoning effort before starting a workflow or stage; the fields are free-form
+and optional reasoning effort before starting a workflow, stage, or operator intervention; the fields are free-form
 because AIDD does not maintain a global model-id allowlist. Controls are enabled only when
 the selected runtime advertises the capability, blank values are omitted, and the chosen
 values plus `ui-selection` provenance are retained in the run snapshot.

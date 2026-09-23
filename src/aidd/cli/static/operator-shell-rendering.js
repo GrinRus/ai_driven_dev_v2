@@ -82,6 +82,15 @@ function renderRuntimeSelector() {
   setRunButtonState();
 }
 
+function syncRuntimeSelectorSurface() {
+  const settings = document.getElementById("runtimeSettings");
+  const hasInlineRunnerSettings = Boolean(document.querySelector("[data-runner-selector-overrides]"));
+  document.querySelectorAll("#runtimeSettings .runtime-selector-field").forEach((field) => {
+    field.hidden = hasInlineRunnerSettings;
+  });
+  if (hasInlineRunnerSettings && settings) settings.open = false;
+}
+
 function renderWorkItemTabs() {
   const host = document.getElementById("workItemTabs");
   if (!host) return;
@@ -95,7 +104,7 @@ function renderWorkItemTabs() {
   host.hidden = false;
   const active = normalizeWorkItemTab(state.workItemTab);
   host.innerHTML = `
-    <div class="work-item-tabs-list" role="tablist" aria-label="Work Item sections">
+    <div class="work-item-tabs-list" role="tablist" aria-label="Work Item sections" data-current-work-item-tab="${escapeHtml(active)}">
       ${WORK_ITEM_TABS.map((tab) => `
         <button
           class="work-item-tab${tab === active ? " active" : ""}"
@@ -132,6 +141,9 @@ function selectedRuntimeView() {
 
 function focusRuntimeSelector() {
   const settings = document.getElementById("runtimeSettings");
+  if (settings?.hidden) {
+    settings.hidden = false;
+  }
   if (settings) settings.open = true;
   document.getElementById("runtimeSelect")?.focus();
 }
@@ -150,6 +162,35 @@ function runtimeReadinessMessage() {
   return "";
 }
 
+function renderRunnerSelectorOverrides(runtime) {
+  const supportedSelectors = new Set(runtime?.capabilities?.supported_selectors || []);
+  const modelSupported = supportedSelectors.has("model");
+  const effortSupported = supportedSelectors.has("reasoning_effort");
+  const model = state.runtimeModel || runtime?.configured_model || "";
+  const reasoningEffort = state.runtimeReasoningEffort || runtime?.configured_reasoning_effort || "";
+  return `
+    <div class="runner-inspector-controls" data-runner-selector-overrides>
+      <div class="runner-inspector-controls-heading">
+        <strong>Run settings</strong>
+        <span>Overrides apply to the next task or finalization attempt.</span>
+      </div>
+      <label>
+        <span>Model</span>
+        <input data-runtime-inline-model type="text" value="${escapeHtml(model)}" placeholder="Native default" ${modelSupported ? "" : "disabled"}>
+      </label>
+      <label>
+        <span>Reasoning effort</span>
+        <input data-runtime-inline-reasoning-effort type="text" value="${escapeHtml(reasoningEffort)}" placeholder="Runtime default" ${effortSupported ? "" : "disabled"}>
+      </label>
+      <small data-runner-selector-hint>${escapeHtml(
+        runtime
+          ? `${modelSupported ? "Model" : "Model selection"} and ${effortSupported ? "reasoning effort" : "reasoning-effort selection"} follow this Runner's advertised capabilities.`
+          : "Select a Runner to inspect its supported settings."
+      )}</small>
+    </div>
+  `;
+}
+
 function renderContextualRunnerControl({actionLabel = "launch", inspector = false} = {}) {
   const runtime = selectedRuntimeView();
   const runtimeLabel = state.selectedRuntime || "no Runner selected";
@@ -161,11 +202,12 @@ function renderContextualRunnerControl({actionLabel = "launch", inspector = fals
       : ready
         ? `Eligible for ${actionLabel}.`
         : runtime?.disabled_reason || "Choose an eligible Runner before this action.";
-  const model = runtime?.configured_model || state.runtimeModel || "Native default";
+  const model = state.runtimeModel || runtime?.configured_model || "Native default";
   const inspectorFacts = inspector
     ? `
         <div class="runner-inspector-facts" data-runner-inspector-facts>
           <div><span>Model</span><strong>${escapeHtml(model)}</strong></div>
+          <div><span>Reasoning</span><strong>${escapeHtml(state.runtimeReasoningEffort || runtime?.configured_reasoning_effort || "Runtime default")}</strong></div>
           <div><span>Readiness</span><strong>${escapeHtml(
             state.readinessLoading
               ? "checking"
@@ -174,13 +216,17 @@ function renderContextualRunnerControl({actionLabel = "launch", inspector = fals
                 : ready
                   ? "eligible"
                   : "blocked",
-          )}</strong></div>
+            )}</strong></div>
         </div>
-        ${runtime
-          ? renderRuntimeReadinessDimensions(runtime, {compact: true})
-          : '<p class="runner-inspector-empty">Select an eligible Runner to load current readiness evidence.</p>'}
+        ${renderRunnerSelectorOverrides(runtime)}
+        <details class="runner-inspector-supporting-details">
+          <summary>Readiness evidence</summary>
+          ${runtime
+            ? renderRuntimeReadinessDimensions(runtime, {compact: true})
+            : '<p class="runner-inspector-empty">Select an eligible Runner to load current readiness evidence.</p>'}
+        </details>
         ${typeof renderProtectedWriteScope === "function"
-          ? `<div class="runner-inspector-scope" data-runner-inspector-scope>${renderProtectedWriteScope()}</div>`
+          ? `<details class="runner-inspector-supporting-details runner-inspector-scope" data-runner-inspector-scope><summary>Protected write scope</summary>${renderProtectedWriteScope()}</details>`
           : ""}
       `
     : "";
@@ -192,7 +238,10 @@ function renderContextualRunnerControl({actionLabel = "launch", inspector = fals
         <span>${escapeHtml(reason)}</span>
         ${inspectorFacts}
       </div>
-      <button class="secondary" data-open-runner type="button">${state.selectedRuntime ? "Change Runner" : "Choose Runner"}</button>
+      <div class="runner-control-actions">
+        <button class="secondary" data-open-runner type="button">${state.selectedRuntime ? "Change Runner" : "Choose Runner"}</button>
+        ${inspector ? '<button class="link-button" data-refresh-runtime-readiness type="button">Recheck Runner</button>' : ""}
+      </div>
     </div>
   `;
 }

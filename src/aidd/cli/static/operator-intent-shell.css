@@ -1055,6 +1055,42 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   text-align: right;
 }
 
+.runner-inspector-controls {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+.runner-inspector-controls-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.runner-inspector-controls-heading span,
+.runner-inspector-controls > small {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: 1.35;
+}
+
+.runner-inspector-controls label {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.runner-inspector-controls label > span {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-weight-strong);
+}
+
+.runner-inspector-controls input {
+  min-width: 0;
+  width: 100%;
+}
+
 .runner-inspector-empty {
   border-top: 1px solid var(--line);
   color: var(--color-text-secondary);
@@ -1569,6 +1605,22 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   body.work-overview-mode .intent-decision-surface #globalNextActionButton {
     position: static;
     width: 100%;
+  }
+}
+
+/* Disabled consequence controls explain a blocked state; they are not
+ * actionable targets and must never become fixed overlays over the evidence. */
+@media (max-width: 1500px) {
+  [data-primary-action]:disabled,
+  [data-primary-action][aria-disabled="true"],
+  [data-aidd-primary-action]:disabled,
+  [data-aidd-primary-action][aria-disabled="true"] {
+    bottom: auto !important;
+    box-shadow: none !important;
+    left: auto !important;
+    position: static !important;
+    right: auto !important;
+    z-index: auto !important;
   }
 }
 
@@ -2486,11 +2538,11 @@ body.markdown-workspace-mode .document-context-evidence .evidence-inspector-titl
   }
 
   body.markdown-workspace-mode #artifactViewer .workbench-sidebar {
-    order: -1;
+    order: 2;
   }
 
   body.markdown-workspace-mode .document-context-actions {
-    order: -1;
+    order: initial;
   }
 
   body.markdown-workspace-mode .reader-heading-map .workbench-toc-list a {

@@ -891,6 +891,7 @@
     background: var(--topbar-bg);
     border: 1px solid var(--topbar-line);
     border-radius: var(--radius-control);
+    color: var(--topbar-text);
     box-shadow: var(--elevation-overlay);
     display: grid;
     gap: 6px;
@@ -2003,9 +2004,9 @@
  * the operator inspects a long evidence surface. The action remains the same
  * DOM control; only placement changes at bounded viewport sizes. */
 @media (max-width: 1500px) and (min-width: 761px) {
-  .target-implementation-review [data-aidd-primary-action],
-  .target-remediation-surface [data-remediation-launch="review"],
-  .target-remediation-surface [data-remediation-launch="qa"] {
+  .target-implementation-review [data-aidd-primary-action]:not(:disabled):not([aria-disabled="true"]),
+  .target-remediation-surface [data-remediation-launch="review"]:not(:disabled):not([aria-disabled="true"]),
+  .target-remediation-surface [data-remediation-launch="qa"]:not(:disabled):not([aria-disabled="true"]) {
     background: var(--cobalt-dark);
     border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
@@ -2016,8 +2017,9 @@
     width: min(280px, calc(100vw - (var(--space-6) * 2)));
     z-index: 60;
   }
-  .target-implementation-review .target-review-gate,
-  .target-remediation-surface .target-remediation-request {
+  .target-implementation-review .target-review-gate:has([data-aidd-primary-action]:not(:disabled):not([aria-disabled="true"])),
+  .target-implementation-ledger-with-primary,
+  .target-remediation-surface .target-remediation-request:has([data-remediation-launch]:not(:disabled):not([aria-disabled="true"])) {
     padding-bottom: calc(var(--space-8) + var(--control-height));
   }
   .target-remediation-surface .remediation-draft-preview pre {
@@ -2027,9 +2029,9 @@
 }
 
 @media (max-width: 760px) {
-  .target-implementation-review [data-aidd-primary-action],
-  .target-remediation-surface [data-remediation-launch="review"],
-  .target-remediation-surface [data-remediation-launch="qa"] {
+  .target-implementation-review [data-aidd-primary-action]:not(:disabled):not([aria-disabled="true"]),
+  .target-remediation-surface [data-remediation-launch="review"]:not(:disabled):not([aria-disabled="true"]),
+  .target-remediation-surface [data-remediation-launch="qa"]:not(:disabled):not([aria-disabled="true"]) {
     background: var(--cobalt-dark);
     border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
@@ -2041,8 +2043,9 @@
     width: auto;
     z-index: 60;
   }
-  .target-implementation-review .target-review-gate,
-  .target-remediation-surface .target-remediation-request {
+  .target-implementation-review .target-review-gate:has([data-aidd-primary-action]:not(:disabled):not([aria-disabled="true"])),
+  .target-implementation-ledger-with-primary,
+  .target-remediation-surface .target-remediation-request:has([data-remediation-launch]:not(:disabled):not([aria-disabled="true"])) {
     padding-bottom: calc(var(--space-10) + var(--control-height-touch));
   }
   .target-remediation-surface .remediation-draft-preview pre {

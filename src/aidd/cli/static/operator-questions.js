@@ -156,6 +156,13 @@ function updateQuestionResumeButtonStates() {
   });
 }
 
+function resumeStageAfterQuestions() {
+  if (typeof resumeStageOrImplementationTarget === "function") {
+    return resumeStageOrImplementationTarget(state.activeStage);
+  }
+  return startStage(state.activeStage);
+}
+
 function interviewCandidateRecoveryAction(candidate) {
   const canonical = candidate?.canonical_question;
   if (!candidate || candidate.status !== "rejected") return null;
@@ -372,6 +379,7 @@ function renderQuestionCards({showResume}) {
         const resolutionId = questionControlId("resolution", question.question_id, index);
         const evidenceId = questionControlId("evidence", question.question_id, index);
         const consequenceId = questionControlId("consequence", question.question_id, index);
+        const previewPanelId = questionControlId("answer-preview", question.question_id, index);
         const displayStatus = questionDisplayStatus(question);
         const savedAnswer = question.answer_resolution
           ? `<div class="saved-answer"><span class="saved-answer-label">Saved ${escapeHtml(question.answer_resolution)} answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text || "Answer recorded in answers.md; blocking question still requires a resolved answer.")}</span></div>`
@@ -434,7 +442,7 @@ function renderQuestionCards({showResume}) {
               <span>Unblock consequence</span>
               <textarea id="${consequenceId}" name="${consequenceId}" rows="2" data-question-consequence="${escapeHtml(question.question_id)}" placeholder="What can resume after this answer is accepted?">${escapeHtml(unblockConsequence)}</textarea>
             </label>
-            <div class="answer-preview-panel" data-answer-preview-panel="${escapeHtml(question.question_id)}" hidden aria-live="polite"></div>
+            <div id="${previewPanelId}" class="answer-preview-panel" data-answer-preview-panel="${escapeHtml(question.question_id)}" hidden role="tabpanel" aria-live="polite"></div>
             <div class="question-actions">
               <div class="decision-resolution" role="radiogroup" aria-label="Resolution">
                 <span class="decision-resolution-label">Resolution</span>
@@ -457,8 +465,8 @@ function renderQuestionCards({showResume}) {
               <button data-save-draft="${escapeHtml(question.question_id)}" data-decision-alternative="draft" type="button" class="secondary">Keep draft locally</button>
               </details>
               <div class="answer-editor-tabs" role="tablist" aria-label="Answer editor mode">
-                <button class="active" data-answer-editor-mode="write" type="button" role="tab" aria-selected="true">Write</button>
-                <button data-answer-preview="${escapeHtml(question.question_id)}" type="button" role="tab" aria-selected="false">Preview</button>
+                <button class="active" data-answer-editor-mode="write" data-answer-editor-question="${escapeHtml(question.question_id)}" type="button" role="tab" aria-controls="${answerId}" aria-selected="true">Write</button>
+                <button data-answer-editor-mode="preview" data-answer-editor-question="${escapeHtml(question.question_id)}" data-answer-preview="${escapeHtml(question.question_id)}" type="button" role="tab" aria-controls="${previewPanelId}" aria-selected="false">Preview</button>
               </div>
               ${showResume ? `
                 <button ${saveIsPrimary ? "data-primary-action" : ""} data-decision-submit="true" data-save-answer="${escapeHtml(question.question_id)}" type="button" class="${saveIsPrimary ? "primary" : "secondary"}">${escapeHtml(answerLabel)}</button>
@@ -590,12 +598,20 @@ async function saveAnswer(questionId) {
 }
 
 async function previewAnswer(questionId) {
+  if (typeof setAnswerEditorMode === "function") setAnswerEditorMode(questionId, "preview");
+  const previewIsActive = () => document.querySelector(
+    `[data-answer-editor-mode="preview"][data-answer-editor-question="${CSS.escape(questionId)}"]`
+  )?.getAttribute("aria-selected") === "true";
   const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
   const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
   const evidence = document.querySelector(`[data-question-evidence="${CSS.escape(questionId)}"]`);
   const consequence = document.querySelector(`[data-question-consequence="${CSS.escape(questionId)}"]`);
   const panel = document.querySelector(`[data-answer-preview-panel="${CSS.escape(questionId)}"]`);
   if (!textarea || !panel) return;
+  const previewGeneration = String(
+    Number(panel.dataset.answerPreviewGeneration || "0") + 1
+  );
+  panel.dataset.answerPreviewGeneration = previewGeneration;
   const text = textarea.value.trim();
   if (!text) {
     panel.hidden = false;
@@ -614,16 +630,37 @@ async function previewAnswer(questionId) {
       evidence_links: (evidence?.value || "").split("\n").map((value) => value.trim()).filter(Boolean),
       unblock_consequence: consequence?.value?.trim() || ""
     });
+    if (
+      panel.dataset.answerPreviewGeneration !== previewGeneration
+      || !previewIsActive()
+    ) return;
     panel.innerHTML = `<strong>Preview · ${escapeHtml(payload.answers_path || "answers.md")}</strong><pre>${escapeHtml(payload.markdown || "")}</pre>`;
   } catch (error) {
+    if (
+      panel.dataset.answerPreviewGeneration !== previewGeneration
+      || !previewIsActive()
+    ) return;
     panel.textContent = `Preview unavailable: ${error.message}`;
   }
 }
 
 async function answerAndResume(questionId) {
+  const targetContext = {
+    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "",
+    routeWorkItem: state.activeRouteWorkItem || "",
+    runId: state.activeRunId || "",
+    stage: state.activeStage || ""
+  };
+  const targetContextIsCurrent = () => (
+    (state.dashboard?.work_item || state.activeRouteWorkItem || "") === targetContext.workItem
+    && (state.activeRouteWorkItem || "") === targetContext.routeWorkItem
+    && (state.activeRunId || "") === targetContext.runId
+    && (state.activeStage || "") === targetContext.stage
+  );
   let view = state.dashboard?.active_stage_view?.questions;
   if (!view) {
     await fetchDashboard();
+    if (!targetContextIsCurrent()) return false;
     view = state.dashboard?.active_stage_view?.questions;
   }
   let unresolved = view?.unresolved_blocking_question_ids || [];
@@ -642,6 +679,7 @@ async function answerAndResume(questionId) {
       await renderAll();
       return false;
     }
+    if (!targetContextIsCurrent()) return false;
     view = state.dashboard?.active_stage_view?.questions;
     unresolved = view?.unresolved_blocking_question_ids || [];
     question = (view?.questions || []).find((item) => item.question_id === questionId);
@@ -663,10 +701,14 @@ async function answerAndResume(questionId) {
     resumeButton.textContent = "Checking Runner…";
   }
   try {
-    await startStage(state.activeStage, {skipClientReadiness: true});
+    if (state.activeStage === "implement") {
+      await resumeStageAfterQuestions();
+    } else {
+      await startStage(state.activeStage, {skipClientReadiness: true});
+    }
     return true;
   } finally {
-    if (!state.activeJobId) {
+    if (targetContextIsCurrent() && !state.activeJobId) {
       const currentButton = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
       if (currentButton) currentButton.removeAttribute("aria-busy");
       updateQuestionResumeButtonState(questionId);
@@ -675,17 +717,39 @@ async function answerAndResume(questionId) {
 }
 
 async function resumeAfterAnswers() {
-  let view = state.dashboard?.active_stage_view?.questions;
-  if (!view) {
-    await fetchDashboard();
-    view = state.dashboard?.active_stage_view?.questions;
-  }
-  const unresolved = view?.unresolved_blocking_question_ids || [];
+  const targetContext = {
+    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "",
+    routeWorkItem: state.activeRouteWorkItem || "",
+    runId: state.activeRunId || "",
+    stage: state.activeStage || ""
+  };
+  const targetContextIsCurrent = () => (
+    (state.dashboard?.work_item || state.activeRouteWorkItem || "") === targetContext.workItem
+    && (state.activeRouteWorkItem || "") === targetContext.routeWorkItem
+    && (state.activeRunId || "") === targetContext.runId
+    && (state.activeStage || "") === targetContext.stage
+  );
+  await fetchDashboard();
+  if (!targetContextIsCurrent()) return false;
+  const unresolved = state.dashboard?.active_stage_view?.questions?.unresolved_blocking_question_ids || [];
   if (unresolved.length) {
     await renderAll();
     toast("Resolve blocking questions before resume.");
     return false;
   }
-  await startStage(state.activeStage, {skipClientReadiness: true});
+  const readinessAccepted = await fetchReadiness();
+  if (!targetContextIsCurrent()) return false;
+  const runtimeReady = typeof selectedRuntimeReady === "function"
+    ? selectedRuntimeReady()
+    : true;
+  if (readinessAccepted === false || !runtimeReady) {
+    await renderAll();
+    const readinessMessage = typeof runtimeReadinessMessage === "function"
+      ? runtimeReadinessMessage()
+      : "";
+    toast(readinessMessage || "Runner is not ready to resume this stage.");
+    return false;
+  }
+  await resumeStageAfterQuestions();
   return true;
 }

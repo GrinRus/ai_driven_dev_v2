@@ -97,6 +97,8 @@ const state = {
   dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
   dashboardAbortController: null,
+  refreshRequestGeneration: 0,
+  onboardingRequestGeneration: 0,
   projectHome: null,
   projectHomeRequestGeneration: 0,
   requestContext: null,
@@ -119,10 +121,12 @@ const state = {
   evidenceDetail: "artifacts",
   historyDetail: "history",
   historyRuns: null,
+  historyRunsRequestGeneration: 0,
   historyRunsError: "",
   historyStatusFilter: "",
   historyAttemptModeFilter: "",
   historyTimeline: null,
+  historyTimelineRequestGeneration: 0,
   historySelectedFrame: "",
   historyAutoFollow: true,
   historyView: "timeline",
@@ -138,6 +142,7 @@ const state = {
   activeTaskAttempt: null,
   selectedTaskId: "",
   taskWorkspace: null,
+  taskWorkspaceRequestGeneration: 0,
   taskWorkspaceError: "",
   taskWorkspaceFilter: "",
   projectRailFilter: "",
@@ -165,17 +170,27 @@ const state = {
   archivePresentationPromise: null,
   archiveIntentSequence: 0,
   runAccountability: null,
+  runAccountabilityRequestGeneration: 0,
   runAccountabilityError: "",
   runComparison: null,
+  runComparisonRequestGeneration: 0,
   runComparisonError: "",
   runComparisonLoading: false,
   runComparisonBaselineInput: "",
   reviewFindingsView: null,
+  reviewFindingsRequestGeneration: 0,
   reviewFindingsRunId: "",
   qaVerdictView: null,
+  qaVerdictRequestGeneration: 0,
   qaVerdictRunId: "",
+  implementReviewRequestGeneration: 0,
+  requestChangeRequestGeneration: 0,
+  approvalsRequestGeneration: 0,
+  logsRequestGeneration: 0,
   remediationFindingFilter: "all",
   activeArtifactKey: "",
+  artifactRequestGeneration: 0,
+  artifactGraphRequestGeneration: 0,
   activeArtifactWorkbench: null,
   artifactWorkbenchRequestGeneration: 0,
   artifactWorkbenchAbortController: null,
@@ -195,6 +210,8 @@ const state = {
     setupRequired: false,
     loading: true,
     error: "",
+    projectRequestGeneration: 0,
+    projectSetRequestGeneration: 0,
     projectRootInput: ".",
     project: null,
     configPath: "",
@@ -230,6 +247,9 @@ const state = {
   },
   nextFlowWizard: {
     active: false,
+    requestGeneration: 0,
+    preflightRequestGeneration: 0,
+    followUpDraftRequestGeneration: 0,
     action: "",
     step: "sources",
     loading: false,
@@ -609,8 +629,33 @@ function activeJobPayloadIsLive(job) {
   return ["running", "waiting-for-operator", "cancelling"].includes(job.status || "running");
 }
 
+function clearOrphanedDashboardJob() {
+  if (!state.activeJobId) return;
+  if (typeof clearReconciledActiveJob === "function") {
+    clearReconciledActiveJob({preserveConnection: false});
+    return;
+  }
+  // Keep this fallback available to provider-free state tests that load the
+  // state module without the live-log module. A dashboard response is the
+  // server-owned source of truth, so an absent live job must invalidate any
+  // older client poll and selection instead of leaving stale logs visible.
+  const previousJobId = state.activeJobId;
+  if (typeof clearActiveJobPollTimer === "function") clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
+  state.reconciledTerminalJobId = previousJobId;
+  state.activeJobId = "";
+  state.activeJobStatus = null;
+  state.activeJobCursor = 0;
+  state.activeJobLogChunks = [];
+  state.approvalSessionConfirmation = null;
+  if (typeof resetActiveJobConnection === "function") resetActiveJobConnection();
+}
+
 async function recoverActiveJobFromDashboard(job) {
-  if (!activeJobPayloadIsLive(job)) return;
+  if (!activeJobPayloadIsLive(job)) {
+    clearOrphanedDashboardJob();
+    return;
+  }
   if (job.job_id === state.reconciledTerminalJobId) return;
   if (state.activeJobId === job.job_id && state.activeJobStatus) {
     state.activeJobStatus = {...state.activeJobStatus, ...job};
@@ -875,10 +920,14 @@ function currentOperatorDraftProject() {
 }
 
 async function fetchOnboardingState() {
+  const requestGeneration = state.onboardingRequestGeneration = (
+    Number(state.onboardingRequestGeneration) || 0
+  ) + 1;
   state.onboarding.loading = true;
   state.onboarding.error = "";
   try {
     const payload = await api("/api/onboarding/state");
+    if (requestGeneration !== state.onboardingRequestGeneration) return false;
     state.onboarding.setupRequired = Boolean(payload.setup_required);
     state.onboarding.recentProjects = payload.recent_projects || [];
     const context = payload.context || null;
@@ -891,11 +940,15 @@ async function fetchOnboardingState() {
     const version = String(payload.app_version || "").trim();
     document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
   } catch (error) {
+    if (requestGeneration !== state.onboardingRequestGeneration) return false;
     state.onboarding.error = error.message || "setup state unavailable";
     state.onboarding.setupRequired = true;
   } finally {
-    state.onboarding.loading = false;
+    if (requestGeneration === state.onboardingRequestGeneration) {
+      state.onboarding.loading = false;
+    }
   }
+  return requestGeneration === state.onboardingRequestGeneration;
 }
 
 async function fetchReadiness({runtimeOnly = false} = {}) {

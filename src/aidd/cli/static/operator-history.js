@@ -43,12 +43,22 @@ function selectedHistoryRun() {
 }
 
 async function loadStudioRunHistory() {
+  const requestGeneration = state.historyRunsRequestGeneration = (Number(state.historyRunsRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
   try {
     const payload = await api(`/api/run/history?${historyRunQuery()}`);
+    if (
+      requestGeneration !== state.historyRunsRequestGeneration
+      || requestedRunId !== state.activeRunId
+    ) return state.historyRuns;
     state.historyRuns = Array.isArray(payload?.runs) ? payload.runs : [];
     state.historyRunsError = "";
     if (!state.activeRunId && payload?.selected_run_id) state.activeRunId = payload.selected_run_id;
   } catch (error) {
+    if (
+      requestGeneration !== state.historyRunsRequestGeneration
+      || requestedRunId !== state.activeRunId
+    ) return state.historyRuns;
     state.historyRuns = [];
     state.historyRunsError = error.message || "Run history unavailable";
   }
@@ -56,14 +66,24 @@ async function loadStudioRunHistory() {
 }
 
 async function loadStudioHistoryTimeline() {
+  const requestGeneration = state.historyTimelineRequestGeneration = (Number(state.historyTimelineRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
   if (!state.activeRunId) {
     state.historyTimeline = null;
     await loadStudioRunHistory();
     return null;
   }
   const timeline = await api(`/api/run/timeline?${runScopedQuery()}`);
+  if (
+    requestGeneration !== state.historyTimelineRequestGeneration
+    || requestedRunId !== state.activeRunId
+  ) return state.historyTimeline;
   state.historyTimeline = timeline;
   await loadStudioRunHistory();
+  if (
+    requestGeneration !== state.historyTimelineRequestGeneration
+    || requestedRunId !== state.activeRunId
+  ) return state.historyTimeline;
   const frames = primaryHistoryFrames(timeline);
   if (state.historyAutoFollow && frames.length) {
     state.historySelectedFrame = frames.at(-1).identity;

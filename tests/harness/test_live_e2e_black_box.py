@@ -4696,6 +4696,18 @@ def test_implementation_verification_evidence_shape_uses_validator_patterns() ->
     }
 
 
+def test_evidence_shape_ignores_result_word_in_command_argument() -> None:
+    shape = _implementation_verification_evidence_shape(
+        "# Implementation Report\n\n## Verification\n\n- `uv run pytest -k passed`.\n"
+    )
+
+    assert shape == {
+        "backed_evidence_line_count": 0,
+        "outcome_claim_line_count": 0,
+        "has_executable_or_not_run_evidence": False,
+    }
+
+
 def test_black_box_live_e2e_stops_when_public_inspection_fails_after_stage_pass(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

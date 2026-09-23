@@ -9,9 +9,20 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const assetPath = path.join(repositoryRoot, "src/aidd/cli/static/operator-onboarding.js");
 
 async function context() {
-  const value = vm.createContext({console});
+  const value = vm.createContext({
+    console,
+    document: {querySelector() { return null; }, getElementById() { return null; }},
+  });
   vm.runInContext(await readFile(assetPath, "utf8"), value, {filename: assetPath});
   return value;
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolver) => {
+    resolve = resolver;
+  });
+  return {promise, resolve};
 }
 
 function reduce(value, state, event, payload = {}) {
@@ -64,6 +75,100 @@ test("Guided Setup fails closed on validation, incomplete continue, and blocked 
   state = reduce(value, state, "launch-readiness", {ready: false, error: "command unavailable"});
   assert.equal(state.launchReadiness, "blocked");
   assert.equal(state.error, "command unavailable");
+});
+
+test("changing Project root invalidates old project, runner, and create eligibility", async () => {
+  const value = await context();
+  value.state = {
+    onboarding: {
+      projectRootInput: "/old",
+      project: {project_root: "/old"},
+      configPath: "/old/aidd.toml",
+      guided: reduce(value, null, "project-valid"),
+      projectSetRows: [{id: "app", root: "src", role: ""}],
+      projectSetRequestGeneration: 0,
+    },
+    readinessRequestGeneration: 4,
+    readiness: {runtimes: [{runtime_id: "codex"}]},
+    readinessLoading: true,
+    readinessError: "",
+  };
+
+  assert.equal(vm.runInContext('updateOnboardingProjectRoot("/new")', value), true);
+
+  assert.equal(value.state.onboarding.projectRootInput, "/new");
+  assert.equal(value.state.onboarding.project, null);
+  assert.equal(value.state.onboarding.configPath, "");
+  assert.equal(value.state.onboarding.guided.projectStatus, "unvalidated");
+  assert.equal(value.state.readinessRequestGeneration, 5);
+  assert.deepEqual(JSON.parse(JSON.stringify(value.state.readiness)), {runtimes: []});
+  assert.equal(value.state.readinessLoading, false);
+});
+
+test("late project validation cannot approve a root that changed while the request was pending", async () => {
+  const value = await context();
+  const request = deferred();
+  value.state = {
+    onboarding: {
+      projectRootInput: "/old",
+      project: null,
+      configPath: "",
+      recentProjects: [],
+      inspectError: "",
+      inspecting: false,
+      guided: reduce(value, null, "reset"),
+      projectSetRows: [{id: "app", root: "src", role: ""}],
+      projectSetRequestGeneration: 0,
+    },
+    readinessRequestGeneration: 0,
+    readiness: {runtimes: []},
+    readinessLoading: false,
+    readinessError: "",
+  };
+  value.postJson = () => request.promise;
+  value.renderOnboarding = () => {};
+
+  const inspection = vm.runInContext("inspectOnboardingProject()", value);
+  await new Promise((resolve) => setImmediate(resolve));
+  vm.runInContext('updateOnboardingProjectRoot("/new")', value);
+  request.resolve({
+    project: {project_root: "/old"},
+    config_path: "/old/aidd.toml",
+    readiness: {runtimes: [{runtime_id: "old"}]},
+  });
+  assert.equal(await inspection, false);
+
+  assert.equal(value.state.onboarding.project, null);
+  assert.equal(value.state.onboarding.inspecting, false);
+  assert.equal(value.state.onboarding.guided.projectStatus, "unvalidated");
+  assert.deepEqual(JSON.parse(JSON.stringify(value.state.readiness)), {runtimes: []});
+});
+
+test("editing a project-set row invalidates its in-flight validation result", async () => {
+  const value = await context();
+  const request = deferred();
+  value.state = {
+    onboarding: {
+      projectRootInput: "/project",
+      projectSetRows: [{id: "app", root: "src", role: ""}],
+      projectSetRequestGeneration: 0,
+      projectSetLoading: false,
+      projectSetResult: null,
+      projectSetError: "",
+    },
+  };
+  value.postJson = () => request.promise;
+  value.renderOnboarding = () => {};
+
+  const validation = vm.runInContext("validateOnboardingProjectSet()", value);
+  await new Promise((resolve) => setImmediate(resolve));
+  vm.runInContext('updateProjectSetRow(0, "root", "packages/app")', value);
+  request.resolve({project_set: {projects: [{id: "app", root: "/project/src"}]}});
+  assert.equal(await validation, false);
+
+  assert.equal(value.state.onboarding.projectSetResult, null);
+  assert.equal(value.state.onboarding.projectSetLoading, false);
+  assert.equal(value.state.onboarding.projectSetRows[0].root, "packages/app");
 });
 
 test("Create and Resume establish durable context before any runtime launch", async () => {

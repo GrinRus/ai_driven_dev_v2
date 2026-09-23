@@ -33,6 +33,33 @@ function nextFlowMutationState(selectors) {
   return (mutation) => setMutationControlsPending(selectors, mutation.status === "pending");
 }
 
+function beginNextFlowWizardSession(action) {
+  const wizard = state.nextFlowWizard;
+  const token = Object.freeze({
+    generation: wizard.requestGeneration = (Number(wizard.requestGeneration) || 0) + 1,
+    action,
+    sourceRunId: nextFlowSourceRunId()
+  });
+  wizard.active = true;
+  wizard.action = action;
+  return token;
+}
+
+function nextFlowWizardRequestIsCurrent(token) {
+  if (!token) return true;
+  const wizard = state.nextFlowWizard;
+  return Boolean(
+    wizard.active
+    && wizard.action === token.action
+    && wizard.requestGeneration === token.generation
+    && nextFlowSourceRunId() === token.sourceRunId
+  );
+}
+
+function invalidateNextFlowWizardRequests() {
+  state.nextFlowWizard.requestGeneration = (Number(state.nextFlowWizard.requestGeneration) || 0) + 1;
+}
+
 const TERMINAL_EVIDENCE_REQUIREMENTS = [
   {
     key: "runtime_log",
@@ -98,6 +125,9 @@ function comparisonBaselineRunId(run, lineage) {
 
 async function loadRunComparisonPanel() {
   const panel = document.getElementById("runComparisonPanel");
+  const requestGeneration = state.runComparisonRequestGeneration = (
+    Number(state.runComparisonRequestGeneration) || 0
+  ) + 1;
   const run = state.dashboard?.run || {};
   if (!panel || !run.run_id) return;
   const lineage = run.lineage || {};
@@ -112,17 +142,30 @@ async function loadRunComparisonPanel() {
   state.runComparisonLoading = true;
   state.runComparisonError = "";
   panel.outerHTML = renderActiveRunComparisonPanel();
+  const requestedRunId = targetRunId;
+  const requestedBaselineRunId = baselineRunId;
+  const comparisonIsCurrent = () => (
+    requestGeneration === state.runComparisonRequestGeneration
+    &&
+    state.activeRunId === requestedRunId
+    && state.dashboard?.run?.run_id === requestedRunId
+    && comparisonBaselineRunId(state.dashboard.run, state.dashboard.run.lineage || {}) === requestedBaselineRunId
+  );
   const params = new URLSearchParams({
     baseline_run_id: baselineRunId,
     target_run_id: targetRunId
   });
   try {
-    state.runComparison = await api(`/api/run/comparison?${params.toString()}`);
+    const comparison = await api(`/api/run/comparison?${params.toString()}`);
+    if (!comparisonIsCurrent()) return;
+    state.runComparison = comparison;
     state.runComparisonError = "";
   } catch (error) {
+    if (!comparisonIsCurrent()) return;
     state.runComparison = null;
     state.runComparisonError = error.message || "run comparison unavailable";
   } finally {
+    if (!comparisonIsCurrent()) return;
     state.runComparisonLoading = false;
     const updatedPanel = document.getElementById("runComparisonPanel");
     if (updatedPanel) updatedPanel.outerHTML = renderActiveRunComparisonPanel();
@@ -234,8 +277,7 @@ async function openNextFlowWizard(action) {
     && state.nextFlowWizard.sourceFindings
     && state.nextFlowWizard.sourceFindings.source_run_id === sourceRunId
   );
-  state.nextFlowWizard.active = true;
-  state.nextFlowWizard.action = action;
+  const request = beginNextFlowWizardSession(action);
   state.nextFlowWizard.step = "sources";
   if (canReuseSourceFindings) {
     state.nextFlowWizard.loading = false;
@@ -261,23 +303,26 @@ async function openNextFlowWizard(action) {
   state.nextFlowWizard.selectedSourceIds = [];
   activateTab("overview");
   await renderNextFlowWizardStep();
+  if (!nextFlowWizardRequestIsCurrent(request)) return;
   try {
     const payload = await api(sourceFindingsUrl());
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     state.nextFlowWizard.sourceFindings = payload;
     state.nextFlowWizard.selectedSourceIds = allSourceFindingItems(payload)
       .filter((item) => item.selected)
       .map((item) => item.id);
   } catch (error) {
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     state.nextFlowWizard.error = error.message;
   } finally {
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     state.nextFlowWizard.loading = false;
     await renderNextFlowWizardStep();
   }
 }
 
 async function openNewWorkItemHandoff() {
-  state.nextFlowWizard.active = true;
-  state.nextFlowWizard.action = "create-new-work-item";
+  beginNextFlowWizardSession("create-new-work-item");
   state.nextFlowWizard.step = "new-work-item";
   state.nextFlowWizard.loading = false;
   state.nextFlowWizard.error = "";
@@ -294,8 +339,7 @@ async function openNewWorkItemHandoff() {
 }
 
 async function openEvalBatchHandoff() {
-  state.nextFlowWizard.active = true;
-  state.nextFlowWizard.action = "run-eval-batch";
+  beginNextFlowWizardSession("run-eval-batch");
   state.nextFlowWizard.step = "eval-batch";
   state.nextFlowWizard.loading = false;
   state.nextFlowWizard.error = "";
@@ -348,8 +392,7 @@ function cloneDraftFromPayload(payload) {
 
 async function openCloneFlowDraft() {
   const wizard = state.nextFlowWizard;
-  wizard.active = true;
-  wizard.action = "clone-flow";
+  const request = beginNextFlowWizardSession("clone-flow");
   wizard.step = "confirm";
   wizard.loading = false;
   wizard.error = "";
@@ -365,6 +408,7 @@ async function openCloneFlowDraft() {
   wizard.preflightLoading = true;
   activateTab("overview");
   await renderNextFlowWizardStep();
+  if (!nextFlowWizardRequestIsCurrent(request)) return;
   try {
     const draftRequest = {
       source_work_item: nextFlowSourceWorkItem(),
@@ -378,8 +422,13 @@ async function openCloneFlowDraft() {
         title: `Clone ${nextFlowSourceWorkItem()} from ${nextFlowSourceRunId()}`
       }),
       readWinner: async () => null,
-      onState: nextFlowMutationState(['[data-next-flow-action="clone-flow"]'])
+      onState: (mutation) => {
+        if (nextFlowWizardRequestIsCurrent(request)) {
+          nextFlowMutationState(['[data-next-flow-action="clone-flow"]'])(mutation);
+        }
+      }
     });
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     if (guarded.status === "conflict") {
       throw new Error(`A clone draft or Work Item already exists for ${draftRequest.new_work_item}.`);
     }
@@ -389,6 +438,7 @@ async function openCloneFlowDraft() {
     toast("Clone draft created for launch review.");
     await loadLaunchConfirmation();
   } catch (error) {
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     wizard.preflightLoading = false;
     wizard.preflightError = error.message;
     await renderNextFlowWizardStep();
@@ -397,6 +447,14 @@ async function openCloneFlowDraft() {
 
 async function loadLaunchConfirmation() {
   const wizard = state.nextFlowWizard;
+  const request = Object.freeze({
+    generation: wizard.requestGeneration,
+    action: wizard.action,
+    sourceRunId: nextFlowSourceRunId(),
+  });
+  const preflightGeneration = wizard.preflightRequestGeneration = (
+    Number(wizard.preflightRequestGeneration) || 0
+  ) + 1;
   const draft = readFollowUpDraftForm() || wizard.followUpDraft;
   if (!draft) {
     wizard.preflightError = "No next-flow draft is available for preflight.";
@@ -422,6 +480,7 @@ async function loadLaunchConfirmation() {
   resetLaunchReadiness(wizard);
   wizard.step = "confirm";
   await renderNextFlowWizardStep();
+  if (!nextFlowWizardRequestIsCurrent(request)) return;
   try {
     const payload = {
       source_work_item: draft.source_work_item,
@@ -439,8 +498,13 @@ async function loadLaunchConfirmation() {
         });
         return {response, result: await response.json()};
       },
-      onState: nextFlowMutationState(["[data-next-flow-confirm-preview]"])
+      onState: (mutation) => {
+        if (nextFlowWizardRequestIsCurrent(request) && preflightGeneration === wizard.preflightRequestGeneration) {
+          nextFlowMutationState(["[data-next-flow-confirm-preview]"])(mutation);
+        }
+      }
     });
+    if (!nextFlowWizardRequestIsCurrent(request) || preflightGeneration !== wizard.preflightRequestGeneration) return;
     const {response, result} = guarded.result;
     if (response.ok) {
       wizard.preflight = result.preflight;
@@ -458,8 +522,10 @@ async function loadLaunchConfirmation() {
       throw new Error(result.error || response.statusText);
     }
   } catch (error) {
+    if (!nextFlowWizardRequestIsCurrent(request) || preflightGeneration !== wizard.preflightRequestGeneration) return;
     wizard.preflightError = error.message;
   } finally {
+    if (!nextFlowWizardRequestIsCurrent(request) || preflightGeneration !== wizard.preflightRequestGeneration) return;
     wizard.preflightLoading = false;
     await renderNextFlowWizardStep();
   }
@@ -556,6 +622,9 @@ function readFollowUpDraftForm() {
 
 function invalidateFollowUpDraftPreview() {
   if (!state.nextFlowWizard.active || state.nextFlowWizard.step !== "definition") return;
+  state.nextFlowWizard.preflightRequestGeneration = (
+    Number(state.nextFlowWizard.preflightRequestGeneration) || 0
+  ) + 1;
   state.nextFlowWizard.preflight = null;
   state.nextFlowWizard.preflightError = "";
   state.nextFlowWizard.definitionErrors = [];
@@ -566,7 +635,7 @@ function invalidateFollowUpDraftPreview() {
     .forEach((node) => node.remove());
 }
 
-async function createFollowUpDraftForLaunch(draft) {
+async function createFollowUpDraftForLaunch(draft, request = null) {
   if (state.nextFlowWizard.createdDraft) return state.nextFlowWizard.createdDraft;
   const guarded = await runGuardedMutation({
     key: nextFlowMutationKey("follow-up-draft", draft),
@@ -582,18 +651,24 @@ async function createFollowUpDraftForLaunch(draft) {
       inherited_context: draft.inherited_context_lines || inheritedContextLinesFromItems(draft.inherited_context)
     }),
     readWinner: async () => null,
-    onState: nextFlowMutationState(["[data-launch-flow-now]"])
+    onState: (mutation) => {
+      if (nextFlowWizardRequestIsCurrent(request)) {
+        nextFlowMutationState(["[data-launch-flow-now]"])(mutation);
+      }
+    }
   });
+  if (!nextFlowWizardRequestIsCurrent(request)) return guarded.result?.created || null;
   if (guarded.status === "conflict") {
     throw new Error(`A follow-up draft or Work Item already exists for ${draft.new_work_item}.`);
   }
   const payload = guarded.result;
-  state.nextFlowWizard.createdDraft = payload.created;
+  if (nextFlowWizardRequestIsCurrent(request)) state.nextFlowWizard.createdDraft = payload.created;
   return payload.created;
 }
 
-async function blockLaunchForRuntimeReadiness(message) {
+async function blockLaunchForRuntimeReadiness(message, request = null) {
   const wizard = state.nextFlowWizard;
+  if (!nextFlowWizardRequestIsCurrent(request)) return false;
   wizard.launchReadinessChecking = false;
   wizard.launchReadinessError = message;
   focusRuntimeSelector();
@@ -602,22 +677,26 @@ async function blockLaunchForRuntimeReadiness(message) {
   return false;
 }
 
-async function refreshRuntimeReadinessForLaunch() {
+async function refreshRuntimeReadinessForLaunch(request = null) {
   const wizard = state.nextFlowWizard;
   if (!state.selectedRuntime) {
-    return blockLaunchForRuntimeReadiness(runtimeReadinessMessage());
+    return blockLaunchForRuntimeReadiness(runtimeReadinessMessage(), request);
   }
+  if (!nextFlowWizardRequestIsCurrent(request)) return false;
   wizard.launchReadinessChecking = true;
   wizard.launchReadinessError = "";
   await renderNextFlowWizardStep();
+  if (!nextFlowWizardRequestIsCurrent(request)) return false;
   await fetchReadiness();
+  if (!nextFlowWizardRequestIsCurrent(request)) return false;
   renderRuntimeSelector();
   renderTopbar();
   renderSidebar();
+  if (!nextFlowWizardRequestIsCurrent(request)) return false;
   wizard.launchReadinessChecking = false;
   const message = runtimeReadinessMessage();
   if (message) {
-    return blockLaunchForRuntimeReadiness(message);
+    return blockLaunchForRuntimeReadiness(message, request);
   }
   await renderNextFlowWizardStep();
   return true;
@@ -625,6 +704,11 @@ async function refreshRuntimeReadinessForLaunch() {
 
 async function launchNextFlowNow() {
   const wizard = state.nextFlowWizard;
+  const request = Object.freeze({
+    generation: wizard.requestGeneration,
+    action: wizard.action,
+    sourceRunId: nextFlowSourceRunId(),
+  });
   const draft = readFollowUpDraftForm() || wizard.followUpDraft;
   if (!draft) {
     toast("No next-flow draft is ready to launch.");
@@ -633,13 +717,16 @@ async function launchNextFlowNow() {
   persistNextFlowBrowserDraft();
   wizard.launchError = "";
   resetLaunchReadiness(wizard);
-  if (!(await refreshRuntimeReadinessForLaunch())) return;
+  if (!(await refreshRuntimeReadinessForLaunch(request))) return;
+  if (!nextFlowWizardRequestIsCurrent(request)) return;
   wizard.launchLoading = true;
   await renderNextFlowWizardStep();
+  if (!nextFlowWizardRequestIsCurrent(request)) return;
   try {
     if (wizard.action === "start-follow-up-flow") {
-      await createFollowUpDraftForLaunch(draft);
+      await createFollowUpDraftForLaunch(draft, request);
     }
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     const guarded = await runGuardedMutation({
       key: nextFlowMutationKey("launch", draft),
       execute: async () => {
@@ -663,8 +750,13 @@ async function launchNextFlowNow() {
         return job;
       },
       readWinner: async () => null,
-      onState: nextFlowMutationState(["[data-launch-flow-now]"])
+      onState: (mutation) => {
+        if (nextFlowWizardRequestIsCurrent(request)) {
+          nextFlowMutationState(["[data-launch-flow-now]"])(mutation);
+        }
+      }
     });
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     if (guarded.status === "conflict") {
       throw new Error("Another next-flow launch already won; refresh durable state before retrying.");
     }
@@ -672,30 +764,43 @@ async function launchNextFlowNow() {
     wizard.active = false;
     toast(`Launching ${draft.new_work_item}.`);
   } catch (error) {
+    if (!nextFlowWizardRequestIsCurrent(request)) return;
     wizard.launchError = error.message;
     toast(error.message);
     wizard.launchLoading = false;
     await renderNextFlowWizardStep();
   } finally {
-    wizard.launchLoading = false;
+    if (nextFlowWizardRequestIsCurrent(request)) wizard.launchLoading = false;
   }
 }
 
 async function loadFollowUpDraft() {
   const wizard = state.nextFlowWizard;
+  const request = Object.freeze({
+    generation: wizard.requestGeneration,
+    action: wizard.action,
+    sourceRunId: nextFlowSourceRunId(),
+  });
+  const draftGeneration = wizard.followUpDraftRequestGeneration = (
+    Number(wizard.followUpDraftRequestGeneration) || 0
+  ) + 1;
   wizard.followUpDraftLoading = true;
   wizard.followUpDraftError = "";
   wizard.step = "definition";
   await renderNextFlowWizardStep();
+  if (!nextFlowWizardRequestIsCurrent(request) || draftGeneration !== wizard.followUpDraftRequestGeneration) return;
   try {
     const payload = await postJson("/api/next-flow/follow-up-draft", {
       source_run_id: state.activeRunId,
       selected_source_ids: wizard.selectedSourceIds
     });
+    if (!nextFlowWizardRequestIsCurrent(request) || draftGeneration !== wizard.followUpDraftRequestGeneration) return;
     wizard.followUpDraft = mergeNextFlowBrowserDraft(payload.draft, "start-follow-up-flow");
   } catch (error) {
+    if (!nextFlowWizardRequestIsCurrent(request) || draftGeneration !== wizard.followUpDraftRequestGeneration) return;
     wizard.followUpDraftError = error.message;
   } finally {
+    if (!nextFlowWizardRequestIsCurrent(request) || draftGeneration !== wizard.followUpDraftRequestGeneration) return;
     wizard.followUpDraftLoading = false;
     await renderNextFlowWizardStep();
   }
@@ -707,8 +812,7 @@ async function openArchiveConfirmation() {
     toast("No completed run is selected for archive.");
     return;
   }
-  state.nextFlowWizard.active = true;
-  state.nextFlowWizard.action = "archive-run";
+  beginNextFlowWizardSession("archive-run");
   state.nextFlowWizard.step = "archive-confirm";
   state.nextFlowWizard.loading = false;
   state.nextFlowWizard.error = "";
@@ -772,10 +876,19 @@ async function applyArchiveWinner(winner, intentId = "default") {
     throw new Error("Archive mutation did not return a durable dashboard winner");
   }
   const identity = `${winner.dashboard.work_item}/${winner.dashboard.run?.run_id || ""}/${intentId}`;
+  const retryingPresentation = state.archivePresentationIdentity === identity;
+  const currentIntentId = state.nextFlowWizard.archiveIntentId || "default";
+  if (
+    (!retryingPresentation && !state.nextFlowWizard.active)
+    || (!retryingPresentation && state.nextFlowWizard.action && state.nextFlowWizard.action !== "archive-run")
+    || currentIntentId !== intentId
+    || state.activeRunId && state.activeRunId !== winner.dashboard.run?.run_id
+  ) return false;
   if (
     state.archivePresentationIdentity === identity
     && state.archivePresentationPromise
   ) return state.archivePresentationPromise;
+  invalidateNextFlowWizardRequests();
   state.dashboard = winner.dashboard;
   state.nextFlowWizard.active = false;
   state.nextFlowWizard.action = "";

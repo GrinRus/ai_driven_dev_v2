@@ -103,6 +103,60 @@ function transitionGuidedSetup(event, payload = {}) {
   return state.onboarding.guided;
 }
 
+function syncOnboardingProjectSetStatus() {
+  if (typeof document === "undefined") return;
+  const status = document.querySelector("[data-onboarding-project-set-status]");
+  if (status) status.innerHTML = onboardingProjectSetStatus();
+}
+
+function invalidateOnboardingProjectSetValidation() {
+  state.onboarding.projectSetRequestGeneration = (
+    Number(state.onboarding.projectSetRequestGeneration) || 0
+  ) + 1;
+  state.onboarding.projectSetLoading = false;
+  state.onboarding.projectSetResult = null;
+  state.onboarding.projectSetError = "";
+  syncOnboardingProjectSetStatus();
+}
+
+function syncOnboardingProjectValidationSurface() {
+  if (typeof document === "undefined") return;
+  const summary = document.querySelector("[data-onboarding-project-summary]");
+  if (summary) summary.outerHTML = onboardingProjectSummary();
+  const advanced = document.querySelector("[data-onboarding-advanced-surface]");
+  if (advanced) advanced.innerHTML = renderOnboardingAdvanced();
+  const runnerCards = document.querySelector("[data-onboarding-runner-cards]");
+  if (runnerCards) runnerCards.innerHTML = onboardingRunnerCards();
+  const workItems = document.querySelector("[data-onboarding-work-items]");
+  if (workItems) workItems.innerHTML = onboardingWorkItems();
+  const createSurface = document.querySelector("[data-create-work-item-surface]");
+  if (createSurface) createSurface.dataset.guidedStep = state.onboarding.guided.step;
+  const validateButton = document.querySelector("#onboardingProjectForm button[type=\"submit\"]");
+  if (validateButton) validateButton.disabled = false;
+  syncOnboardingCreateActionState();
+}
+
+function updateOnboardingProjectRoot(value) {
+  const projectRoot = String(value ?? "");
+  if (projectRoot === state.onboarding.projectRootInput) return false;
+  state.onboarding.projectRootInput = projectRoot;
+  state.onboarding.projectRequestGeneration = (
+    Number(state.onboarding.projectRequestGeneration) || 0
+  ) + 1;
+  state.onboarding.inspecting = false;
+  state.onboarding.inspectError = "";
+  state.onboarding.project = null;
+  state.onboarding.configPath = "";
+  state.onboarding.guided = initialGuidedSetupState();
+  state.readinessRequestGeneration = (Number(state.readinessRequestGeneration) || 0) + 1;
+  state.readiness = {runtimes: []};
+  state.readinessLoading = false;
+  state.readinessError = "";
+  invalidateOnboardingProjectSetValidation();
+  syncOnboardingProjectValidationSurface();
+  return true;
+}
+
 function onboardingProject() {
   return state.onboarding.project || null;
 }
@@ -228,11 +282,11 @@ function onboardingProjectSummary() {
   const project = onboardingProject();
   if (!project) {
     return state.onboarding.inspectError
-      ? `<div class="empty-state bad">${escapeHtml(state.onboarding.inspectError)}</div>`
-      : `<div class="empty-state">Project status will appear after validation.</div>`;
+      ? `<div data-onboarding-project-summary class="empty-state bad">${escapeHtml(state.onboarding.inspectError)}</div>`
+      : `<div data-onboarding-project-summary class="empty-state">Project status will appear after validation.</div>`;
   }
   return `
-    <div class="panel-list">
+    <div data-onboarding-project-summary class="panel-list">
       <div class="panel-item"><strong>Project root</strong>${pathLine(project.project_root, 86)}</div>
       <div class="panel-item"><strong>Workspace</strong><span>${project.workspace_exists ? "existing .aidd detected" : "new .aidd will be created"}</span></div>
     </div>
@@ -322,7 +376,7 @@ function renderOnboardingAdvanced() {
         <div class="surface-title compact"><span>Project set</span><span class="small-badge">optional</span></div>
         <div class="form-grid">
           ${renderProjectSetEditor()}
-          ${onboardingProjectSetStatus()}
+          <div data-onboarding-project-set-status>${onboardingProjectSetStatus()}</div>
         </div>
       </div>
     </details>
@@ -649,16 +703,16 @@ function renderOnboarding() {
               </div>
             </form>
             ${onboardingProjectSummary()}
-            ${renderOnboardingAdvanced()}
+            <div data-onboarding-advanced-surface>${renderOnboardingAdvanced()}</div>
           </section>
           <section class="surface onboarding-panel target-create-resume" data-onboarding-work-item-branch="resume">
             <div class="surface-title"><span>Saved Work Items</span><span class="small-badge">resume</span></div>
             <p class="muted">Open saved Work Item context now; runtime selection and launch remain separate actions.</p>
-            <div class="panel-list">${onboardingWorkItems()}</div>
+            <div class="panel-list" data-onboarding-work-items>${onboardingWorkItems()}</div>
           </section>
           <section class="surface onboarding-panel">
             <div class="surface-title"><span>Runner</span>${selectedRunner}</div>
-            <div class="runner-card-grid">${onboardingRunnerCards()}</div>
+            <div class="runner-card-grid" data-onboarding-runner-cards>${onboardingRunnerCards()}</div>
           </section>
         </div>
       </details>
@@ -668,6 +722,14 @@ function renderOnboarding() {
 }
 
 async function inspectOnboardingProject() {
+  const projectRoot = String(state.onboarding.projectRootInput || "");
+  const requestGeneration = state.onboarding.projectRequestGeneration = (
+    Number(state.onboarding.projectRequestGeneration) || 0
+  ) + 1;
+  const requestIsCurrent = () => (
+    requestGeneration === state.onboarding.projectRequestGeneration
+    && projectRoot === state.onboarding.projectRootInput
+  );
   state.onboarding.inspecting = true;
   state.onboarding.inspectError = "";
   state.onboarding.project = null;
@@ -676,8 +738,9 @@ async function inspectOnboardingProject() {
   renderOnboarding();
   try {
     const payload = await postJson("/api/onboarding/project", {
-      project_root: state.onboarding.projectRootInput
+      project_root: projectRoot
     });
+    if (!requestIsCurrent()) return false;
     state.onboarding.project = payload.project || null;
     state.onboarding.configPath = payload.config_path || "";
     state.onboarding.recentProjects = payload.recent_projects || state.onboarding.recentProjects;
@@ -685,15 +748,19 @@ async function inspectOnboardingProject() {
     state.readinessError = "";
     transitionGuidedSetup("project-valid");
   } catch (error) {
+    if (!requestIsCurrent()) return false;
     state.onboarding.inspectError = error.message || "project validation failed";
     state.readiness = {runtimes: []};
     state.readinessError = "";
     transitionGuidedSetup("project-invalid", {error: state.onboarding.inspectError});
   } finally {
-    state.onboarding.inspecting = false;
-    state.readinessLoading = false;
-    renderOnboarding();
+    if (requestIsCurrent()) {
+      state.onboarding.inspecting = false;
+      state.readinessLoading = false;
+      renderOnboarding();
+    }
   }
+  return requestIsCurrent();
 }
 
 function onboardingProjectSetPayload() {
@@ -726,40 +793,54 @@ function updateProjectSetRow(index, field, value) {
   if (!rows[index]) return;
   rows[index][field] = value;
   state.onboarding.projectSetRows = rows;
-  state.onboarding.projectSetResult = null;
-  state.onboarding.projectSetError = "";
+  invalidateOnboardingProjectSetValidation();
 }
 
 function addProjectSetRow() {
   state.onboarding.projectSetRows = [...projectSetRows(), {id: "", root: "", role: ""}];
-  state.onboarding.projectSetResult = null;
+  invalidateOnboardingProjectSetValidation();
   renderOnboarding();
 }
 
 function removeProjectSetRow(index) {
   const rows = projectSetRows().filter((_, rowIndex) => rowIndex !== index);
   state.onboarding.projectSetRows = rows.length ? rows : [{id: "", root: "", role: ""}];
-  state.onboarding.projectSetResult = null;
+  invalidateOnboardingProjectSetValidation();
   renderOnboarding();
 }
 
 async function validateOnboardingProjectSet() {
+  const projectRoot = String(state.onboarding.projectRootInput || "");
+  const projectSet = JSON.stringify(projectSetRows());
+  const requestGeneration = state.onboarding.projectSetRequestGeneration = (
+    Number(state.onboarding.projectSetRequestGeneration) || 0
+  ) + 1;
+  const requestIsCurrent = () => (
+    requestGeneration === state.onboarding.projectSetRequestGeneration
+    && projectRoot === state.onboarding.projectRootInput
+    && projectSet === JSON.stringify(projectSetRows())
+  );
   state.onboarding.projectSetLoading = true;
   state.onboarding.projectSetError = "";
   state.onboarding.projectSetResult = null;
   renderOnboarding();
   try {
     const payload = await postJson("/api/onboarding/project-set", {
-      project_root: state.onboarding.projectRootInput,
+      project_root: projectRoot,
       project_set: onboardingProjectSetPayload()
     });
+    if (!requestIsCurrent()) return false;
     state.onboarding.projectSetResult = payload.project_set || null;
   } catch (error) {
+    if (!requestIsCurrent()) return false;
     state.onboarding.projectSetError = error.message || "project set validation failed";
   } finally {
-    state.onboarding.projectSetLoading = false;
-    renderOnboarding();
+    if (requestIsCurrent()) {
+      state.onboarding.projectSetLoading = false;
+      renderOnboarding();
+    }
   }
+  return requestIsCurrent();
 }
 
 async function completeOnboardingWorkItem(action, workItem) {

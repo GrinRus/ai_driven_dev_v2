@@ -817,10 +817,14 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "if (state.readinessLoading) return null;",
             "function selectedRuntimeReady()",
             "function runtimeReadinessMessage()",
+            "function renderRunnerSelectorOverrides(runtime)",
             'function renderContextualRunnerControl({actionLabel = "launch", '
             "inspector = false} = {})",
             "data-contextual-runner-control",
             "data-open-runner",
+            "data-refresh-runtime-readiness",
+            "data-runtime-inline-model",
+            "data-runtime-inline-reasoning-effort",
             "runtime.eligible === true",
             "runtime.disabled_reason",
             "function renderProjectHomeRail()",
@@ -1136,6 +1140,8 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "Canonical source of truth",
             "Published handoff mirror",
             "Canonical stage path:",
+            "data-artifact-categories",
+            "artifact-categories-body",
             "Runtime inputs",
             "Validation evidence",
             "Runtime evidence",
@@ -1447,6 +1453,7 @@ def test_operator_implement_review_static_contract_covers_project_set_grouping()
 def test_studio_implementation_gate_uses_canonical_task_actions_and_review_guard() -> None:
     quality_gate = _asset_text("/operator-quality-gates.js")
     control = _asset_text("/operator-control-center.js")
+    main = _asset_text("/operator-main.js")
 
     _assert_contains_all(
         quality_gate,
@@ -1454,7 +1461,8 @@ def test_studio_implementation_gate_uses_canonical_task_actions_and_review_guard
             "function renderStudioImplementationQualityGate(taskView)",
             'data-studio-quality-gate="implement"',
             'data-run-task="${escapeHtml(task.id)}"',
-            "task.ready && selectedRuntimeReady()",
+            "function studioTaskMutationAction(task)",
+            "implementationRecoveryTarget(taskView)",
             "data-finalize-tasks",
             "taskView.finalization_eligible",
             "data-implementation-review-blocker",
@@ -1466,6 +1474,23 @@ def test_studio_implementation_gate_uses_canonical_task_actions_and_review_guard
         (
             "renderStudioImplementationQualityGate(taskView)",
             "reviewEnabled: context.verificationReady",
+        ),
+    )
+    _assert_contains_all(
+        main,
+        (
+            'const implementationRecovery = event.target.closest("[data-rerun-implement]");',
+            'else if (action === "run-stage")',
+            'else if (action === "review-complete" || action === "open-terminal-handoff") '
+            'setOperatorMode("artifacts");',
+            'toast(`Unsupported recovery action: ${action || "missing"}`);',
+            'if (action === "run-workflow")',
+            'action === "wait-for-stage"',
+            'action === "open-terminal-handoff"',
+            'toast(`Unsupported Inbox action: ${action || "missing"}`);',
+            "const safeInboxNavigation = new Set([",
+            "startImplementationTask(taskId);",
+            "startTaskFinalization();",
         ),
     )
 
@@ -1485,11 +1510,12 @@ def test_task_workspace_attempt_tray_preserves_factual_live_state() -> None:
             'data-cancel-job="${escapeHtml(activeJob.job_id)}"',
         ),
     )
+    task_workspace = studio.split("function renderTaskWorkspace", 1)[1].split(
+        "async function renderWorkItemTasks", 1
+    )[0]
+    assert "Cancellation is already in progress." in task_workspace
     assert (
-        "progress"
-        not in studio.split("function renderTaskWorkspace", 1)[1]
-        .split("async function renderWorkItemTasks", 1)[0]
-        .lower()
+        "progress" not in task_workspace.replace("Cancellation is already in progress.", "").lower()
     )
     assert 'state.workDetail === "tasks"' in logs
 
@@ -1622,8 +1648,10 @@ def test_operator_implement_review_surfaces_missing_verification_evidence() -> N
             "implementation?.verification_commands || []",
             "Implementation verification evidence is missing",
             "No executable command evidence was parsed from implementation-report.md.",
-            "Primary action: Rerun implement or request intervention",
+            "Primary action: Resume the canonical implementation action or request intervention",
             "function implementationSummaryWarnings(implementation)",
+            "function implementationVerificationResults(implementation)",
+            "Legacy command-only payloads are displayable evidence, never proof of a pass.",
             "No executable verification commands",
             "renderWarnings(implementationSummaryWarnings(implementation))",
             "function renderImplementationVerificationItems(implementation)",
@@ -1782,6 +1810,7 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "runtimeReadinessMessage()",
             "/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests",
             "target_documents: descriptor.targetDocuments",
+            '...(typeof runtimeSelectorPayload === "function" ? runtimeSelectorPayload() : {})',
             "request.created_at_utc",
             "escapeHtml(JSON.stringify(payload, null, 2))",
             "if (descriptor.runId) payload.run_id = descriptor.runId;",
@@ -1904,6 +1933,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
 
 def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> None:
     next_flow = _next_flow_assets()
+    dashboard_actions = _asset_text("/operator-dashboard-actions.js")
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
@@ -1939,6 +1969,14 @@ def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> No
             "justify-self: stretch;",
             ".next-action-blocker {",
             "max-width: 100%;",
+        ),
+    )
+    _assert_contains_all(
+        dashboard_actions,
+        (
+            'action.action === "open-terminal-handoff"',
+            'action.action === "wait-for-stage"',
+            'toast(`Unsupported next action: ${action.action || "missing"}`);',
         ),
     )
 
@@ -2067,7 +2105,7 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
         (
             "await fetchDashboard();",
             "void fetchReadiness({runtimeOnly: recoveryDeepLink}).then((accepted) => {",
-            "if (accepted) renderReadinessSurfaces();",
+            "if (accepted && refreshIsCurrent()) renderReadinessSurfaces();",
             "/api/open-folder",
             "/api/server/stop",
             "function orderedTabButtons()",

@@ -58,6 +58,9 @@ _GEOMETRY_MEASUREMENTS = r"""
 
   for (const action of document.querySelectorAll("[data-aidd-primary-action]")) {
     if (!visible(action)) continue;
+    // A disabled action is explanatory state, not a first-viewport task target.
+    // Only enabled consequence-bearing controls need the reachability guarantee.
+    if (action.disabled || action.getAttribute("aria-disabled") === "true") continue;
     const rect = action.getBoundingClientRect();
     if (rect.top < 0 || rect.bottom > window.innerHeight) {
       add(

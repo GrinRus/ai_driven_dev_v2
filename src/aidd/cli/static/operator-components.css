@@ -1315,6 +1315,9 @@
   overflow: auto;
   padding: 9px 10px;
 }
+.answer-preview-panel[hidden] {
+  display: none;
+}
 .answer-preview-panel pre {
   margin: 0;
   white-space: pre-wrap;
@@ -2037,8 +2040,12 @@
 
 
 .work-item-tabs {
+  background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border-default);
   min-width: 0;
+  position: sticky;
+  top: 0;
+  z-index: 12;
 }
 
 .work-item-tabs-list {
@@ -2067,6 +2074,7 @@
 
 .work-item-tab.active,
 .work-item-tab[aria-selected="true"] {
+  background: var(--color-bg-selected);
   border-bottom-color: var(--color-action-primary);
 }
 
@@ -2707,6 +2715,36 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
   display: grid;
   gap: 10px;
   margin-bottom: 18px;
+}
+.artifact-categories {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  min-width: 0;
+  overflow: hidden;
+}
+.artifact-categories > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-weight-strong);
+  gap: var(--space-2);
+  justify-content: space-between;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+}
+.artifact-categories[open] > summary {
+  border-bottom: 1px solid var(--color-border-default);
+}
+.artifact-categories-body {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+}
+.artifact-categories-body > .surface-title.compact:first-child {
+  margin-top: 0;
 }
 .document-navigator-group {
   border-top: 1px solid var(--line);
@@ -4572,6 +4610,14 @@ button.intent-phase-step.active:hover {
   font-size: 0.82rem;
 }
 
+.runner-control-actions {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
 /* Ready-task presentation: keep the ledger's authored order and group
    membership visible as a dense, scan-friendly table.  The browser only
    renders core-owned fields; it never derives task state or eligibility. */
@@ -6304,10 +6350,6 @@ button.target-editor-tab.active:hover {
   padding-block: var(--space-2);
 }
 .target-implementation-ledger-details > .compact-list {
-  max-height: 0;
-  overflow: hidden;
-}
-.target-implementation-ledger-details:focus-within > .compact-list {
   max-height: none;
   overflow: visible;
 }

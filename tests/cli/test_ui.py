@@ -2716,6 +2716,8 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
             "to_stage": "plan",
             "run_id": "run-ui-existing",
             "log_follow": True,
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
         },
     )
 
@@ -2733,6 +2735,8 @@ def test_ui_workflow_run_endpoint_delegates_through_internal_seam(
     assert request.stage_start == "research"
     assert request.stage_end == "plan"
     assert request.log_follow is True
+    assert request.model_override == "model-from-ui"
+    assert request.reasoning_effort_override == "high"
     assert "stage_executor" in captured
 
 
@@ -3234,6 +3238,8 @@ def test_ui_repair_extension_endpoint_delegates_exact_selection_and_streams_atte
             "runtime": "codex",
             "run_id": "run-repair-extension-ui",
             "log_follow": True,
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
         },
     )
 
@@ -3252,6 +3258,8 @@ def test_ui_repair_extension_endpoint_delegates_exact_selection_and_streams_atte
     assert options.runtime == "codex"
     assert options.run_id == "run-repair-extension-ui"
     assert options.non_interactive is True
+    assert options.model_override == "model-from-ui"
+    assert options.reasoning_effort_override == "high"
     assert options.runtime_operator_decision_provider is not None
     assert options.cancel_requested is not None
     assert options.cancel_requested() is False
@@ -3529,6 +3537,58 @@ def test_ui_remediation_launch_requires_finalization_before_marking_downstream_s
     assert stages["qa"]["stale"] is False
 
 
+def test_ui_remediation_launch_propagates_runtime_selector_overrides(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    _write_operator_control_reports(workspace_root)
+    captured_stage: list[StageRunOptions] = []
+    captured_service: dict[str, object] = {}
+
+    class _FakeImplementationService:
+        def reopen_for_remediation(self, request: object, *, remediation_id: str) -> None:
+            del request, remediation_id
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured_stage.append(options)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    service._implementation_service = (  # type: ignore[method-assign]
+        lambda **kwargs: captured_service.update(kwargs) or _FakeImplementationService()
+    )
+    monkeypatch.setattr(ui_module, "implementation_finalization_blocker", lambda **_: None)
+
+    response = service.handle_post(
+        "/api/remediation/launch",
+        {
+            "source_stage": "review",
+            "source_ids": ["RV-1"],
+            "target_stage": "implement",
+            "operator_note": "Fix rejected review finding.",
+            "runtime": "generic-cli",
+            "run_id": "run-ui",
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
+        },
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    completed = _wait_job(service, str(payload["job_id"]))
+    assert completed["status"] == "completed"
+    assert captured_service == {
+        "runtime": "generic-cli",
+        "run_id": "run-ui",
+        "job_id": payload["job_id"],
+        "model_override": "model-from-ui",
+        "reasoning_effort_override": "high",
+    }
+    assert len(captured_stage) == 1
+    assert captured_stage[0].model_override == "model-from-ui"
+    assert captured_stage[0].reasoning_effort_override == "high"
+
+
 def test_ui_remediation_request_rejects_ids_missing_from_source_report(
     tmp_path: Path,
 ) -> None:
@@ -3640,7 +3700,12 @@ def test_ui_remediation_rerun_downstream_runs_review_qa_and_clears_stale(
 
     response = service.handle_post(
         "/api/remediation/rerun-downstream",
-        {"runtime": "generic-cli", "run_id": "run-ui"},
+        {
+            "runtime": "generic-cli",
+            "run_id": "run-ui",
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
+        },
     )
 
     payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
@@ -3648,6 +3713,8 @@ def test_ui_remediation_rerun_downstream_runs_review_qa_and_clears_stale(
     status = _payload(service.handle_get("/api/remediation/status", {"run_id": ["run-ui"]}))
     assert [options.stage for options in captured] == ["review", "qa"]
     assert all(options.runtime == "generic-cli" for options in captured)
+    assert all(options.model_override == "model-from-ui" for options in captured)
+    assert all(options.reasoning_effort_override == "high" for options in captured)
     assert completed["status"] == "completed"
     assert completed["result"]["rerun_stages"] == ["review", "qa"]  # type: ignore[index]
     assert status["stale_stages"] == []
@@ -3724,7 +3791,13 @@ def test_ui_remediation_rerun_stage_runs_one_stale_stage_and_clears_it(
 
     response = service.handle_post(
         "/api/remediation/rerun-stage",
-        {"runtime": "generic-cli", "run_id": "run-ui", "stage": "review"},
+        {
+            "runtime": "generic-cli",
+            "run_id": "run-ui",
+            "stage": "review",
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
+        },
     )
 
     payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
@@ -3733,6 +3806,8 @@ def test_ui_remediation_rerun_stage_runs_one_stale_stage_and_clears_it(
 
     assert [options.stage for options in captured] == ["review"]
     assert captured[0].runtime == "generic-cli"
+    assert captured[0].model_override == "model-from-ui"
+    assert captured[0].reasoning_effort_override == "high"
     assert completed["status"] == "completed"
     assert completed["result"]["rerun_stage"] == "review"  # type: ignore[index]
     assert [item["stage"] for item in status["stale_stages"]] == ["qa"]  # type: ignore[index]
@@ -4443,6 +4518,8 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
             "request": "Add migration rollback risks",
             "target_documents": ["workitems/WI-UI/stages/plan/plan.md"],
             "log_follow": True,
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
         },
     )
 
@@ -4468,6 +4545,8 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     assert options.run_id == "run-ui-flow"
     assert options.request == "Add migration rollback risks"
     assert options.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+    assert options.model_override == "model-from-ui"
+    assert options.reasoning_effort_override == "high"
     assert options.prepared_interaction is not None
     assert options.prepared_interaction.operator_request.request_id == "request-0001"
     assert (
@@ -5707,3 +5786,44 @@ def test_ui_task_finalize_requires_explicit_run_id(tmp_path: Path) -> None:
 
     payload = _payload_with_status(response, HTTPStatus.BAD_REQUEST)
     assert payload["error"] == "run_id is required."
+
+
+def test_ui_task_finalize_propagates_runtime_selector_overrides(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+    captured: dict[str, object] = {}
+
+    class _FakeLedger:
+        finalization = SimpleNamespace(status=SimpleNamespace(value="succeeded"))
+
+    class _FakeImplementationService:
+        def finalize(self, request: object) -> object:
+            captured["request"] = request
+            return SimpleNamespace(ledger=_FakeLedger())
+
+    service._validate_implementation_runtime = lambda **_: None  # type: ignore[method-assign]
+    service._implementation_service = (  # type: ignore[method-assign]
+        lambda **kwargs: captured.update({"service": kwargs}) or _FakeImplementationService()
+    )
+
+    response = service.handle_post(
+        "/api/tasks/finalize",
+        {
+            "runtime": "generic-cli",
+            "run_id": "run-selector-finalize",
+            "model": "model-from-ui",
+            "reasoning_effort": "high",
+        },
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    completed = _wait_job(service, str(payload["job_id"]))
+    assert completed["status"] == "completed"
+    assert captured["service"] == {
+        "runtime": "generic-cli",
+        "run_id": "run-selector-finalize",
+        "job_id": payload["job_id"],
+        "model_override": "model-from-ui",
+        "reasoning_effort_override": "high",
+    }

@@ -81,10 +81,21 @@ function renderRunAccountabilityCard() {
 async function loadRunAccountabilityCard() {
   const card = document.getElementById("runAccountabilityCard");
   if (!card || !state.activeRunId) return;
+  const requestGeneration = state.runAccountabilityRequestGeneration = (Number(state.runAccountabilityRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
   try {
     state.runAccountabilityError = "";
-    state.runAccountability = await api(`/api/run/accountability?${runScopedQuery()}`);
+    const accountability = await api(`/api/run/accountability?${runScopedQuery()}`);
+    if (
+      requestGeneration !== state.runAccountabilityRequestGeneration
+      || requestedRunId !== state.activeRunId
+    ) return;
+    state.runAccountability = accountability;
   } catch (error) {
+    if (
+      requestGeneration !== state.runAccountabilityRequestGeneration
+      || requestedRunId !== state.activeRunId
+    ) return;
     state.runAccountability = null;
     state.runAccountabilityError = error.message || "run provenance unavailable";
   }
@@ -94,6 +105,12 @@ async function loadRunAccountabilityCard() {
 function repairCenterStatus(validation, stopped) {
   if (stopped?.stopped) return "explicit-stop";
   return validation?.status || (validation?.validator_fail_count ? "repair-needed" : "clear");
+}
+
+function recoveryActionDisabledAttributes(action, fallback = "This recovery action is not currently eligible.") {
+  if (action?.enabled !== false) return "";
+  const reason = String(action.disabled_reason || action.detail || fallback).trim() || fallback;
+  return `disabled aria-disabled="true" title="${escapeHtml(reason)}"`;
 }
 
 function renderRepairExtensionPreview(validation) {
@@ -167,7 +184,7 @@ function renderRecoveryActionBandReadOnly(diagnostics) {
       <div class="repair-actions">
         ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : extensionEligible && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "one more repair"}) : ""}
         <span class="muted">Primary recovery action is shown above.</span>
-        ${requestPrimary && extensionEligible ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary">Request Change</button><button data-work-item-tab="overview" type="button" class="secondary">Start new run</button>` : requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
+        ${requestPrimary && extensionEligible ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary">Request Change</button><button data-work-item-tab="overview" type="button" class="secondary">Start new run</button>` : requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true" title="${escapeHtml(stoppedMessage || guidance)}">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
       </div>
       ${extensionPreview ? `<div class="repair-supporting-preview">${renderRepairExtensionPreview(validation)}</div>` : ""}
     </section>
@@ -296,7 +313,7 @@ function renderValidationFindingInspector(diagnostics, result) {
     ? `<button data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(state.activeStage)}" data-repair-extension type="button">Run one more repair</button>`
     : requestPrimary
       ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" data-primary-action type="button">Request Change</button>`
-      : `<button data-run-repair data-primary-action type="button" ${repairAvailable ? "" : "disabled aria-disabled=\"true\""}>Run repair</button>`;
+      : `<button data-run-repair data-primary-action type="button" ${recoveryActionDisabledAttributes({enabled: repairAvailable, detail: "Validation repair is not currently eligible for this stage."})}>Run repair</button>`;
   const requestChange = requestPrimary
     ? ""
     : `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" class="secondary" type="button">Request change</button>`;
@@ -409,7 +426,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
       action: "answer-questions",
       label: action.label || "Answer questions",
       detail: action.detail || "Resolve blocking questions before resuming execution.",
-      attrs: `data-recovery-action="answer-questions" data-recovery-stage="${escapeHtml(stage)}"`
+      attrs: `data-recovery-action="answer-questions" data-recovery-stage="${escapeHtml(stage)}" ${recoveryActionDisabledAttributes(action)}`
     };
   }
   if (action.action === "inspect-runtime-log") {
@@ -417,14 +434,14 @@ function recoveryPrimaryActionSpec(diagnostics) {
       action: "inspect-runtime-log",
       label: action.label || "Open logs",
       detail: action.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
-      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(stage)}"`
+      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(stage)}" ${recoveryActionDisabledAttributes(action)}`
     };
   }
   return {
     action: action.action || "inspect-blocker",
     label: action.label || "Review recovery",
     detail: action.detail || "Review the active blocker and supporting evidence.",
-    attrs: `data-recovery-action="${escapeHtml(action.action || "inspect-blocker")}" data-recovery-stage="${escapeHtml(stage)}" ${action.enabled === false ? "disabled" : ""}`
+    attrs: `data-recovery-action="${escapeHtml(action.action || "inspect-blocker")}" data-recovery-stage="${escapeHtml(stage)}" ${recoveryActionDisabledAttributes(action)}`
   };
 }
 
@@ -465,7 +482,7 @@ function renderRuntimePartialEvidence(firstFailure) {
   // evidence may still expose Request Change, but must not duplicate Retry.
   const actions = requestAction ? `
     <div class="wizard-actions">
-      ${requestAction ? `<button class="secondary" data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}" type="button" ${requestAction.enabled ? "" : "disabled"}>${escapeHtml(requestAction.label || "Request change")}</button>` : ""}
+      ${requestAction ? `<button class="secondary" data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}" type="button" ${recoveryActionDisabledAttributes(requestAction, "Request Change is not currently eligible.")}>${escapeHtml(requestAction.label || "Request change")}</button>` : ""}
     </div>
   ` : "";
   return `
@@ -504,7 +521,7 @@ function renderRecoveryDecisionWorkbench({runtimeFailure, firstFailure, diagnost
         <div><dt>Primary action</dt><dd data-recovery-primary>${escapeHtml(primary?.label || (runtimeFailure ? "Open logs" : status === "repair-available" ? "Run Repair" : "Request Change"))}</dd></div>
       </dl>
       <div class="recovery-decision-actions">
-        ${runtimeFailure ? `<button data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button">Open logs</button><button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button" ${primary?.action === "resume-stage" ? "" : "disabled"}>Retry stage</button><button data-stop-run type="button" class="danger">Cancel</button>` : `<span class="muted">Use the single bounded recovery action below; this panel is read-only evidence.</span>`}
+        ${runtimeFailure ? `<button data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button">Open logs</button><button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button" ${recoveryActionDisabledAttributes({enabled: primary?.action === "resume-stage", detail: "A resumable stage action was not published for this runtime failure."})}>Retry stage</button><button data-stop-run type="button" class="danger">Cancel</button>` : `<span class="muted">Use the single bounded recovery action below; this panel is read-only evidence.</span>`}
       </div>
       <span class="muted recovery-decision-attempts">${escapeHtml(runtimeFailure ? "Runtime retry is separate from validation repair attempts." : `${repairAttempts.length} validation repair attempt${repairAttempts.length === 1 ? "" : "s"} retained.`)}</span>
     </section>
@@ -763,6 +780,7 @@ async function renderCockpit({skipArtifactLoad = false} = {}) {
   } finally {
     syncIntentShellRegions();
     syncCurrentDecisionTarget();
+    if (typeof syncRuntimeSelectorSurface === "function") syncRuntimeSelectorSurface();
   }
 }
 
@@ -845,7 +863,7 @@ function renderRecoveryAssistantPanel() {
       <span class="small-badge ${failureCount ? "bad" : ""}">Failures ${escapeHtml(failureCount)}</span>
       <span class="small-badge">Suggestions ${escapeHtml(actions.length)}</span>
     </div>
-    <button class="secondary" data-tab-shortcut="recovery" type="button" ${firstFailure || questionCount || actions.length ? "" : "disabled"}>Open Recovery Summary</button>
+    <button class="secondary" data-tab-shortcut="recovery" type="button" ${recoveryActionDisabledAttributes({enabled: Boolean(firstFailure || questionCount || actions.length), detail: "No recovery evidence or operator action is currently available."})}>Open Recovery Summary</button>
   `;
 }
 

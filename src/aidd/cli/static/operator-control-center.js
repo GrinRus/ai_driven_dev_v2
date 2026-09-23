@@ -4,6 +4,14 @@ function runScopedQuery(stage = null) {
   if (stage) params.set("stage", stage);
   return params.toString();
 }
+
+function controlCenterDisabledAttributes(enabled, reason = "This action is not currently eligible.") {
+  if (enabled) return "";
+  const detail = String(reason || "This action is not currently eligible.").trim()
+    || "This action is not currently eligible.";
+  return `disabled aria-disabled="true" title="${escapeHtml(detail)}"`;
+}
+
 function renderRunningStageNotice(job) {
   const status = String(job?.status || "running");
   const stage = job?.stage || "workflow";
@@ -66,7 +74,7 @@ function renderActiveRunPanel() {
     ${warning}
     <div class="panel-actions">
       <button data-tab-shortcut="logs" type="button" class="secondary">Open logs</button>
-      <button data-cancel-job="${escapeHtml(job.job_id || "")}" type="button" class="danger" ${activeJobIsTerminal() ? "disabled" : ""}>${escapeHtml(activeJobCancelLabel())}</button>
+      <button data-cancel-job="${escapeHtml(job.job_id || "")}" type="button" class="danger" ${controlCenterDisabledAttributes(!activeJobIsTerminal() && job.status !== "cancelling", job.status === "cancelling" ? "Cancellation is already in progress." : "This job has already reached a terminal state.")}>${escapeHtml(activeJobCancelLabel())}</button>
     </div>
   `;
 }
@@ -120,11 +128,14 @@ function renderDiffFilters(files) {
 
 function renderImplementationVerificationGap(implementation) {
   const commands = implementation?.verification_commands || [];
-  if (commands.length) return "";
+  if (implementationVerificationReady(implementation)) return "";
+  const status = implementationVerificationStatus(implementation);
   const skipped = implementation?.skipped_checks || [];
   const skippedLabel = skipped.length === 1 ? "1 skipped check" : `${skipped.length} skipped checks`;
   const skippedVerb = skipped.length === 1 ? "was" : "were";
-  const body = skipped.length
+  const body = commands.length
+    ? `Recorded verification evidence is ${status}; every executable check must include a command and a passing observed result before Review can proceed.`
+    : skipped.length
     ? `${skippedLabel} ${skippedVerb} recorded, but no executable command evidence was parsed from implementation-report.md. Review cannot trust readiness until implementation records what ran.`
     : "No executable command evidence was parsed from implementation-report.md. Review cannot trust readiness until implementation records what ran.";
   return renderDecisionSummary({
@@ -133,9 +144,9 @@ function renderImplementationVerificationGap(implementation) {
     badge: "verification missing",
     title: "Implementation verification evidence is missing",
     body,
-    primary: "Primary action: Rerun implement or request intervention",
+    primary: "Primary action: Resume the canonical implementation action or request intervention",
     metrics: [
-      {label: "Commands", value: "0", tone: "bad"},
+      {label: "Commands", value: String(commands.length), tone: commands.length ? "warn" : "bad"},
       {label: "Skipped", value: String(skipped.length), tone: skipped.length ? "warn" : ""},
       {label: "Touched files", value: String((implementation?.touched_files || []).length)},
       {label: "Residual risks", value: String((implementation?.residual_risks || []).length)}
@@ -145,16 +156,43 @@ function renderImplementationVerificationGap(implementation) {
 
 function implementationSummaryWarnings(implementation) {
   const warnings = implementation?.warnings || [];
-  if ((implementation?.verification_commands || []).length) return warnings;
+  if ((implementation?.verification_commands || []).length || (implementation?.verification_results || []).length) return warnings;
   return warnings.filter((warning) =>
     !String(warning || "").includes("No executable verification commands")
   );
 }
 
+function implementationVerificationResults(implementation) {
+  const results = Array.isArray(implementation?.verification_results)
+    ? implementation.verification_results.filter(Boolean)
+    : [];
+  if (results.length) return results;
+  const commands = Array.isArray(implementation?.verification_commands)
+    ? implementation.verification_commands
+    : [];
+  // Legacy command-only payloads are displayable evidence, never proof of a pass.
+  return commands.map((command) => ({command, status: "unverifiable", kind: "legacy"}));
+}
+
+function implementationVerificationStatus(implementation) {
+  const results = implementationVerificationResults(implementation);
+  const statuses = new Set(results.map((result) => result?.status || "unverifiable"));
+  if (statuses.has("fail")) return "failed";
+  if (statuses.has("not-run")) return "not-run";
+  if (statuses.size && [...statuses].some((status) => status !== "pass")) return "unverifiable";
+  if (!results.length) return implementation?.verification_status || "missing";
+  return implementation?.verification_status === "verified" ? "verified" : "unverifiable";
+}
+
 function renderImplementationVerificationItems(implementation) {
-  const commands = implementation?.verification_commands || [];
-  if (commands.length) {
-    return commands.slice(0, 8).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+  const results = implementationVerificationResults(implementation);
+  if (results.length) {
+    return results.slice(0, 8).map((result) => {
+      const status = result.status || "unverifiable";
+      const tone = status === "pass" ? "good" : status === "not-run" ? "warn" : "bad";
+      const marker = status === "pass" ? "✓" : status === "not-run" ? "!" : "×";
+      return `<span><b class="target-check ${tone}">${marker}</b> ${escapeHtml(result.command || "Verification command unavailable")} · ${escapeHtml(status)}</span>`;
+    }).join("");
   }
   const skipped = implementation?.skipped_checks || [];
   if (skipped.length) {
@@ -170,7 +208,11 @@ function renderImplementationEvidenceList(items, emptyLabel) {
 }
 
 function implementationVerificationReady(implementation) {
-  return Boolean((implementation?.verification_commands || []).length);
+  if (implementation?.verification_status !== "verified") return false;
+  const results = implementationVerificationResults(implementation);
+  return results.length > 0 && results.every((result) =>
+    result?.status === "pass" && String(result?.command || "").trim()
+  );
 }
 
 function renderImplementationProceedGuard(implementation) {
@@ -208,9 +250,9 @@ function renderImplementationSummary(implementation) {
           <span>${escapeHtml((implementation?.touched_files || []).join(", ") || "No touched files recorded.")}</span>
         </div>
         <div>
-          <span class="eyebrow">Verified (actual)</span>
-          <strong>${escapeHtml((implementation?.verification_commands || []).length ? `${implementation.verification_commands.length} command(s)` : "Evidence missing")}</strong>
-          <span>${escapeHtml((implementation?.verification_commands || ["No executable verification command recorded."]).slice(0, 2).join(" · "))}</span>
+          <span class="eyebrow">Verification status</span>
+          <strong>${escapeHtml(implementationVerificationStatus(implementation))}</strong>
+          <span>${escapeHtml(implementationVerificationResults(implementation).slice(0, 2).map((result) => result.command || "Verification result unavailable").join(" · ") || "No executable verification command recorded.")}</span>
         </div>
       </div>
       <div class="compact-list" data-implementation-verification>
@@ -250,6 +292,7 @@ function renderTargetImplementationReviewGate({diffView, evidence, taskView, fil
   const tests = files.filter((file) => file.category === "test");
   const docs = files.filter((file) => file.category === "documentation");
   const commands = evidence?.verification_commands || [];
+  const verificationResults = implementationVerificationResults(evidence);
   const risks = evidence?.residual_risks || [];
   const claims = evidence?.touched_files || [];
   const reviewBlocker = taskView?.review_blocker || "Review remains blocked until implementation evidence is complete.";
@@ -278,7 +321,12 @@ function renderTargetImplementationReviewGate({diffView, evidence, taskView, fil
       </section>
       <section class="target-review-gate-section" data-review-verification>
         <h4>Verification commands run</h4>
-        ${commands.length ? `<div class="target-review-command-list">${commands.slice(0, 5).map((command) => `<span><b class="target-check good">✓</b><code>${escapeHtml(command)}</code></span>`).join("")}</div>` : `<p class="form-error">No executable verification evidence recorded.</p>`}
+        ${verificationResults.length ? `<div class="target-review-command-list">${verificationResults.slice(0, 5).map((result) => {
+          const status = result.status || "unverifiable";
+          const tone = status === "pass" ? "good" : status === "not-run" ? "warn" : "bad";
+          const marker = status === "pass" ? "✓" : status === "not-run" ? "!" : "×";
+          return `<span><b class="target-check ${tone}">${marker}</b><code>${escapeHtml(result.command || "Verification command unavailable")}</code> · ${escapeHtml(status)}</span>`;
+        }).join("")}</div>` : `<p class="form-error">No executable verification evidence recorded.</p>`}
       </section>
       <section class="target-review-gate-section" data-review-risks>
         <h4>Risks</h4>
@@ -287,7 +335,7 @@ function renderTargetImplementationReviewGate({diffView, evidence, taskView, fil
       ${reviewEnabled && runner ? `<div class="target-review-runner">${runner}</div>` : ""}
       ${!reviewEnabled ? `<p class="form-error" data-target-review-blocker>${escapeHtml(reviewBlocker)}</p>` : ""}
       <div class="target-review-gate-actions">
-        <button data-proceed-stage="review" data-aidd-primary-action aria-label="Open Review stage" type="button" ${reviewEnabled ? "" : "disabled aria-disabled=\"true\""}>Proceed to Review</button>
+        <button data-proceed-stage="review" data-aidd-primary-action aria-label="Open Review stage" type="button" ${controlCenterDisabledAttributes(reviewEnabled, "Implementation verification must pass before Review can start.")}>Proceed to Review</button>
         <button data-open-request-tab type="button" class="secondary">Request change</button>
       </div>
       <p class="target-review-gate-note">This launches the Review stage and moves this Work Item forward.</p>
@@ -297,6 +345,9 @@ function renderTargetImplementationReviewGate({diffView, evidence, taskView, fil
 }
 
 async function renderImplementReview() {
+  const requestGeneration = state.implementReviewRequestGeneration = (Number(state.implementReviewRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   const content = document.getElementById("intentContent");
   if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   if (!state.activeRunId) {
@@ -311,6 +362,11 @@ async function renderImplementReview() {
       api(`/api/implement/evidence?${runScopedQuery()}`),
       api(`/api/tasks?${runScopedQuery()}`).catch(() => ({tasks: []}))
     ]);
+    if (
+      requestGeneration !== state.implementReviewRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     const files = diffView.source_files || [];
     const visible = filteredDiffFiles(files);
     if (!state.implementDiffPath && visible[0]) state.implementDiffPath = visible[0].path;
@@ -332,6 +388,11 @@ async function renderImplementReview() {
       </div>
     `;
   } catch (error) {
+    if (
+      requestGeneration !== state.implementReviewRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
@@ -390,7 +451,7 @@ function renderRemediationDraftPreview(sourceStage, {destination = null} = {}) {
   const ids = draft?.value?.source_ids || [];
   const note = draft?.value?.text || "";
   return `
-    <details class="remediation-draft-preview" data-remediation-write-preview open>
+    <details id="${escapeHtml(sourceStage)}RemediationPreview" class="remediation-draft-preview" data-remediation-write-preview="${escapeHtml(sourceStage)}">
       <summary>Markdown Write/Preview</summary>
       <div class="compact-list" data-remediation-destination>
         <span>Destination: ${escapeHtml(destination || remediationDraftDestination())}</span>
@@ -488,24 +549,45 @@ async function launchRemediation(sourceStage) {
 }
 
 async function renderReviewFindings() {
+  const requestGeneration = state.reviewFindingsRequestGeneration = (Number(state.reviewFindingsRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   const content = document.getElementById("intentContent");
   content.innerHTML = `<div class="empty-state loading-state">Loading review findings...</div>`;
   try {
     const view = await api(`/api/review/findings?${runScopedQuery()}`);
+    if (
+      requestGeneration !== state.reviewFindingsRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     state.reviewFindingsView = view;
     state.reviewFindingsRunId = state.activeRunId;
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     content.innerHTML = renderStudioReviewQualityGate(view);
   } catch (error) {
+    if (
+      requestGeneration !== state.reviewFindingsRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
 
 async function renderQaVerdict() {
+  const requestGeneration = state.qaVerdictRequestGeneration = (Number(state.qaVerdictRequestGeneration) || 0) + 1;
+  const requestedRunId = state.activeRunId;
+  const requestedStage = state.activeStage;
   const content = document.getElementById("intentContent");
   content.innerHTML = `<div class="empty-state loading-state">Loading QA verdict...</div>`;
   try {
     const view = await api(`/api/qa/verdict?${runScopedQuery()}`);
+    if (
+      requestGeneration !== state.qaVerdictRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     state.qaVerdictView = view;
     state.qaVerdictRunId = state.activeRunId;
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
@@ -527,6 +609,11 @@ async function renderQaVerdict() {
     ];
     content.innerHTML = renderStudioQaQualityGate(view, sourceItems);
   } catch (error) {
+    if (
+      requestGeneration !== state.qaVerdictRequestGeneration
+      || requestedRunId !== state.activeRunId
+      || requestedStage !== state.activeStage
+    ) return;
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
