@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "ai-driven-dev-v2"
-version = "0.1.0a25"
+version = "0.1.0a26.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
