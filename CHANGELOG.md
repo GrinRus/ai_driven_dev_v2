@@ -7,8 +7,18 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- The development tree now targets `0.1.0a25.dev0` after the accepted `v0.1.0a24`
-  prerelease publication.
+- No changes yet.
+
+## 0.1.0a25 - 2026-09-23
+
+- Restore targeted retries for failed implementation tasks and finalization, with runner/model
+  controls and clearer readiness feedback.
+- Guard UI refresh, document, history, onboarding, and next-flow actions against stale responses
+  and changed project/work-item context.
+- Improve operator recovery, evidence presentation, and responsive layouts; strengthen validation
+  of executable implementation verification evidence.
+- Add regression coverage across the CLI, core reports, validators, frontend state, and browser
+  journeys, and update operator guidance.
 
 ## 0.1.0a24 - 2026-09-22
 
