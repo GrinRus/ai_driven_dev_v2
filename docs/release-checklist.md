@@ -255,7 +255,8 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current development package version: `0.1.0a26.dev0`.
+Maintainer source development package version: `0.1.0a26.dev0`.
+No current release candidate is accepted from this development version.
 Latest accepted published prerelease evidence: `0.1.0a25`.
 The `v0.1.0a25` release is published and accepted; release and package-channel verification
 evidence is recorded below.
