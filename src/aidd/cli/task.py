@@ -149,14 +149,17 @@ def task_list(
         typer.Option("--root", help="Root AIDD storage directory."),
     ] = Path(".aidd"),
 ) -> None:
-    plan = load_task_execution_plan(workspace_root=root, work_item=work_item)
-    ledger = (
-        load_task_ledger(workspace_root=root, work_item=work_item, run_id=run_id)
-        if run_id is not None
-        else None
-    )
-    _validate_ledger_source(plan_hash=plan.source_sha256, ledger=ledger)
-    _display_ledger(ledger=ledger or TaskLedger.create(plan), plan=plan)
+    try:
+        plan = load_task_execution_plan(workspace_root=root, work_item=work_item)
+        ledger = (
+            load_task_ledger(workspace_root=root, work_item=work_item, run_id=run_id)
+            if run_id is not None
+            else None
+        )
+        _validate_ledger_source(plan_hash=plan.source_sha256, ledger=ledger)
+        _display_ledger(ledger=ledger or TaskLedger.create(plan), plan=plan)
+    except ValueError as exc:
+        _raise_task_command_error(exc)
 
 
 def task_show(
@@ -171,36 +174,39 @@ def task_show(
         typer.Option("--root", help="Root AIDD storage directory."),
     ] = Path(".aidd"),
 ) -> None:
-    plan = load_task_execution_plan(workspace_root=root, work_item=work_item)
-    ledger = (
-        load_task_ledger(workspace_root=root, work_item=work_item, run_id=run_id)
-        if run_id is not None
-        else None
-    ) or TaskLedger.create(plan)
-    _validate_ledger_source(plan_hash=plan.source_sha256, ledger=ledger)
-    ledger.entry(task_id)
-    _display_ledger(ledger=ledger, plan=plan, task_id=task_id)
-    model = resolve_task_read_model(
-        workspace_root=root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    tasks = model.get("tasks", [])
-    if isinstance(tasks, list):
-        selected = next(
-            (item for item in tasks if isinstance(item, dict) and item.get("id") == task_id),
-            None,
+    try:
+        plan = load_task_execution_plan(workspace_root=root, work_item=work_item)
+        ledger = (
+            load_task_ledger(workspace_root=root, work_item=work_item, run_id=run_id)
+            if run_id is not None
+            else None
+        ) or TaskLedger.create(plan)
+        _validate_ledger_source(plan_hash=plan.source_sha256, ledger=ledger)
+        ledger.entry(task_id)
+        _display_ledger(ledger=ledger, plan=plan, task_id=task_id)
+        model = resolve_task_read_model(
+            workspace_root=root,
+            work_item=work_item,
+            run_id=run_id,
         )
-        if selected is not None:
-            attempts = selected.get("attempts", [])
-            if isinstance(attempts, list):
-                for attempt in attempts:
-                    if isinstance(attempt, dict):
-                        console.print(
-                            "Attempt "
-                            f"{attempt.get('number')}: {attempt.get('status')} "
-                            f"{attempt.get('path')}"
-                        )
+        tasks = model.get("tasks", [])
+        if isinstance(tasks, list):
+            selected = next(
+                (item for item in tasks if isinstance(item, dict) and item.get("id") == task_id),
+                None,
+            )
+            if selected is not None:
+                attempts = selected.get("attempts", [])
+                if isinstance(attempts, list):
+                    for attempt in attempts:
+                        if isinstance(attempt, dict):
+                            console.print(
+                                "Attempt "
+                                f"{attempt.get('number')}: {attempt.get('status')} "
+                                f"{attempt.get('path')}"
+                            )
+    except ValueError as exc:
+        _raise_task_command_error(exc)
 
 
 def _task_attempt_port(
@@ -311,6 +317,13 @@ def _raise_port_cause(exc: ImplementationPortError) -> NoReturn:
     if isinstance(exc.__cause__, Exception):
         raise exc.__cause__.with_traceback(exc.__cause__.__traceback__)
     raise exc
+
+
+def _raise_task_command_error(exc: ValueError) -> NoReturn:
+    message = str(exc)
+    if message.startswith("Published tasklist is missing:"):
+        message += " Run through the tasklist stage before inspecting or executing tasks."
+    raise typer.BadParameter(message) from exc
 
 
 def execute_task_by_id(
@@ -578,19 +591,22 @@ def task_run(
         typer.Option("--log-follow/--no-log-follow"),
     ] = False,
 ) -> None:
-    ledger = execute_task_by_id(
-        task_id=task_id,
-        work_item=work_item,
-        run_id=run_id,
-        runtime=runtime,
-        root=root,
-        config=config,
-        log_follow=log_follow,
-    )
-    plan = load_task_execution_plan(
-        workspace_root=_workspace_root(root, config), work_item=work_item
-    )
-    _display_ledger(ledger=ledger, plan=plan, task_id=task_id)
+    try:
+        ledger = execute_task_by_id(
+            task_id=task_id,
+            work_item=work_item,
+            run_id=run_id,
+            runtime=runtime,
+            root=root,
+            config=config,
+            log_follow=log_follow,
+        )
+        plan = load_task_execution_plan(
+            workspace_root=_workspace_root(root, config), work_item=work_item
+        )
+        _display_ledger(ledger=ledger, plan=plan, task_id=task_id)
+    except ValueError as exc:
+        _raise_task_command_error(exc)
 
 
 def task_finalize(
@@ -604,14 +620,17 @@ def task_finalize(
         Path, typer.Option("--config", help="Path to an AIDD TOML config file.")
     ] = Path("aidd.example.toml"),
 ) -> None:
-    ledger = finalize_implementation(
-        work_item=work_item,
-        run_id=run_id,
-        runtime=runtime,
-        root=root,
-        config=config,
-    )
-    _display_ledger(ledger=ledger)
+    try:
+        ledger = finalize_implementation(
+            work_item=work_item,
+            run_id=run_id,
+            runtime=runtime,
+            root=root,
+            config=config,
+        )
+        _display_ledger(ledger=ledger)
+    except ValueError as exc:
+        _raise_task_command_error(exc)
 
 
 __all__ = [

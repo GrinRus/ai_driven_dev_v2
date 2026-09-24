@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None; W55-E1-S1-T1 is complete.
+- None.
 
 ## Soon
 
@@ -38,22 +38,11 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-23` W55-E1-S1-T1 is complete: stale async operator responses/actions and obsolete
-  project validation could apply to a newer run, route, or edited input. Fixes and provider-free
-  regression evidence are recorded in `roadmap.md`; 164 frontend tests, 61 CLI stage/task tests,
-  53 UI asset contracts, and the isolated five-width Document Canvas journey passed. The first
-  full packaged browser invocation executed all 12 journeys but hit one 1440px visibility
-  timeout under concurrent Python/CLI test load; the exact case and whole document journey both
-  passed when rerun alone. W54-E1-S1-T1 is complete from the post-W53 operator evidence audit:
-  it owns fail-closed parser/UI truth
-  for legacy, malformed, and mixed verification claims, recovery action dispatch,
-  implementation/intervention selector propagation, and visible disabled states for ineligible
-  Inbox mutations. Scoped CLI/frontend/browser evidence is recorded in `roadmap.md`; the
-  broader `make check` attempt still has two adapter subprocess timing failures outside W54.
-  T10 is complete in `68f7a9fe`: QA upstream verdicts now use parsed review
-  dispositions, and focused/full checks pass. T4 is complete in live run
-  `eval-live-007-claude-code-20260914T112909Z` on `deepseek-flash` from an independent root;
-  all stages, validator reports, Seatbelt/session integrity, and final manual quality reports
-  pass. The adjacent UI refactor remains outside this worktree and read-only.
-- Earlier W50 release and acceptance evidence remains recorded in roadmap/Git history; this
-  bounded note tracks the completed T10 → T4 sequence and parked follow-ups.
+- `2026-09-24` W56-E1-S1-T1 and W56-E1-S2-T1 completed the product-claim, CLI, and Operator UI
+  parity audit. Guided Setup now accepts an absolute `.aidd` path contained by the selected project
+  and rejects outside-project roots; `aidd task list/show` report the unpublished-tasklist
+  prerequisite with exit code 2 and no traceback. The rendered clean-setup journey created
+  `WI-ABS-ROOT` without starting a runtime. Five focused modules passed (227 tests); focused Ruff,
+  formatting, planning-integrity, docs-consistency, and `git diff --check` validations are recorded
+  with the completion evidence in `roadmap.md`. No provider-backed execution was needed.
+- Earlier W50 release and acceptance evidence remains recorded in roadmap/Git history.

@@ -24,6 +24,38 @@ def test_onboarding_inspects_empty_project(tmp_path: Path) -> None:
     assert summary.work_items == ()
 
 
+def test_onboarding_accepts_absolute_workspace_root_inside_project(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    workspace_root = project_root / ".aidd"
+    service = OnboardingService(launch_root=tmp_path, workspace_root=workspace_root)
+
+    summary = service.inspect_project("project")
+    created = service.create_work_item(
+        raw_project_root="project",
+        work_item="WI-ABSOLUTE-ROOT",
+        request_text="Keep absolute workspace setup project-local.",
+    )
+
+    assert summary.workspace_root == workspace_root.resolve()
+    assert summary.workspace_exists is False
+    assert created.project.workspace_root == workspace_root.resolve()
+    assert created.seeded_context is not None
+    assert created.seeded_context.user_request_path.exists()
+
+
+def test_onboarding_rejects_absolute_workspace_root_outside_project(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    service = OnboardingService(
+        launch_root=tmp_path,
+        workspace_root=tmp_path / "outside" / ".aidd",
+    )
+
+    with pytest.raises(ValueError, match="stay inside the selected project root"):
+        service.inspect_project("project")
+
+
 def test_onboarding_rejects_missing_file_parent_and_symlink_escape(tmp_path: Path) -> None:
     service = OnboardingService(launch_root=tmp_path)
 

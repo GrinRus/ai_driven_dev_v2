@@ -250,6 +250,16 @@ project-local workspace, creates or resumes a work item, and seeds the operator 
 uses the same workspace creation and request seeding behavior as `aidd init`; it does not
 introduce a second workflow engine or a hidden `generic-cli` fallback.
 
+An explicit absolute `--root` also works during clean setup when the resolved workspace path is
+inside the selected project root. For example, from the target project:
+
+```bash
+aidd ui --root /path/to/local-project/.aidd
+```
+
+This keeps the workspace project-local. A workspace path outside the selected project is
+rejected.
+
 When an accessible `.aidd/` directory already exists, restart with the same command (for example,
 `aidd ui --root .aidd`) to open the project **Inbox**, not Guided Setup; no existing work-item
 marker is required. That project-only Inbox context does not select an arbitrary work item,

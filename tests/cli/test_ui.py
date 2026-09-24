@@ -2052,6 +2052,49 @@ def test_ui_onboarding_mode_serves_setup_until_context_handoff(
     assert workflow_request.stage_end == "plan"
 
 
+def test_ui_guided_setup_accepts_absolute_workspace_root_inside_project(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    workspace_root = project_root / ".aidd"
+    monkeypatch.chdir(tmp_path)
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item=None,
+            root=workspace_root,
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        ),
+        readiness_probe_provider=_ready_probe,
+    )
+
+    inspected = _payload(
+        service.handle_post(
+            "/api/onboarding/project",
+            {"project_root": project_root.as_posix()},
+        )
+    )
+    created = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": project_root.as_posix(),
+                "work_item": "WI-ABS-ROOT",
+                "request": "Create this Work Item under the selected project.",
+            },
+        )
+    )
+
+    assert inspected["project"]["workspace_root"] == workspace_root.resolve().as_posix()  # type: ignore[index]
+    assert inspected["project"]["workspace_exists"] is False  # type: ignore[index]
+    assert created["context"]["workspace_root"] == workspace_root.resolve().as_posix()  # type: ignore[index]
+    assert (workspace_root / "workitems" / "WI-ABS-ROOT" / "context" / "user-request.md").exists()
+
+
 def test_ui_onboarding_persists_structured_work_item_request_fields(
     tmp_path: Path,
     monkeypatch: Any,
