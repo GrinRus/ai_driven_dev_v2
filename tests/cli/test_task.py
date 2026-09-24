@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -126,11 +127,13 @@ def test_task_inspection_reports_missing_tasklist_without_traceback(
         arguments.append("TL-1")
     arguments.extend(["--work-item", "WI-NO-TASKLIST", "--root", str(workspace_root)])
 
-    result = runner.invoke(app, arguments)
+    result = runner.invoke(app, arguments, color=True, terminal_width=80)
 
     assert result.exit_code == 2
     assert "Published tasklist is missing" in result.output
-    assert "Run through the tasklist stage" in result.output
+    diagnostic = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.output)
+    diagnostic = diagnostic.translate(str.maketrans("│╭╮╰╯─", "      "))
+    assert "Run through the tasklist stage" in " ".join(diagnostic.split())
     assert "Traceback" not in result.output
 
 
