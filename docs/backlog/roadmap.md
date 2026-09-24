@@ -1687,3 +1687,47 @@ for confirmed defects of the same class and repair them with provider-free evide
     tests/test_docs_consistency.py tests/test_planning_integrity.py` -> 70 passed;
     `git diff --check` -> pass. The broader `make check` was not rerun in this wave; the
     previously recorded two adapter subprocess timing failures remain outside the audited paths.
+
+## Wave 56 — product-claim and operator-surface parity audit (`done`)
+
+This wave follows the 2026-09-24 request to find and repair functional gaps between current
+product claims, the installed CLI, and the local Operator UI. It starts from the completed W55
+operator-integrity baseline and records only reproduced defects against current user-visible
+contracts; external provider execution is not required for this audit.
+
+### Epic W56-E1 — reliable onboarding and task inspection (`done`)
+
+Linked stories: `US-09`, `US-11`, `US-13`
+
+#### Slice W56-E1-S1 — project-contained absolute workspace roots (`done`)
+
+- `W56-E1-S1-T1` (done) Support absolute workspace roots during clean Guided Setup.
+  - Output: `aidd ui --root <absolute-project>/.aidd` can validate the selected project and
+    create or resume work while keeping `.aidd` inside that project; an absolute root outside
+    the selected project remains an explicit error.
+  - Scope: `src/aidd/core/onboarding.py`, `tests/core/test_onboarding.py`,
+    `tests/cli/test_ui.py`, and the relevant operator handbook guidance; preserve symlink and
+    project-boundary checks.
+  - Dependencies: W55-E1-S1-T1 and the current Guided Setup onboarding contract.
+  - Verification: focused onboarding and UI service evidence covers valid absolute, outside-root,
+    and existing relative workspace paths; a rendered clean-setup journey confirms work-item
+    creation without launching a runtime.
+  - Completion evidence: the onboarding and UI regressions prove an absolute workspace inside the
+    project can be inspected and created, while an outside-project root remains rejected. The
+    local UI was launched from a clean temp project with an absolute `.aidd` path; Guided Setup
+    validated it, created `WI-ABS-ROOT`, and opened Studio without selecting or invoking a runtime.
+    The five-module focused suite passed (227 tests); Ruff and `git diff --check` passed.
+
+#### Slice W56-E1-S2 — task-command prerequisite diagnostics (`done`)
+
+- `W56-E1-S2-T1` (done) Report task-command preconditions without tracebacks.
+  - Output: `aidd task list` and `aidd task show` return a concise actionable CLI error before a
+    tasklist is published; expected domain failures from task execution/finalization also use the
+    CLI error surface. Valid task inspection and fail-closed execution stay unchanged.
+  - Scope: `src/aidd/cli/task.py` and `tests/cli/test_task.py`.
+  - Dependencies: W55-E1-S1-T1; the tasklist remains the required source of task definitions.
+  - Verification: focused CLI evidence covers missing and valid tasklists, nonzero failure status,
+    absence of an uncaught traceback, and malformed-ledger rejection before runtime or state writes.
+  - Completion evidence: `tests/cli/test_task.py` passed (12 tests); `aidd task list/show` on a
+    newly initialized item now return exit code 2, explain that the `tasklist` stage must run
+    first, and show no Python traceback. The full five-module focused suite passed (227 tests).

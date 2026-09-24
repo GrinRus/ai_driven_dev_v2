@@ -351,7 +351,10 @@ class OnboardingService:
     def _resolve_workspace_root(self, *, project_root: Path) -> Path:
         raw_workspace = self._workspace_root
         if raw_workspace.is_absolute():
-            raise ValueError("Setup mode requires a project-relative AIDD workspace root.")
+            resolved_workspace = raw_workspace.resolve(strict=False)
+            if not resolved_workspace.is_relative_to(project_root):
+                raise ValueError("AIDD workspace root must stay inside the selected project root.")
+            return resolved_workspace
         if any(part == ".." for part in raw_workspace.parts):
             raise ValueError("AIDD workspace root must not contain parent traversal.")
         resolved_workspace = (project_root / raw_workspace).resolve(strict=False)

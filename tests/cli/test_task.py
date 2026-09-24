@@ -115,6 +115,25 @@ def test_task_list_and_show_render_derived_pending_state(tmp_path: Path) -> None
     assert "TL-1-AC1" in show_result.stdout
 
 
+@pytest.mark.parametrize("command", ["list", "show"])
+def test_task_inspection_reports_missing_tasklist_without_traceback(
+    tmp_path: Path,
+    command: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    arguments = ["task", command]
+    if command == "show":
+        arguments.append("TL-1")
+    arguments.extend(["--work-item", "WI-NO-TASKLIST", "--root", str(workspace_root)])
+
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code == 2
+    assert "Published tasklist is missing" in result.output
+    assert "Run through the tasklist stage" in result.output
+    assert "Traceback" not in result.output
+
+
 def test_task_show_rejects_unknown_task(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_tasklist(workspace_root)
@@ -133,8 +152,8 @@ def test_task_show_rejects_unknown_task(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0
-    assert result.exception is not None
-    assert "Unknown task id" in str(result.exception)
+    assert "Unknown task id" in result.output
+    assert "Traceback" not in result.output
 
 
 def test_task_run_rejects_runtime_mismatch_before_creating_ledger(tmp_path: Path) -> None:
@@ -492,8 +511,8 @@ def test_task_cli_rejects_retired_ledger_before_runtime_or_state_writes(
         ],
     )
     assert result.exit_code != 0
-    assert isinstance(result.exception, ValueError)
-    assert "schema_version=2" in str(result.exception)
+    assert "schema_version=2" in result.output
+    assert "Traceback" not in result.output
     assert runtime_calls == []
     assert {
         path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()
