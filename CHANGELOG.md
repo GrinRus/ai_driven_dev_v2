@@ -9,6 +9,14 @@ stable compatibility window exists.
 
 - No changes yet.
 
+## 0.1.0a26 - 2026-09-25
+
+- Allow clean Guided Setup to use absolute `--root` paths inside the selected project while
+  rejecting workspace roots outside that project.
+- Show concise, actionable CLI diagnostics for task-command failures; missing tasklists explain
+  that the `tasklist` stage must run before task inspection or execution.
+- Document the project-local absolute-root setup path in the operator handbook.
+
 ## 0.1.0a25 - 2026-09-23
 
 - Restore targeted retries for failed implementation tasks and finalization, with runner/model

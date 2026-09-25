@@ -255,9 +255,10 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a26.dev0`.
-No current release candidate is accepted from this development version.
+Current release-candidate package version: `0.1.0a26`.
 Latest accepted published prerelease evidence: `0.1.0a25`.
+The `v0.1.0a26` candidate is prepared but is not accepted until publication and package-channel
+verification complete.
 The `v0.1.0a25` release is published and accepted; release and package-channel verification
 evidence is recorded below.
 
@@ -266,9 +267,9 @@ provider, browser, onboarding, project-set, provenance, approval, and install ev
 in `docs/product/user-stories.md`.
 
 README install instructions resolve the latest published package from PyPI. The accepted release
-is `v0.1.0a25`; this post-release follow-up moves `main` to `0.1.0a26.dev0`, which is not a
-published release. The release branch carries the accepted version `0.1.0a25`. Keep the newest
-accepted package evidence first and retain prior outcomes as historical records.
+is `v0.1.0a25`; `main` targets `0.1.0a26.dev0` and is not a published release. The release branch
+carries candidate version `0.1.0a26`. Keep the newest accepted package evidence first and retain
+prior outcomes as historical records.
 
 A beta-oriented claim requires fresh evidence for the exact candidate.
 
