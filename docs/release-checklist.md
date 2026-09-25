@@ -255,11 +255,10 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a26`.
-Latest accepted published prerelease evidence: `0.1.0a25`.
-The `v0.1.0a26` candidate is prepared but is not accepted until publication and package-channel
-verification complete.
-The `v0.1.0a25` release is published and accepted; release and package-channel verification
+Maintainer source development package version: `0.1.0a27.dev0`.
+No current release candidate is accepted from this development version.
+Latest accepted published prerelease evidence: `0.1.0a26`.
+The `v0.1.0a26` release is published and accepted; release and package-channel verification
 evidence is recorded below.
 
 Future beta readiness is not implied by alpha package publication. Beta claims require the
@@ -267,9 +266,9 @@ provider, browser, onboarding, project-set, provenance, approval, and install ev
 in `docs/product/user-stories.md`.
 
 README install instructions resolve the latest published package from PyPI. The accepted release
-is `v0.1.0a25`; `main` targets `0.1.0a26.dev0` and is not a published release. The release branch
-carries candidate version `0.1.0a26`. Keep the newest accepted package evidence first and retain
-prior outcomes as historical records.
+is `v0.1.0a26`; `main` targets `0.1.0a27.dev0` and is not a published release. The release branch
+carries the accepted version `0.1.0a26`. Keep the newest accepted package evidence first and
+retain prior outcomes as historical records.
 
 A beta-oriented claim requires fresh evidence for the exact candidate.
 
@@ -314,6 +313,29 @@ Beta-oriented release note criteria:
 - [ ] Announce release with links to package and notes.
 
 ## Latest accepted release evidence
+
+### `v0.1.0a26` accepted evidence on 2026-09-25
+
+- Tag: `v0.1.0a26`
+- Release branch: `release/v0.1.0a26`
+- Commit: `ed717fab70abd12c2c6d503be244cf7844f00e4b`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a26`
+- Release PR: `https://github.com/GrinRus/ai_driven_dev_v2/pull/697` (merged).
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/36100330526`
+- Result: accepted published prerelease and package-channel evidence; all required jobs passed.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: the release tag matched `project.version` `0.1.0a26`, and the tag commit
+  matched the remote `release/v0.1.0a26` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a26/`.
+- Independent local `pipx` verification used pipx 1.17.5 through `uv tool run --from pipx`,
+  the `pip` backend, and Python 3.12.14; the installed `aidd` binary returned `aidd 0.1.0a26`
+  and `aidd doctor` completed successfully (exit code 0).
+- Independent local `uv tool` verification used uv 0.12.8 and Python 3.12.14; the installed
+  `aidd` binary returned `aidd 0.1.0a26` and `aidd doctor` completed successfully (exit code 0).
+- Local `doctor` reported the generic `python` wrapper unavailable; package install and CLI
+  startup succeeded, and no provider workflow was run as part of package verification.
+- No Docker/GHCR artifact was published.
 
 ### `v0.1.0a25` accepted evidence on 2026-09-23
 
