@@ -7,7 +7,7 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No changes yet.
+- Development continues after the `v0.1.0a26` prerelease; no new changes are recorded yet.
 
 ## 0.1.0a26 - 2026-09-25
 
