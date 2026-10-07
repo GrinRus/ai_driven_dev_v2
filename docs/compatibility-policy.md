@@ -172,3 +172,19 @@ current Markdown contracts remain supported; they are not version-compatibility 
 Remove the obsolete `[logging]` section from existing configuration before loading it.
 Bare provider probe commands without an explicit execution mode are rejected; omit the command
 to use the maintained default, or configure the command and mode together.
+
+### 6.6 Accepted iterative replacement
+
+The [iterative delivery contract](architecture/iterative-delivery-contract.md) and
+[ADR 009](architecture/iterative-delivery-decisions.md#adr-009-direct-breaking-replacement)
+define a future direct breaking replacement, not an already shipped format change.
+One accepted candidate replaces the delivery policy, state formats, contracts, prompts,
+CLI/UI and packaged resources together. It contains no classic/iterative coexistence,
+legacy readers, aliases, automatic converters or in-engine rollback.
+
+Unsupported old configuration/run/manifest/ledger inputs stop before workspace mutation.
+Recreate work explicitly in current formats; retain historical Markdown, logs and bundles
+for direct/archive inspection without promising resume or importing old success/authority.
+A comparison or rollback uses the pinned earlier package/revision and its compatible
+retained workspace in a separate environment. Current runtime/platform support tiers,
+exact-candidate acceptance and installation gates remain in force.

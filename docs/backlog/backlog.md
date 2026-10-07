@@ -7,11 +7,13 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W57-E1-S1-T2` — Pin the baseline and predeclare migration acceptance under accepted P01–P07.
+- `W57-E1-S2-T1` — Add source-bound criteria and scoped product decisions.
 
 ## Soon
 
-- None.
+- `W57-E1-S2-T2` — Dereference evidence paths, IDs, and criterion coverage.
+- `W57-E2-S1-T1` — Register declared check definitions and execution policy.
 
 ## Parking lot
 
@@ -38,11 +40,22 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-24` W56-E1-S1-T1 and W56-E1-S2-T1 completed the product-claim, CLI, and Operator UI
-  parity audit. Guided Setup now accepts an absolute `.aidd` path contained by the selected project
-  and rejects outside-project roots; `aidd task list/show` report the unpublished-tasklist
-  prerequisite with exit code 2 and no traceback. The rendered clean-setup journey created
-  `WI-ABS-ROOT` without starting a runtime. Five focused modules passed (227 tests); focused Ruff,
-  formatting, planning-integrity, docs-consistency, and `git diff --check` validations are recorded
-  with the completion evidence in `roadmap.md`. No provider-backed execution was needed.
-- Earlier W50 release and acceptance evidence remains recorded in roadmap/Git history.
+- `2026-10-06` Accepted one direct breaking migration without backward compatibility.
+  W57–W59 retain 40 tasks: positioning/UX W57-E1-S1-T3 and architecture W57-E1-S1-T1
+  are done; 38 implementation/measurement/acceptance tasks remain. The
+  [accepted contract](../architecture/iterative-delivery-contract.md) replaces the original
+  coexistence/default-switch sequence. The [decision log](../architecture/iterative-delivery-decisions.md)
+  retains ADR 001–ADR 009 and P01–P07; the roadmap links parameters to their protocol,
+  controller, native, human and acceptance tasks. A bounded
+  [SWE-bench proposal](../analysis/swe-bench-migration-evaluation-2026-10-06.md) is research input
+  to baseline W57-E1-S1-T2, not an accepted extra matrix or completed evidence.
+  Next is baseline W57-E1-S1-T2 and source/decision
+  W57-E1-S2-T1; their direct successors W57-E1-S2-T2 and W57-E2-S1-T1 are Soon.
+  Other migration tasks remain planned in the roadmap. Existing parked observation,
+  provider, and beta-readiness tasks retain their status; overlapping evidence must be
+  reconciled against the same candidate/protocol before it closes another task.
+
+Earlier completion evidence remains in the roadmap and merged Git history. The
+[accepted migration plan](../analysis/iterative-delivery-migration-plan-2026-10-01.md)
+retains dated design rationale and its supersession note; this queue and the roadmap own
+current execution priority/status. Planning closure does not claim runtime implementation.

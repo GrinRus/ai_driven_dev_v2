@@ -11,6 +11,11 @@ Build a runtime-agnostic orchestration system for agentic software delivery that
 - includes user interview loops,
 - and makes harness/eval/log analysis part of the product.
 
+The [iterative delivery decisions](./iterative-delivery-decisions.md) and
+[unified iterative contract](./iterative-delivery-contract.md) define the accepted breaking
+replacement, its records, finite routes and lifecycle. They guide upcoming implementation;
+the current workflow and contracts described here remain in effect until those tasks land.
+
 ## 2. Non-goals
 
 - Recreating a host-specific plugin under a different name.

@@ -2,6 +2,17 @@
 
 These user stories define why AIDD exists and what the first release must make possible.
 
+[Product positioning](product-positioning.md) states the operator promise and separates
+current capabilities from the accepted iterative direction. Current alpha acceptance stays
+in force until the complete replacement is accepted; presentation changes cannot weaken it.
+
+The [accepted iterative contract](../architecture/iterative-delivery-contract.md) clarifies
+the target for the breaking replacement in W57–W59. Its stronger authority, verification,
+iteration and route signals are listed separately as accepted replacement requirements,
+not claims about the current alpha. The replacement deliberately changes preparation routes
+and correction policy while retaining required validation and quality outcomes. The
+traceability registry distinguishes current evidence from target gaps.
+
 ## Primary personas
 
 - **Operator** — runs AI-driven delivery flows on real tasks.
@@ -43,6 +54,15 @@ Success signals:
 - validation reports are durable artifacts,
 - invalid output triggers repair or stop, never silent acceptance.
 
+Accepted replacement signals (implementation pending):
+
+- stage contracts apply to the explicitly selected finite route; unselected preparation
+  does not create fake successful output or remove required terminal quality gates,
+- required verification uses current AIDD-owned execution evidence; stale, missing or failing
+  receipts cannot be replaced by a model's pass claim,
+- required behavioral assessment remains distinct from document validity and check exit code;
+  inconclusive or unassessed required behavior prevents delivery completion.
+
 ### US-04 — self-repair on bad outputs
 
 As an **operator**, I want the system to retry a stage with a repair brief when validation fails so that small model misses do not force manual cleanup every time.
@@ -62,6 +82,13 @@ Success signals:
 - questions are surfaced in the CLI,
 - questions and answers are persisted as documents,
 - unanswered questions block progression when the stage policy requires them.
+
+Accepted replacement signals (implementation pending):
+
+- explicit source requirements do not need blanket approval of a generated specification;
+  material proposals, conflicts and ambiguity require a scoped product decision,
+- saving an answer, applying it to affected criteria/tasks, and assessing the resulting
+  behavior are distinguishable; runtime permission and model review cannot substitute.
 
 ### US-06 — native runtime visibility
 
@@ -83,6 +110,13 @@ Success signals:
 - manual external audit evidence can be refreshed as auditable bundles or explicit environment blockers,
 - every run produces durable audit artifacts,
 - failure classification separates model, document, adapter, and environment failures.
+
+Accepted replacement signals (implementation pending):
+
+- migration comparisons use pinned independent expectations and an earlier release in a
+  separate environment; the replacement does not need a parallel legacy execution path,
+- scripted replay, native-runtime evidence and genuine operator observations retain distinct
+  acceptance roles; missing evidence is reported rather than counted as passed.
 
 ### US-08 — clean adapter extension
 
@@ -115,6 +149,11 @@ Success signals:
 - runs record the prompt file paths, Git commit SHA, and content hashes used,
 - evals can be re-run against the same scenario to compare outcomes.
 
+Accepted replacement signals (implementation pending):
+
+- consumed source/answer/criterion/check/oracle revisions, code/input identity, plan changes,
+  child runs, reused attempts and final evidence remain attributable to exact snapshots.
+
 ### US-11 — operator workflow frontend
 
 As an **operator**, I want a frontend for the governed delivery flow so that I can run each stage, answer questions, inspect artifacts, and view runner logs without losing the CLI's workflow semantics.
@@ -129,6 +168,15 @@ Success signals:
 - the operator can choose optional model and reasoning-effort selectors for a capable runtime in the frontend,
   while omitted selectors preserve native defaults and the choice is retained in run provenance,
 - after a run reaches a terminal state, the frontend can guide the operator to create a new work item, follow-up flow, cloned flow, eval batch, or archive decision without mutating the completed run.
+
+Accepted replacement signals (implementation pending):
+
+- the full delivery journey uses the selected finite route from intake through QA, and
+  individual-stage entrypoints share its eligibility rules with the CLI,
+- selected operations, unselected preparation, current action/reason, evidence gaps, remaining
+  objective limits and cancellation are shown truthfully; unselected stages never appear successful,
+- corrections within one objective preserve immutable parent/child history and exact input
+  revisions; an unsupported old format stops explicitly and retained raw evidence remains inspectable.
 
 ### US-12 — project-set workflow
 
@@ -154,6 +202,19 @@ Success signals:
 - automatic execution follows dependency order and stops on the first blocked or failed task;
 - CLI and frontend can inspect and resume one task without bypassing dependencies;
 - review and QA receive aggregate evidence only after every implementation task succeeds.
+
+Accepted replacement signals (implementation pending):
+
+- an eligible, validated tasklist decomposes an already authorized outcome, with no unresolved
+  material product decision; this replaces the active contracts' “approved tasklist” wording
+  without requiring blanket human approval of generated prose,
+- dependency order remains mandatory; a blocked or failed attempt stops with retained evidence,
+  and only a recorded eligible bounded correction action permits affected work to continue;
+- changed plans create child runs; compatible retained work keeps its original attribution,
+  affected tasks and dependents execute again, and children do not reset objective limits;
+- review and QA receive aggregate evidence only after every required implementation task has
+  a valid executed or reused result and current required verification; delivery completion also
+  requires current final-tree checks, behavioral assessment and terminal quality gates.
 
 ## Future beta readiness gate
 
