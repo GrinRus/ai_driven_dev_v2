@@ -1731,3 +1731,663 @@ Linked stories: `US-09`, `US-11`, `US-13`
   - Completion evidence: `tests/cli/test_task.py` passed (12 tests); `aidd task list/show` on a
     newly initialized item now return exit code 2, explain that the `tasklist` stage must run
     first, and show no Python traceback. The full five-module focused suite passed (227 tests).
+
+## Wave 57 — grounded requirements and owned verification (`planned`)
+
+Goal: Ground original requirements and decisions in exact sources, execute registered checks
+through AIDD, and distinguish current verification evidence from behavioral acceptance before
+changing orchestration.
+
+Accepted on 2026-10-01 from the [iterative delivery migration
+plan](../analysis/iterative-delivery-migration-plan-2026-10-01.md). W57–W59 contain the 39 original
+migration tasks plus the user-requested positioning/UX precursor W57-E1-S1-T3 (40 total);
+this roadmap owns their definitions, dependencies, and statuses. The dated plan
+retains design rationale, adversarial cases, and measurement proposals. Acceptance of this work
+does not claim that migration behavior is already implemented.
+
+The [accepted architecture contract](../architecture/iterative-delivery-contract.md) and
+[ADR 009](../architecture/iterative-delivery-decisions.md#adr-009-direct-breaking-replacement)
+supersede the proposal's coexistence/default-switch/retirement sequence: implement bounded
+internal slices, then accept one complete breaking replacement without backward compatibility.
+
+Linked stories: `US-02`, `US-03`, `US-04`, `US-05`, `US-07`, `US-10`, `US-11`, `US-13`.
+The internal pilot establishes source authority and owned proof before changing orchestration;
+it is not a publicly supported parallel engine. Each behavior task includes contract/prompt alignment and
+its direct regression; the final scenario task integrates these results rather than
+postponing their tests.
+
+### Epic W57-E1 — source and decision authority (`planned`)
+
+Goal: Establish protected source/criterion identity and scoped decision authority without
+blanket approval of generated plans.
+
+#### Slice W57-E1-S1 — define the target and comparison contract (`planned`)
+
+Dependencies: No upstream local task for slice entry. Task-specific dependencies below govern
+later work.
+
+- `W57-E1-S1-T3` (done) Establish product positioning and the iterative Operator UX direction.
+  - Output: durable product positioning, a target journey/screen/state/action blueprint,
+    a bounded current-UI audit, and an inspectable concept with explicit fixture status.
+  - Scope: product/architecture docs, README framing, and a separate design concept;
+    no production UI, orchestration, or stage-contract implementation.
+  - Dependencies: none; this user-requested design precursor informs the contracts below.
+  - Verification: inspect current rendered UI and the concept, check documentation/planning
+    consistency, and preserve current-versus-target claims. Human usability remains unverified.
+  - Completion evidence: [product positioning](../product/product-positioning.md),
+    [iterative UX blueprint](../architecture/iterative-operator-ux.md), and
+    [current-UI audit/concept walkthrough](../design/iterative-operator/README.md) recorded
+    on 2026-10-01. Current UI and concept screenshots inspected; decision/save/start/review,
+    failure retention, stale proof, narrow layouts, and keyboard interactions checked.
+    Documentation/planning suite: 70 passed; concept syntax and error-level console clean.
+    Production UI/runtime and genuine human usability acceptance are not implemented or claimed.
+
+- `W57-E1-S1-T1` (done) Define outcome, authority, routing, and iteration contracts.
+  - Output: accepted architecture decisions, concrete record/lifecycle and ownership contract,
+    story changes, and stage/route migration map, including direct breaking replacement policy.
+  - Scope: product/architecture/compatibility docs, document ownership, traceability registry;
+    no runtime implementation. Clarify `US-13` “approved tasklist” authority and `US-11` routes.
+    Use the [positioning](../product/product-positioning.md) and
+    [iterative UX blueprint](../architecture/iterative-operator-ux.md) as the product baseline.
+  - Dependencies: `W57-E1-S1-T3`.
+  - Verification: documentation/traceability consistency; review that material decisions,
+    permissions, model reviews, and ordinary retries have distinct consequences.
+  - Progress on 2026-10-01: [ADR 001](../architecture/iterative-delivery-decisions.md#adr-001-requirement-authority)
+    accepted by the operator. Explicit source requirements have authority; additions,
+    ambiguity, and conflicts require scoped decisions.
+    [ADR 002](../architecture/iterative-delivery-decisions.md#adr-002-verification-execution)
+    accepted by the operator: an AIDD verification service runs registered local checks
+    through a provider-independent execution port and retains actual results and code identity.
+    [ADR 003](../architecture/iterative-delivery-decisions.md#adr-003-criterion-acceptance)
+    accepted by the operator: automatically assess criteria with independent expected behavior
+    and current evidence, clarify ambiguity, and use scoped manual assessment when needed.
+    Unassessed or inconclusive mandatory criteria prevent completion.
+    [ADR 004](../architecture/iterative-delivery-decisions.md#adr-004-project-check-registry)
+    accepted by the operator: register project checks and parameter bounds, select checks
+    by declared policy, retain mandatory checks, and register new or changed execution
+    definitions separately.
+    [ADR 005](../architecture/iterative-delivery-decisions.md#adr-005-preparation-depth-and-routing)
+    accepted by the operator: core policy selects focused/investigate/design from explicit
+    evidence, exposes the rationale, and escalates uncertainty; required verification,
+    review, and QA remain.
+    [ADR 006](../architecture/iterative-delivery-decisions.md#adr-006-iteration-identity-and-history)
+    accepted by the operator: revised plans create child runs of the same Work Item,
+    preserve immutable predecessor history, and retain ordinary fixes/retries within a
+    compatible unchanged run.
+    [ADR 007](../architecture/iterative-delivery-decisions.md#adr-007-carry-forward-and-invalidation)
+    accepted by the operator: re-execute affected tasks and dependents, carry compatible
+    retained work with original attempt attribution, and refresh stale verification;
+    required final checks apply to the current final tree.
+    [ADR 008](../architecture/iterative-delivery-decisions.md#adr-008-bounded-automatic-control)
+    accepted by the operator: automatically fix, verify, and replan within authorized bounds
+    and shared finite objective limits; exhaustion, no progress, and unresolved authority
+    stop or ask. Children do not reset budgets, and recovery cannot silently duplicate
+    execution.
+    [ADR 009](../architecture/iterative-delivery-decisions.md#adr-009-direct-breaking-replacement)
+    accepted by the operator: one complete replacement release with no coexistence, legacy
+    readers, automatic conversion or in-engine rollback. The
+    [unified target contract](../architecture/iterative-delivery-contract.md) defines records,
+    ownership, source/assessment limits, finite routes, input substitutions, lifecycle/budgets,
+    recovery, story mapping and direct cutover.
+  - Completion evidence on 2026-10-01: ADR 001–ADR 009 and the unified contract recorded;
+    user stories/traceability, compatibility, product/UX direction and W57–W59 reconciled.
+    Planning/document/traceability suite: 75 passed; `make check-agents`: 52 instruction
+    documents checked and 45 tests passed; generated traceability and local links checked.
+    Current runtime behavior, active stage contracts/prompts, native/human acceptance and
+    publication are not implemented or claimed by this architecture task.
+
+- `W57-E1-S1-T2` (next) Pin the baseline and predeclare migration acceptance.
+  - Output: comparison protocol, fixed tasks/fixtures, independent expected behavior,
+    failure taxonomy, comprehension questions, and predeclared migration acceptance thresholds.
+  - Scope: eval/E2E protocols and baseline inventory. Pin the earlier package/revision and
+    retained traces in a separate checkout/environment; record model/runtime/reasoning,
+    prompts, commit, environment, bundle identity and intentional AIDD/prompt differences.
+    Pin finite budget defaults, waiting-time accounting and no-progress thresholds before eval.
+    Assess a bounded [SWE-bench fixture proposal](../analysis/swe-bench-migration-evaluation-2026-10-06.md)
+    for independent code-correctness cases; qualify exact source/test/environment identities
+    before selecting it. Benchmark cases cannot replace authority, iteration or human/UI lanes.
+  - Accepted parameters on 2026-10-05/06: [P01–P07](../architecture/iterative-delivery-decisions.md#baseline-protocol-decisions)
+    record active-time accounting; 40 execution starts, 3 children and 2 active hours per
+    Work Item; stop after 2 consecutive correction/check cycles without confirmed progress;
+    mandatory correctness/understanding with overhead diagnostics; 5 first-time participants,
+    at least 4 unassisted successes and no serious interface-caused error; 3 native repetitions
+    of 4 task classes on each version, 24 initial trials per runtime configuration; and
+    expected outcomes in all 3 counted candidate repetitions, with replacement of only a
+    diagnosed externally interrupted trial. All attempts remain retained. These choices
+    do not complete case/oracle selection, baseline inventory or the protocol; status stays Next.
+  - Dependencies: `W57-E1-S1-T1`.
+  - Verification: the earlier release and replacement candidate can be evaluated separately
+    against the same task/oracle without generated plans as the answer key or classic
+    support in the new engine; missing baseline evidence stays unavailable.
+
+#### Slice W57-E1-S2 — ground criteria and applied answers (`planned`)
+
+Dependencies: `W57-E1-S1-T1`. Task-specific dependencies below govern later work.
+
+- `W57-E1-S2-T1` (next) Add source-bound criteria and scoped product decisions.
+  - Output: compact Markdown criterion proposal plus AIDD-owned authority/decision records,
+    stable source anchors/digests, revision identity, and eligibility for unresolved decisions.
+  - Scope: document contracts/ownership, core source/decision services, validation context,
+    and minimal CLI question/decision integration; protect operator-authored originals.
+  - Dependencies: `W57-E1-S1-T1`.
+  - Verification: explicit criteria continue without blanket approval; proposed additions
+    and conflicts block; runtime permission, document opening, and model sign-off cannot
+    confer product authority; stale source decisions are detected. Decomposition changes
+    reuse authority only within unchanged criterion/constraint/authorized-scope bounds;
+    ambiguous equivalence blocks without model self-certification.
+
+- `W57-E1-S2-T2` (soon) Dereference evidence paths, IDs, and criterion coverage.
+  - Output: deterministic reference resolution across request, criteria, plan/tasklist,
+    review-spec, implementation, review, and QA, with precise missing/stale findings.
+  - Scope: `validators/cross_document_rules`, semantic evidence rules, source context and
+    fixtures; load consumed protected request/answer/criterion/decision revisions into
+    context. Pin those revisions in the current run, then adopt the unified resolver in
+    W58-E1-S2-T2. Implement locator identity/bounded fragments, not NLP truth heuristics.
+  - Dependencies: `W57-E1-S2-T1`.
+  - Verification: nonexistent file/line/ID, changed digest, unrelated ID, and internally
+    consistent documents omitting an original constraint cannot produce complete coverage.
+
+- `W57-E1-S2-T3` (planned) Track answer application through decisions and behavior.
+  - Output: QID → answer revision → affected criteria/tasks → resulting evidence mapping;
+    distinguish recorded, linked, and actually assessed application.
+  - Scope: interview consistency, input compiler, criterion revisions, question projections,
+    and focused CLI fixtures. Add no duplicate free-text summary requirement.
+  - Dependencies: `W57-E1-S2-T1`, `W57-E1-S2-T2`.
+  - Verification: resolving a QID without applying the answer leaves a coverage/assessment
+    gap; changed answers invalidate affected criteria; unrelated criteria stay intact.
+    A correct QID link with unchanged wrong behavior passes link integrity but is rejected
+    or remains inconclusive under behavioral assessment; linking alone cannot prove application.
+
+### Epic W57-E2 — product-owned verification and honest acceptance (`planned`)
+
+Goal: Make product task success depend on AIDD-owned current verification and final delivery
+depend on attributed criterion assessment.
+
+#### Slice W57-E2-S1 — declare, execute, and bind checks (`planned`)
+
+Dependencies: `W57-E1-S1-T1`, `W57-E1-S2-T1`. Task-specific dependencies below govern later
+work.
+
+- `W57-E2-S1-T1` (soon) Register declared check definitions and execution policy.
+  - Output: typed check registry with stable IDs, exact command/argv or declared shell form,
+    cwd/project ownership, timeouts, expected result, prerequisites, `authority_source`,
+    definition registration event and authority digest; include a declared-input manifest.
+  - Scope: configuration boundary, check-definition Markdown/current state, project-set
+    policy, task criterion references, doctor/preflight, and deterministic fixtures.
+  - Dependencies: `W57-E1-S1-T1`, `W57-E1-S2-T1`.
+  - Verification: runtime report text cannot register/execute a new command; undeclared cwd,
+    incompatible configuration, changed check definitions, and absent prerequisites stop
+    explicitly. Model-authored tasklist verification is also a proposal until registered
+    under authorized policy. Test full-access/brokered distinctions honestly.
+
+- `W57-E2-S1-T2` (planned) Execute checks through AIDD and retain check receipts.
+  - Output: application verification service with an injected execution port, process
+    ownership, stdout/stderr, exit/timeout/cancel status, duration, and sealed receipt.
+  - Scope: shared narrow process infrastructure, application composition, core lifecycle,
+    receipt retention, and direct executor fixtures. Keep this task centered on the product
+    execution/receipt lifecycle; wire CLI/task gates in W57-E2-S2-T1 and harness scenarios in
+    W57-E2-S2-T3. Do not import harness orchestration into product core.
+  - Dependencies: `W57-E2-S1-T1`.
+  - Verification: false “pass” reports, all-skipped checks, timeout, cancellation, missing
+    executable, and interrupted process retain truthful results and block required progression.
+    A substituted harness transcript cannot satisfy the product receipt gate.
+
+- `W57-E2-S1-T3` (planned) Bind proof to code, check, source, and environment identity.
+  - Output: freshness policy for tree content including uncommitted/untracked inputs,
+    applied answer/criterion/check/config digests, cwd/project set, and declared lock/tool/
+    environment/ignored/generated inputs, with the receipt identity specified in the migration plan.
+  - Scope: repository evidence, receipt schema, freshness service, finalization publication,
+    and non-Git/declared generated-input fixtures. Avoid exposing secrets in environment logs.
+  - Dependencies: `W57-E1-S2-T2`, `W57-E1-S2-T3`, `W57-E2-S1-T2`.
+  - Verification: stale code, modified test/oracle, replaced checkout, changed criterion,
+    check/cwd/config, and required ignored input invalidate proof. Classify verification
+    byproducts so output generation does not spuriously alter product identity.
+
+#### Slice W57-E2-S2 — gate task and delivery outcomes (`planned`)
+
+Dependencies: `W57-E2-S1-T3`. Task-specific dependencies below govern later work.
+
+- `W57-E2-S2-T1` (planned) Require owned verification for task and finalization success.
+  - Output: task gate and final aggregate gate; reports distinguish runtime claims from
+    observed receipts, and required checks run on the final implementation tree. Separate
+    implementation-stage success from downstream Work Item delivery acceptance.
+  - Scope: task attempt executor, ledger, aggregate finalizer, stage reconciliation,
+    CLI task/run output, implementation validators, and repair accounting.
+  - Dependencies: `W57-E2-S1-T3`.
+  - Verification: a structurally valid implementation report with no/currently failing
+    receipts cannot succeed; fixes can resume the affected task; finalization changes require
+    fresh aggregate checks; prior successful evidence remains retained.
+
+- `W57-E2-S2-T2` (planned) Separate execution success from behavioral acceptance.
+  - Output: criterion assessment contract and completion policy referencing independent
+    expected behavior, counterexamples, regression oracles, or explicit manual acceptance;
+    oracle source/owner/version/digest is sealed before implementation.
+  - Scope: review/QA contracts, assessment service, core delivery completion, graders,
+    semantic rules, and honest operator labels. Model conclusions retain attribution.
+  - Dependencies: `W57-E1-S1-T2`, `W57-E1-S2-T3`, `W57-E2-S2-T1`.
+  - Verification: code/tests/documents agreeing on the wrong behavior fail the independent
+    oracle; exit zero alone cannot confirm a subjective criterion; red-before/green-after
+    regression evidence demonstrates that a check detects the relevant defect. Inconclusive/
+    unassessed mandatory criteria permit only a stopped/partial outcome, never complete.
+
+- `W57-E2-S2-T3` (planned) Demonstrate the complete grounded task pilot.
+  - Output: installed deterministic positive/negative scenarios spanning request → criterion
+    → task → diff → receipt → assessment, with retained audit bundles and grader verdicts.
+  - Scope: deterministic scenarios/harness/evals and pilot evidence report. Adapt the pinned
+    Hono non-error-throw behavior as one oracle without requiring a live provider for this gate.
+  - Dependencies: `W57-E2-S2-T2`.
+  - Verification: the migration plan’s truth/authority adversarial cases produce the expected first decisive
+    failure; an actual correct change passes; evidence inspection agrees with exit status.
+
+## Wave 58 — bounded iterative delivery (`planned`)
+
+Goal: Replace mandatory contiguous preparation with finite policy-selected routes and bounded
+child-run iterations of the same Work Item, preserving immutable inputs, addressed task
+invalidation, and recovery evidence.
+
+The current eight-stage workflow remains the execution baseline until its owning tasks are
+completed. The accepted replacement reuses stage identifiers with policy-selected
+operations and explicit prerequisite substitutes; it never creates successful skipped stages.
+Models, runtime tiers, and optional multi-agent defaults are outside this migration.
+
+Linked stories: `US-01`, `US-03`, `US-04`, `US-05`, `US-08`, `US-10`, `US-12`, `US-13`.
+Develop one replacement policy rather than an opt-in second engine. Change graph consumers
+and input resolution deliberately; adding a child-run link while retaining mandatory
+eight-stage preparation would leave the main product problem unresolved.
+
+### Epic W58-E1 — policy identity and immutable plan revisions (`planned`)
+
+Goal: Pin the sole executable policy and resolve versioned task plans from exact immutable run
+inputs.
+
+#### Slice W58-E1-S1 — make preparation policy explicit (`planned`)
+
+Dependencies: `W57-E1-S1-T1`, `W57-E2-S2-T3`. Task-specific dependencies below govern later
+work.
+
+- `W58-E1-S1-T1` (planned) Persist sole policy, route, and objective budgets.
+  - Output: explicit iterative current-format run identity, selected operations,
+    policy/contract versions, runtime selectors, provenance, and inherited objective budgets.
+  - Scope: `config.py`, run/store/manifest models, workflow/stage entrypoints, preflight,
+    installed resource selection, and continuation identity checks.
+    Pin [P01–P03](../architecture/iterative-delivery-decisions.md#p02-pilot-automation-limits)
+    pilot defaults/accounting/progress-policy identity in the shared objective configuration;
+    persist those settings before execution and retain them through child creation/resume.
+  - Dependencies: `W57-E1-S1-T1`, `W57-E2-S2-T3`.
+  - Verification: policy/config changes cannot alter an existing continuation; missing or
+    unsupported format stops before mutation; no classic selector or compatibility fallback
+    remains. Model/provider choices stay in configuration.
+
+- `W58-E1-S1-T2` (planned) Resolve stage contracts and dependencies per selected route.
+  - Output: finite executable routes, route input/output/ownership contracts, and updated
+    registry/eligibility/publication consumers; selected operation/predecessor maps and
+    `not-selected` dispositions replace the universal contiguous-stage requirement.
+  - Scope: stage manifests/graph/registry/preparation, validators, packaged contracts,
+    `workflow_service.py`, `cli/run.py`, `cli/stage_run.py`, `cli/ui.py`, read models,
+    direct-stage/run parity, and scenario declarations.
+  - Dependencies: `W58-E1-S1-T1`.
+  - Verification: focused route runs without research/plan/review-spec output; omitted
+    prerequisites have explicit substitutes; no skipped stage is marked succeeded;
+    investigate/design routes and direct-stage entrypoints retain their declared requirements.
+
+- `W58-E1-S1-T3` (planned) Select preparation depth from deterministic evidence signals.
+  - Output: policy selector and durable route rationale for focused/investigate/design;
+    escalation and question behavior for uncertain ownership or missing verification.
+  - Scope: small core policy service, preflight/input discovery, next-action baseline,
+    config policy settings, and table-driven scenarios.
+  - Dependencies: `W58-E1-S1-T2`, `W57-E1-S2-T3`, `W57-E2-S2-T2`.
+  - Verification: bounded bug fix avoids full preparation; unknown interface effects invoke
+    investigation/design; material ambiguity asks; free confidence/provider names cannot
+    downgrade preparation. Every route retains completion gates.
+
+#### Slice W58-E1-S2 — version inputs and preserve reusable work (`planned`)
+
+Dependencies: `W58-E1-S1-T2`, `W57-E1-S2-T2`. Task-specific dependencies below govern later
+work.
+
+- `W58-E1-S2-T1` (planned) Version task plans and require explicit revision mappings.
+  - Output: immutable Markdown task plan revision, retained/changed/removed/new mappings,
+    stable criterion/task references, and fingerprints of task meaning and execution scope.
+  - Scope: tasklist contracts/parser, ledger initialization, source mismatch handling,
+    fixtures and targeted planning prompts. Keep the current plan immutable in each run.
+  - Dependencies: `W58-E1-S1-T2`, `W57-E1-S2-T2`.
+  - Verification: duplicate/ambiguous mappings stop; same ID with changed scope/criterion is
+    treated as changed; an in-place tasklist edit cannot silently redefine a running ledger.
+    Revision checks enforce the unchanged product authority bounds without requiring
+    re-approval solely for a dependency/decomposition change.
+
+- `W58-E1-S2-T2` (planned) Resolve all consumed artifacts from immutable run snapshots.
+  - Output: exact-run input resolver and publication/index semantics for current outputs,
+    parent sources, source digests, run-local runtime staging roots, and active projections;
+    durable publication phases and coherent validated bundle commit.
+  - Scope: stage/task preparation and readers, finalization eligibility, stage outputs,
+    run inspection/artifact index, and source snapshots; include failed/blocked sources.
+  - Dependencies: `W58-E1-S1-T1`, `W58-E1-S2-T1`.
+  - Verification: different runs in one Work Item consume different tasklists safely; latest
+    publication cannot alter historical inputs; missing/stale/failed parent artifacts are
+    rejected; crash recovery never combines half-published revisions. Uncommitted or blocked
+    child documents leave the committed parent projection intact.
+
+- `W58-E1-S2-T3` (planned) Invalidate affected tasks and carry forward verified work.
+  - Output: finding-to-task dependency closure and revision-specific ledger initialization
+    with an explicit executed/reused disposition, immutable source-run/task-attempt/digest
+    references, task fingerprints, retained work, and required re-verification.
+  - Scope: task plan/ledger/evidence, repository snapshots, task read model, and finalization;
+    revise ledger completion predicates deliberately rather than equating reuse to an attempt.
+  - Dependencies: `W58-E1-S2-T1`, `W58-E1-S2-T2`, `W57-E2-S1-T3`.
+  - Verification: changed criterion/task and dependents rerun; independent work remains
+    attributable; stale whole-tree proof reruns checks; absent retained code or ambiguous
+    finding prevents reuse. Reused work cannot satisfy final proof without required checks
+    on the new final tree. No blind “reopen last task” in the iterative path.
+
+### Epic W58-E2 — bounded controller and task-local context (`planned`)
+
+Goal: Use current evidence to continue, repair, replan, ask, or stop while keeping execution
+bounded and prompts task-local.
+
+#### Slice W58-E2-S1 — implement the evidence-driven control loop (`planned`)
+
+Dependencies: `W58-E1-S1-T3`, `W58-E1-S2-T2`, `W58-E1-S2-T3`, `W57-E2-S2-T2`. Task-specific
+dependencies below govern later work.
+
+- `W58-E2-S1-T1` (planned) Create child iterations through a bounded controller.
+  - Output: `continue/repair/replan/ask/stop` decision service and same-Work-Item child-run
+    creation with sealed predecessor, source authority, invalidation, and atomic lease
+    handoff; stable decision/idempotency identity and durable decision-to-child index.
+  - Scope: workflow service, child-run application service, run/store/attempt lineage,
+    decision records and deterministic controller scenarios; no adapter policy branches.
+    Implement the [P01–P03](../architecture/iterative-delivery-decisions.md#p01-objective-time-accounting)
+    pilot limits and progress rule; children/retries do not reset shared counters, and
+    admitting the final allowed start/child does not cancel it merely because its count is reached.
+  - Dependencies: `W58-E1-S1-T3`, `W58-E1-S2-T2`, `W58-E1-S2-T3`, `W57-E2-S2-T2`.
+  - Verification: execution proof changes the next action; valid failed/blocked/succeeded
+    sources are handled deliberately; active or malformed parent is rejected; limits stop
+    repeated replans; unrelated task successes and parent evidence remain intact.
+
+- `W58-E2-S1-T2` (planned) Reconcile crash, cancellation, questions, and budget accounting.
+  - Output: explicit lifecycle/accounting rules for repair, retry, answer continuation,
+    verification, fix, and iteration, including no-progress detection and partial receipts.
+  - Scope: attempt lineage, owned process lifecycle, leases/jobs, recovery/reconciliation,
+    budget provenance, and failure classification.
+    Apply P01 waiting exclusions only after all executions are confirmed stopped; retain
+    active-time intervals and P02 debits across recovery, and P03 blocker lineage across children.
+  - Dependencies: `W58-E2-S1-T1`.
+  - Verification: injected crashes around command completion and child publication do not
+    double-execute or reset budgets; resumed questions use current answers; cancellation
+    leaves truthful terminal state and first decisive failure evidence. Crashes before/after
+    manifest/index commit return the same child or explicit incomplete transaction;
+    iteration debit and actual receipt cost/time accounting happen once.
+
+- `W58-E2-S1-T3` (planned) Route remediation and feedback to the affected iteration.
+  - Output: route-aware correction/change service shared by run/stage/task/CLI/UI paths;
+    distinguish same-plan fix, replan, product change, and new-objective follow-up.
+  - Scope: remediation/intervention/next-flow/application entrypoints, request documents,
+    task routing and core/CLI regressions under the sole replacement policy.
+  - Dependencies: `W58-E2-S1-T2`, `W58-E1-S2-T3`.
+  - Verification: review/QA findings address exact tasks; forbidden stage intervention does
+    not bypass downstream authority; feedback cannot silently expand the objective; unchanged
+    authorized corrections do not add blanket approval; source lineage survives follow-up.
+
+#### Slice W58-E2-S2 — deliver compact context without a summary cascade (`planned`)
+
+Dependencies: `W58-E1-S2-T2`, `W58-E1-S2-T3`, `W57-E1-S2-T3`. Task-specific dependencies below
+govern later work.
+
+Change one workload prompt group at a time. For every task below, keep model/provider/
+reasoning, scenario, and other prompt groups pinned; compare representative traces before
+and after. Group-specific regressions belong in the same task.
+
+- `W58-E2-S2-T1` (planned) Compile task-local briefs from exact source artifacts.
+  - Output: deterministic bounded brief containing the selected criterion, scope,
+    dependencies, constraints, current finding, declared checks, and exact source locators.
+  - Scope: application/stage preparation, task attempt executor, prompt assembly/provenance,
+    and fixture traces. Full sources remain inspectable rather than copied into every prompt.
+  - Dependencies: `W58-E1-S2-T2`, `W58-E1-S2-T3`, `W57-E1-S2-T3`.
+  - Verification: required constraints/answers survive compaction; stale input cannot be
+    substituted; task context excludes unrelated reports while preserving source identity.
+
+- `W58-E2-S2-T2` (planned) Adapt intake and discovery prompts to criterion-first outputs.
+  - Output: lean idea/research role prompts and route outputs centered on outcome,
+    source evidence, concrete unknowns, and decisions; detailed discovery only when selected.
+  - Scope: intake/discovery prompt packs, document examples/contracts and pinned trace/eval
+    comparisons. Change individual stage prompts sequentially within this workload group.
+  - Dependencies: `W58-E2-S2-T1`, `W58-E1-S1-T3`.
+  - Verification: explicit constraints stay visible; unsupported product assumptions create
+    questions/proposals; focused runs do not produce a mandatory long research narrative.
+
+- `W58-E2-S2-T3` (planned) Adapt planning prompts to bounded versioned task cards.
+  - Output: tasklist/optional design review prompts with criterion IDs, task-local proof,
+    revision mapping, and only necessary design decisions; no unconditional full specification.
+  - Scope: planning prompt group, plan/review-spec/tasklist contracts/examples and trace
+    comparisons, with intake/delivery prompts pinned.
+  - Dependencies: `W58-E2-S2-T1`, `W58-E1-S2-T1`, `W58-E2-S2-T2`.
+  - Verification: focused and design routes both yield executable coverage; replans retain
+    identity correctly; concise output does not omit dependencies, boundaries, or checks.
+
+- `W58-E2-S2-T4` (planned) Adapt implementation prompts to task changes and attributed claims.
+  - Output: lean task execution/finalization instructions and reports pointing to owned
+    receipt IDs, changed paths, residual gaps, and scope violations.
+  - Scope: implementation prompt group and Markdown report contracts/examples; preserve
+    existing runtime capabilities and model defaults.
+  - Dependencies: `W58-E2-S2-T1`, `W58-E2-S2-T3`, `W57-E2-S2-T1`.
+  - Verification: a task-local trace applies its criterion and constraints; model text
+    cannot fabricate an AIDD receipt or enlarge check/project authority.
+
+- `W58-E2-S2-T5` (planned) Adapt review and QA prompts to criterion assessments and findings.
+  - Output: attributed, addressable findings and assessments against original criteria,
+    current changes, and check evidence; distinguish observations from proposed conclusions.
+  - Scope: review/QA prompt group, document contracts, graders and pinned trace comparisons.
+  - Dependencies: `W58-E2-S2-T4`, `W57-E2-S2-T2`.
+  - Verification: wrong but internally consistent code is rejected by the oracle; review
+    gives criterion/task locators usable for replan; missing proof remains inconclusive.
+
+#### Slice W58-E2-S3 — prove integrated iteration and portability (`planned`)
+
+Dependencies: `W58-E1-S2-T3`, `W58-E2-S1-T1`, `W58-E2-S1-T2`, `W58-E2-S1-T3`, `W58-E2-S2-T5`.
+Task-specific dependencies below govern later work.
+
+- `W58-E2-S3-T1` (planned) Demonstrate route, iteration, and recovery conformance.
+  - Output: installed deterministic scenario matrix for all routes, multi-iteration
+    correction/replan, carry-forward/re-verification, failed/blocked sources, and explicit
+    unsupported-format stops without workspace mutation.
+  - Scope: harness/scenarios/evals, fake-runtime conformance and packaged-resource fixtures.
+  - Dependencies: `W58-E1-S2-T3`, `W58-E2-S1-T1`, `W58-E2-S1-T2`, `W58-E2-S1-T3`, `W58-E2-S2-T5`.
+  - Verification: the migration plan’s lifecycle/boundary adversarial cases and nearest core/application/CLI checks
+    pass; raw runtime/verification logs and final evidence are inspected; orchestration
+    policy has no provider-specific branch or newly enabled multi-agent requirement.
+
+## Wave 59 — operator understanding and finite cutover (`planned`)
+
+Goal: Make outcome, decisions, changes, and proof the primary CLI/UI experience, measure real
+operator understanding, and finish the migration through one accepted breaking replacement
+with aligned current formats, packaged resources and operator guidance.
+
+Coordinate W59-E2-S1-T2 with W42-E7-S2-T3 and W36-E7-S3-T2/T3, and W59-E2 acceptance with
+W36-E7-S4-T5 and existing W50 candidate-evidence policy. Existing parked tasks retain their
+ownership and status; evidence may satisfy overlapping requirements only after exact
+candidate/protocol/scope reconciliation. A scripted replay cannot close a human observation;
+this migration does not imply beta readiness. Live execution, participant coordination, and
+publication retain their normal authorization boundaries.
+
+Linked stories: `US-05`, `US-06`, `US-07`, `US-09`, `US-10`, `US-11`, `US-13`.
+Extend the existing Studio/Inbox/History and core next-action services. UI must not invent
+eligibility, infer proof from prose, or require a Spec Tour before routine execution.
+
+### Epic W59-E1 — outcome, decision, and history surfaces (`planned`)
+
+Goal: Expose one shared source-to-outcome projection and preserve operator, project, run, and
+history authority.
+
+#### Slice W59-E1-S1 — make outcome and proof the primary view (`planned`)
+
+Dependencies: `W58-E2-S3-T1`. Task-specific dependencies below govern later work.
+
+- `W59-E1-S1-T1` (planned) Project criterion coverage and one authoritative next action.
+  - Output: shared core payload `source → criterion → task → change → receipt → assessment`,
+    with unknown/stale states, exact locators, selected operations, and scoped decision/action.
+  - Scope: operator read models, reports/Inbox/next action, task projections, application DTOs.
+  - Dependencies: `W58-E2-S3-T1`.
+  - Verification: projection derives from persisted facts; partial coverage cannot become
+    “verified”; required decision, runtime permission, question, and failed check remain
+    distinct blockers; reused work is not displayed as a new successful attempt.
+
+- `W59-E1-S1-T2` (planned) Expose outcome, proof, and scoped decisions through CLI.
+  - Output: inspect/decide/change commands and truthful run/task summaries using the shared
+    application services, with durable decision readback and exact evidence navigation.
+  - Scope: CLI run/stage/task surfaces and focused tests; retain logs/artifacts inspection.
+  - Dependencies: `W59-E1-S1-T1`.
+  - Verification: same cases as UI yield the same blocker/action/outcome; stale and repeated
+    decisions have explicit conflict/idempotency behavior; product decisions do not mask
+    runtime permission, unanswered questions, or failing receipts.
+
+- `W59-E1-S1-T3` (planned) Render criterion, change, and proof cards in Operator UI.
+  - Output: primary outcome view showing before/after behavior, affected tasks/diff,
+    actual checks, uncertainty, and needed decision; dynamic operation navigation/progress.
+  - Scope: existing Studio components/static assets, payload consumers, DOM/browser fixtures.
+    Follow the [iterative UX blueprint](../architecture/iterative-operator-ux.md) and
+    [concept reference](../design/iterative-operator/README.md); use the core projection,
+    not the concept's synthetic state machine.
+  - Dependencies: `W59-E1-S1-T1`, `W57-E1-S1-T3`.
+  - Verification: representative focused/design/correction routes have truthful progress;
+    one primary action comes from core; source/diff/receipt/log opens exact retained evidence;
+    no mandatory generated prose tour or second planning mode appears.
+
+- `W59-E1-S1-T4` (planned) Show how an answer or change request affected delivery.
+  - Output: operator feedback/answer surfaces linked to criterion revision, affected tasks,
+    child decision, resulting change/check, and any remaining application gap.
+  - Scope: existing question/change/recovery forms, CLI readback, shared change service,
+    source comparison and UI projections.
+  - Dependencies: `W59-E1-S1-T2`, `W59-E1-S1-T3`, `W58-E2-S1-T3`.
+  - Verification: an ignored answer is visible as a gap; material change asks for scoped
+    authority; ordinary correction preserves prior authority; no action silently expands
+    project set or loses authored feedback after navigation.
+
+#### Slice W59-E1-S2 — preserve identity across time and navigation (`planned`)
+
+Dependencies: `W59-E1-S1-T4`, `W58-E1-S2-T2`, `W58-E2-S3-T1`. Task-specific dependencies below
+govern later work.
+
+- `W59-E1-S2-T1` (planned) Join criteria, plan revisions, decisions, and iterations in History.
+  - Output: timeline/Filmstrip and CLI inspection for parent/child runs, criterion/plan diffs,
+    reused attempts, decisions, receipts, assessments, and stale/downstream consequences.
+  - Scope: existing History/Compare/artifact-index read models and browser fixtures.
+  - Dependencies: `W59-E1-S1-T4`, `W58-E1-S2-T2`, `W58-E2-S3-T1`.
+  - Verification: history reads exact snapshots and shows unavailable evidence honestly;
+    latest work-item files cannot reconstruct old state; runtime permissions remain separate.
+
+- `W59-E1-S2-T2` (planned) Preserve project and job authority across iteration transitions.
+  - Output: correct originating project/run/child context in background jobs, Inbox,
+    refreshes, links, mutation guards, and cancellation/resume surfaces.
+  - Scope: UI job/context routing and existing stale-response protections, CLI parity,
+    DOM/browser journey regressions; preserve selected model/reasoning propagation.
+  - Dependencies: `W59-E1-S1-T4`, `W59-E1-S2-T1`.
+  - Verification: switching project or active iteration while a job runs cannot apply an
+    old decision to a new run; stale responses cannot render completion or enable a mutation;
+    task, question, approval, review/QA, and recovery journeys still work.
+
+### Epic W59-E2 — acceptance and direct breaking cutover (`planned`)
+
+Goal: Collect exact-candidate correctness and understanding evidence, validate installed
+delivery, and remove the retired executable path.
+
+#### Slice W59-E2-S1 — measure correctness and understanding (`planned`)
+
+Dependencies: `W57-E1-S1-T2`, `W58-E2-S3-T1`, `W59-E1-S2-T2`. Task-specific dependencies below
+govern later work.
+
+- `W59-E2-S1-T1` (planned) Compare the pinned earlier release and replacement native-runtime runs.
+  - Output: paired evidence bundles and independent product-quality report for bounded
+    fix, ambiguous requirement, design change, and correction/replan cases. Pin target repo
+    commit, fixture/oracle, runtime/model/reasoning and environment across variants; record
+    exact AIDD/prompt revisions and intentional policy/prompt differences separately.
+    Run the earlier package/revision in a separate checkout/environment; the replacement
+    does not include classic execution or old-format readers for comparison.
+  - Scope: existing manual live E2E manifests/catalog/rubric and maintained runtime lanes.
+    Follow `live-e2e` for authorized execution; do not change models/prompts/pins to rescue
+    one side of the comparison. Native behavior evidence is separate from fake-runtime tests.
+    Use [P06](../architecture/iterative-delivery-decisions.md#p06-native-comparison-repetitions)
+    for the 4-class/3-repeat/2-version matrix and
+    [P07](../architecture/iterative-delivery-decisions.md#p07-native-acceptance-and-external-failure-replacement)
+    for expected outcomes in all 3 counted candidate repetitions and diagnosed external-failure
+    replacement; preserve every attempt and separate scenario trials from execution starts.
+  - Dependencies: `W57-E1-S1-T2`, `W58-E2-S3-T1`, `W59-E1-S2-T2`.
+  - Verification: original requirements and counterexamples determine quality; cost/time,
+    reading burden, first verified change, failures, and interventions are recorded. Tier 1
+    defects block release; other tiers retain their existing policy and explicit caveats.
+
+- `W59-E2-S1-T2` (planned) Observe real operators using the new outcome flow.
+  - Output: uncoached task observations and paired comprehension report with confusion,
+    wrong actions, assistance, exact decision/evidence understanding, and follow-up findings;
+    matched fixtures, pinned runtime/model/environment, and counterbalanced observation order.
+  - Scope: existing observed-acceptance protocol and anonymized retained evidence. Reconcile
+    W42-E7-S2-T3 and W36-E7-S3-T2/T3 rather than duplicating or silently closing them.
+    Apply [P05](../architecture/iterative-delivery-decisions.md#p05-first-replacement-operator-observation):
+    5 eligible first-time participants, at least 4 completing every key task without coaching,
+    and no serious interface-caused error in any session; retain all participant outcomes.
+  - Dependencies: `W57-E1-S1-T2`, `W58-E2-S3-T1`, `W59-E1-S1-T3`, `W59-E1-S1-T4`, `W59-E1-S2-T2`.
+  - Verification: genuine participants explain the migration plan’s comprehension questions and complete recovery;
+    scripted browser replay does not count. Missing participants/environment are outstanding
+    evidence, not a pass. A beta claim still requires its broader existing readiness gate.
+
+- `W59-E2-S1-T3` (planned) Audit implementation-candidate readiness before final packaging.
+  - Output: go/no-go report tying correctness, human observations, failure taxonomy,
+    deterministic/browser/native evidence, runtime tiers, known gaps and thresholds to
+    one implementation candidate; it permits packaging/cutover preparation, not release.
+  - Scope: eval aggregation and acceptance docs; fixes return to the owning accepted task
+    with new evidence, not a threshold rewrite or silent baseline replacement.
+    Apply [P04](../architecture/iterative-delivery-decisions.md#p04-mandatory-acceptance-and-overhead-diagnostics)
+    quality/understanding gates with diagnostic overhead metrics, plus P05–P07 sample,
+    expected-outcome and replacement rules. Preserve existing runtime-tier release consequences.
+  - Dependencies: `W59-E2-S1-T1`, `W59-E2-S1-T2`.
+  - Verification: predeclared implementation-readiness gates are met with inspectable
+    evidence, or report an explicit no-go with the replacement unaccepted. No public
+    opt-in coexistence lane or later classic-removal phase is created. Installation,
+    final routing/cleanup and the final package gate remain W59-E2-S2 obligations.
+
+#### Slice W59-E2-S2 — finish the migration in current formats (`planned`)
+
+Dependencies: `W59-E2-S1-T3`. Task-specific dependencies below govern later work.
+
+- `W59-E2-S2-T1` (planned) Validate installation and operator guidance for the candidate.
+  - Output: packaged contracts/prompts/UI, clean pipx/uv-tool candidate evidence, doctor
+    behavior, and README/handbook/config/current-format migration instructions.
+  - Scope: packaging/resources, distribution/release docs, install harness and checklists;
+    local candidate preparation does not authorize external publication.
+  - Dependencies: `W59-E2-S1-T3`.
+  - Verification: installed tool runs the same scenarios and UI as the source candidate;
+    no resource lookup depends on checkout-only paths; instructions explain authority,
+    receipts, iteration, historical evidence, and explicit unsupported-format stops.
+
+- `W59-E2-S2-T2` (planned) Finalize the sole iterative policy in the replacement candidate.
+  - Output: one current executable policy and aligned launch/configuration/provenance;
+    explicit recreation and return-to-earlier-version guidance without automatic conversion.
+  - Scope: configuration/routing, provenance, CLI/UI launch, docs and regressions.
+  - Dependencies: `W59-E2-S1-T3`, `W59-E2-S2-T1`.
+  - Verification: every supported launch uses the sole iterative policy and pins its
+    identity. No old artifacts/manifests are rewritten or resumability promised across
+    incompatible engine/format versions. Rollback explicitly uses the earlier package/
+    revision and its compatible retained workspace, without an in-engine classic fallback.
+
+- `W59-E2-S2-T3` (planned) Audit removal of obsolete execution and format consumers.
+  - Output: the replacement candidate contains no retired classic implementation,
+    selectors, aliases, compatibility readers or automatic converters; unsupported-input
+    diagnostics and retained raw-history inspection agree with the direct cutover contract.
+  - Scope: core/application/CLI/UI/resources/tests plus explicit changelog/compatibility notes.
+  - Dependencies: `W59-E2-S2-T2`; the direct replacement gate is `W59-E2-S1-T3`.
+  - Verification: current inputs pass; retired inputs stop clearly; source/resource scan
+    finds no retired executable consumers. Raw historical evidence remains available for
+    direct/archive inspection; recreation is deliberate, not a silent format conversion.
+
+- `W59-E2-S2-T4` (planned) Seal final migration and release-readiness evidence.
+  - Output: final go/no-go for the exact final tree/wheel after routing/cleanup, reconciled
+    stories/traceability/roadmap, deterministic/browser/native acceptance, human-understanding
+    and install evidence, release notes and outstanding limitations.
+  - Scope: final installed candidate and documentation; use `release-publish` only if actual
+    publishing is subsequently requested. Do not label the alpha beta-ready by inference.
+  - Dependencies: `W59-E2-S2-T3`.
+  - Verification: `make check`, `make test-browser`, required runtime/installation lanes and
+    candidate evidence agree on the exact final revision; distinguish unrun/blocked checks
+    from passed ones. Earlier implementation-readiness evidence cannot qualify changed
+    behavior by itself. Human observations require explicit scope/impact/revision validation
+    against the final candidate; changes to observed behavior/UI require new observations.
+    Release readiness requires final-candidate evidence and does not authorize publication.

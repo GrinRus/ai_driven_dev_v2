@@ -6,16 +6,23 @@
 [![Python](https://img.shields.io/pypi/pyversions/ai-driven-dev-v2)](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/compatibility-policy.md)
 [![License](https://img.shields.io/github/license/GrinRus/ai_driven_dev_v2)](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/LICENSE)
 
-**A reviewable, document-first workflow around the AI coding runtimes you already use.**
+**Understand and steer the work you delegate to AI coding agents.**
 
 AIDD (`ai_driven_dev_v2`) is an open-source orchestration layer for AI-assisted software
 delivery. It runs one staged workflow through Claude Code, Codex, OpenCode, Qwen Code, or an
 AIDD-compatible CLI without making the workflow depend on one provider.
 
-Instead of turning a prompt directly into an opaque code change, AIDD saves the requirements,
-decisions, outputs, questions, validation results, and available runtime logs in the local
-project. Each stage produces readable Markdown and must pass its document contract before the
-workflow can advance.
+AIDD keeps your request, decisions, outputs, questions, validation results, and available
+runtime logs in the local project. The current alpha uses a document-first staged workflow:
+each stage produces readable Markdown and must pass its document contract before advancing.
+
+The [accepted product direction](docs/product/product-positioning.md) is an iterative
+workbench centered on the requested outcome, changes, checks, and decisions. Source-bound
+criteria, independently retained check receipts, and the new
+[Operator UX](docs/architecture/iterative-operator-ux.md) are migration targets tracked in
+the roadmap; they are not yet implemented capabilities.
+The [accepted architecture contract](docs/architecture/iterative-delivery-contract.md) defines
+one breaking replacement with current formats and explicit recreation of old workspaces.
 
 ## Why AIDD?
 
@@ -222,7 +229,7 @@ for the maintained evaluation boundaries.
 | Diagnose common failures | [Operator Troubleshooting](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/operator-troubleshooting.md) |
 | Understand support boundaries | [Support Policy](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/operator-support-policy.md) and [Compatibility Policy](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/compatibility-policy.md) |
 | Understand the architecture | [Target Architecture](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/architecture/target-architecture.md) and [Document Contracts](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/architecture/document-contracts.md) |
-| Follow product scope and plans | [User Stories](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/product/user-stories.md) and [Roadmap](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/backlog/roadmap.md) |
+| Follow product direction, scope, and plans | [Positioning](docs/product/product-positioning.md), [User Stories](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/product/user-stories.md), and [Roadmap](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/backlog/roadmap.md) |
 | Review user-visible changes | [Changelog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/CHANGELOG.md) |
 
 ## Development from source

@@ -57,6 +57,7 @@ stories:
     title: validation before progression
     assessment: implemented-with-reliability-gap
     contracts:
+      - docs/architecture/iterative-delivery-contract.md
       - contracts/documents/validator-report.md
       - contracts/documents/stage-result.md
       - contracts/stages/qa.md
@@ -99,8 +100,9 @@ stories:
 
   - id: US-05
     title: user interview when the task is ambiguous
-    assessment: implemented
+    assessment: implemented-with-target-gap
     contracts:
+      - docs/architecture/iterative-delivery-contract.md
       - contracts/documents/questions.md
       - contracts/documents/answers.md
       - contracts/documents/stage-brief.md
@@ -145,6 +147,7 @@ stories:
     title: harness and eval from day one
     assessment: partial
     contracts:
+      - docs/architecture/iterative-delivery-contract.md
       - contracts/documents/stage-result.md
       - contracts/documents/validator-report.md
       - docs/architecture/eval-harness-integration.md
@@ -211,6 +214,7 @@ stories:
     title: prompt and workflow change accountability
     assessment: implemented-with-eval-gap
     contracts:
+      - docs/architecture/iterative-delivery-contract.md
       - contracts/documents/stage-result.md
       - docs/architecture/eval-harness-integration.md
       - docs/architecture/target-architecture.md
@@ -233,6 +237,7 @@ stories:
     title: operator workflow frontend
     assessment: partial
     contracts:
+      - docs/architecture/iterative-delivery-contract.md
       - contracts/documents/questions.md
       - contracts/documents/answers.md
       - docs/architecture/operator-frontend.md
@@ -275,8 +280,9 @@ stories:
 
   - id: US-13
     title: incremental task execution
-    assessment: implemented
+    assessment: implemented-with-target-gap
     contracts:
+      - docs/architecture/iterative-delivery-contract.md
       - contracts/documents/tasklist.md
       - contracts/documents/implementation-report.md
       - docs/architecture/task-execution.md

@@ -8,6 +8,8 @@ Document status:
   and presentation contract;
 - [Target Operator Experience](operator-frontend-target-ux.md) defines the accepted Wave 42
   interaction hierarchy, Markdown behavior, task workspace, and replacement visual references;
+- [Iterative Operator UX](iterative-operator-ux.md) records the future migration design;
+  it does not replace the current interaction or service contracts before implementation;
 - Mission Control, cockpit, right-rail, bottom-dock, and Work / Recovery / Evidence / History
   presentation terminology is historical and non-normative. Its service, artifact, safety, and
   workflow invariants remain binding where explicitly retained below.

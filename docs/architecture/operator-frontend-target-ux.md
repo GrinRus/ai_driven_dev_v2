@@ -3,6 +3,10 @@
 Status: normative interaction contract for the task-centered Operator UI. Pending responsive
 and observed-usability acceptance work is tracked in the roadmap.
 
+The future [iterative Operator UX](iterative-operator-ux.md) records the outcome/evidence
+direction accepted on 2026-10-01. It is an unimplemented migration blueprint; this document
+continues to govern the current task-centered UI and canonical workflow presentation.
+
 This document defines the task-centered Operator UI that replaces the previous visual reference
 sets. It changes presentation and interaction hierarchy, not the canonical workflow, adapter
 boundary, Markdown ownership, validation gates, or durable `.aidd/` state.

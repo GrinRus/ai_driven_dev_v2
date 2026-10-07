@@ -11,17 +11,17 @@ Every story must retain non-empty contract, code, test, scenario, and evidence r
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `US-01` | runtime portability | `partial` | 3 | 3 | 3 | 2 | 2 |
 | `US-02` | document-first artifacts | `implemented-with-authority-gap` | 3 | 4 | 2 | 2 | 2 |
-| `US-03` | validation before progression | `implemented-with-reliability-gap` | 3 | 3 | 3 | 2 | 2 |
+| `US-03` | validation before progression | `implemented-with-reliability-gap` | 4 | 3 | 3 | 2 | 2 |
 | `US-04` | self-repair on bad outputs | `implemented` | 3 | 3 | 3 | 2 | 2 |
-| `US-05` | user interview when the task is ambiguous | `implemented` | 3 | 3 | 3 | 2 | 2 |
+| `US-05` | user interview when the task is ambiguous | `implemented-with-target-gap` | 4 | 3 | 3 | 2 | 2 |
 | `US-06` | native runtime visibility | `implemented-with-reliability-gap` | 3 | 3 | 3 | 2 | 2 |
-| `US-07` | harness and eval from day one | `partial` | 3 | 3 | 3 | 2 | 2 |
+| `US-07` | harness and eval from day one | `partial` | 4 | 3 | 3 | 2 | 2 |
 | `US-08` | clean adapter extension | `partial` | 3 | 3 | 3 | 2 | 2 |
 | `US-09` | installable operator experience | `implemented` | 3 | 3 | 3 | 2 | 2 |
-| `US-10` | prompt and workflow change accountability | `implemented-with-eval-gap` | 3 | 3 | 3 | 2 | 2 |
-| `US-11` | operator workflow frontend | `partial` | 3 | 3 | 3 | 2 | 2 |
+| `US-10` | prompt and workflow change accountability | `implemented-with-eval-gap` | 4 | 3 | 3 | 2 | 2 |
+| `US-11` | operator workflow frontend | `partial` | 4 | 3 | 3 | 2 | 2 |
 | `US-12` | project-set workflow | `partial` | 3 | 3 | 3 | 2 | 2 |
-| `US-13` | incremental task execution | `implemented` | 3 | 3 | 3 | 2 | 2 |
+| `US-13` | incremental task execution | `implemented-with-target-gap` | 4 | 3 | 3 | 2 | 2 |
 
 ## US-01 — runtime portability
 
@@ -95,6 +95,7 @@ Assessment: `implemented-with-reliability-gap`
 
 ### Contracts
 
+- [`docs/architecture/iterative-delivery-contract.md`](../architecture/iterative-delivery-contract.md)
 - [`contracts/documents/validator-report.md`](../../contracts/documents/validator-report.md)
 - [`contracts/documents/stage-result.md`](../../contracts/documents/stage-result.md)
 - [`contracts/stages/qa.md`](../../contracts/stages/qa.md)
@@ -157,10 +158,11 @@ Assessment: `implemented`
 
 ## US-05 — user interview when the task is ambiguous
 
-Assessment: `implemented`
+Assessment: `implemented-with-target-gap`
 
 ### Contracts
 
+- [`docs/architecture/iterative-delivery-contract.md`](../architecture/iterative-delivery-contract.md)
 - [`contracts/documents/questions.md`](../../contracts/documents/questions.md)
 - [`contracts/documents/answers.md`](../../contracts/documents/answers.md)
 - [`contracts/documents/stage-brief.md`](../../contracts/documents/stage-brief.md)
@@ -227,6 +229,7 @@ Assessment: `partial`
 
 ### Contracts
 
+- [`docs/architecture/iterative-delivery-contract.md`](../architecture/iterative-delivery-contract.md)
 - [`contracts/documents/stage-result.md`](../../contracts/documents/stage-result.md)
 - [`contracts/documents/validator-report.md`](../../contracts/documents/validator-report.md)
 - [`docs/architecture/eval-harness-integration.md`](../architecture/eval-harness-integration.md)
@@ -326,6 +329,7 @@ Assessment: `implemented-with-eval-gap`
 
 ### Contracts
 
+- [`docs/architecture/iterative-delivery-contract.md`](../architecture/iterative-delivery-contract.md)
 - [`contracts/documents/stage-result.md`](../../contracts/documents/stage-result.md)
 - [`docs/architecture/eval-harness-integration.md`](../architecture/eval-harness-integration.md)
 - [`docs/architecture/target-architecture.md`](../architecture/target-architecture.md)
@@ -359,6 +363,7 @@ Assessment: `partial`
 
 ### Contracts
 
+- [`docs/architecture/iterative-delivery-contract.md`](../architecture/iterative-delivery-contract.md)
 - [`contracts/documents/questions.md`](../../contracts/documents/questions.md)
 - [`contracts/documents/answers.md`](../../contracts/documents/answers.md)
 - [`docs/architecture/operator-frontend.md`](../architecture/operator-frontend.md)
@@ -421,10 +426,11 @@ Assessment: `partial`
 
 ## US-13 — incremental task execution
 
-Assessment: `implemented`
+Assessment: `implemented-with-target-gap`
 
 ### Contracts
 
+- [`docs/architecture/iterative-delivery-contract.md`](../architecture/iterative-delivery-contract.md)
 - [`contracts/documents/tasklist.md`](../../contracts/documents/tasklist.md)
 - [`contracts/documents/implementation-report.md`](../../contracts/documents/implementation-report.md)
 - [`docs/architecture/task-execution.md`](../architecture/task-execution.md)

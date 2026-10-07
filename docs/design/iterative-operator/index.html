@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AIDD · Iterative Operator concept</title>
+  <link rel="stylesheet" href="../../../src/aidd/cli/static/operator-tokens.css">
+  <link rel="stylesheet" href="concept.css">
+  <script src="concept.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to work</a>
+  <aside class="rail" aria-label="Project and navigation">
+    <a class="brand" href="../../../README.md">AIDD<span>Understand. Steer. Deliver.</span></a>
+    <div class="project">Northstar API<span>Local project · fixture</span></div>
+    <nav aria-label="Product navigation">
+      <button data-nav="inbox">Inbox <span>1</span></button>
+      <button data-nav="studio" aria-current="page">Studio</button>
+      <button data-nav="history">History</button>
+    </nav>
+    <div class="rail-note">Your request stays the source.<br>Evidence stays inspectable.</div>
+    <a class="rail-link" href="README.md">About this concept</a>
+  </aside>
+  <div class="app">
+    <header class="concept-bar">
+      <span><strong>Design concept</strong> · Synthetic data · No connected runtime</span>
+      <label>Explore a state
+        <select id="scenario">
+          <option value="decision">Product decision</option>
+          <option value="failed">Failed check</option>
+          <option value="stale">Stale proof</option>
+        </select>
+      </label>
+    </header>
+    <main id="workspace" tabindex="-1"></main>
+    <footer class="context-footer">All actions simulate the target UX in memory. Reload resets the concept. No repository or AIDD state is written.</footer>
+  </div>
+  <dialog id="inspector" aria-labelledby="inspector-title">
+    <div class="dialog-head"><h2 id="inspector-title"></h2><button id="close-inspector" aria-label="Close inspector">Close</button></div>
+    <div id="inspector-content"></div>
+  </dialog>
+  <p id="announcement" class="sr-only" role="status" aria-live="polite"></p>
+</body>
+</html>
